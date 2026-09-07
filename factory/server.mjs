@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync, readdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { StringDecoder } from 'node:string_decoder';
 import { fileURLToPath } from 'node:url';
 // archiver 8 ships as native ESM with no default export — only the format classes below.
@@ -149,6 +149,34 @@ export function startBuild(options, spawnFn = spawn) {
   });
 
   return build;
+}
+
+// Content is not required to place a page at "/" — the shipped `broken` example's only page is
+// "/sloppy" — so a build can finish cleanly and report success while writing no root index.html
+// at all.
+//
+// Rather than assume the root exists, this asks the actual output tree which page does: a
+// breadth-first, alphabetical-at-each-level walk for the first index.html found, mirroring the
+// same "ask the filesystem instead of predicting from content" approach the slug fix above this
+// file uses. Returns null when `dir` does not exist, or holds no page at all.
+export function findEntryPageDir(dir) {
+  if (!existsSync(dir)) return null;
+  if (existsSync(join(dir, 'index.html'))) return '.';
+
+  const queue = [dir];
+  while (queue.length > 0) {
+    const current = queue.shift();
+    const subdirs = readdirSync(current, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && !entry.name.startsWith('.'))
+      .map((entry) => entry.name)
+      .sort();
+    for (const name of subdirs) {
+      const full = join(current, name);
+      if (existsSync(join(full, 'index.html'))) return relative(dir, full);
+      queue.push(full);
+    }
+  }
+  return null;
 }
 
 // Counts every filesystem entry (files and directories alike) under `dir`, recursively.
@@ -346,7 +374,25 @@ export function createApp() {
     }
 
     const dir = join(OUTPUT_DIR, domain);
-    if (domain === '' || !existsSync(join(dir, 'index.html'))) {
+    // The in-memory check above only knows about builds THIS process started — after a server
+    // restart, `builds` is empty again, so a crash from a previous process looks exactly like no
+    // record at all. Astro's own `.prerender/` staging directory is a durable, on-disk fact
+    // instead: a crashed build leaves it behind, and any build that actually finishes — even one
+    // with no page at "/" — always removes it (see findEntryPageDir above for the "no root page"
+    // half of that same idea). This check does not replace the in-memory one above: the tests
+    // that reach a 'failed' build deterministically do so with a fake child process that never
+    // touches the filesystem, so no real `.prerender/` exists for them to be caught by this.
+    if (existsSync(join(dir, '.prerender'))) {
+      res.status(409).json({
+        error: `Последняя сборка для домена «${domain}» завершилась с ошибкой — архив недоступен`,
+      });
+      return;
+    }
+
+    // Not gated on index.html specifically: content is not required to place a page at "/" (see
+    // findEntryPageDir above), so a real, finished build can legitimately have none. "Does
+    // anything exist here at all" is the actual question this route needs answered.
+    if (domain === '' || !existsSync(dir) || countEntriesRecursively(dir) === 0) {
       res.status(404).json({ error: 'Собранного сайта с таким именем нет' });
       return;
     }
@@ -362,6 +408,26 @@ export function createApp() {
     archive.pipe(res);
     archive.directory(dir, false);
     archive.finalize();
+  });
+
+  // A build with no page at "/" (the shipped `broken` example: its only page is "/sloppy") has
+  // nothing for express.static below to find at the domain's own root, and it has no way to know
+  // which nested page should stand in for it. This runs first and hands it the answer directly:
+  // when the root index.html is missing but the domain really was built, redirect to whichever
+  // page findEntryPageDir finds. A domain that was never built at all, or genuinely has a root
+  // page, falls straight through to the static handler exactly as before.
+  app.get('/preview/:domain/', (req, res, next) => {
+    const dir = join(OUTPUT_DIR, req.params.domain);
+    if (existsSync(join(dir, 'index.html'))) {
+      next();
+      return;
+    }
+    const entry = findEntryPageDir(dir);
+    if (entry === null) {
+      next();
+      return;
+    }
+    res.redirect(302, `/preview/${req.params.domain}/${entry}/`);
   });
 
   app.use('/preview', express.static(OUTPUT_DIR, { index: 'index.html' }));

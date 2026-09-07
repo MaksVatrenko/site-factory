@@ -577,6 +577,121 @@ describe('form values reach the built HTML end to end (M3)', () => {
   });
 });
 
+// final-fix-5, follow-up 1: a build can succeed with no page at "/" at all — the shipped
+// `broken` example's only page resolves to "/sloppy" — so Astro never writes a root index.html.
+// The zip route used to gate entirely on that one file existing, and the preview route is plain
+// express.static with `index: 'index.html'`, so both used to 404 even though the build finished
+// cleanly and reported success. Decision: make both links work for such a site instead of
+// only reporting the mismatch, since the build output is completely real and there is no reason
+// to withhold it — the zip route's job is "was anything actually built", not "is there a page at
+// this one specific path", and the preview route can simply serve whatever page really exists.
+describe('final-fix-5: a successful build with no page at "/" still has a working zip and preview', () => {
+  it('zips a site whose only page is not at the root', async () => {
+    const domain = 'no-root-page-zip-test.com';
+    rmSync(join('output', domain), { recursive: true, force: true });
+
+    const start = await fetch(`${base}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ example: 'broken', domain }),
+    }).then((r) => r.json());
+
+    try {
+      const log = await readUntilDone(start.buildId);
+      expect(log).toContain('event: done');
+      const status = await fetch(`${base}/api/builds/${start.buildId}`).then((r) => r.json());
+      expect(status.status).toBe('ok');
+      expect(existsSync(join('output', domain, 'index.html'))).toBe(false);
+      expect(existsSync(join('output', domain, 'sloppy', 'index.html'))).toBe(true);
+
+      const response = await fetch(`${base}/api/output/${domain}/zip`);
+      expect(response.status).toBe(200);
+      const buffer = Buffer.from(await response.arrayBuffer());
+      const names = readZipEntryNames(buffer);
+      expect(names).toContain('sloppy/index.html');
+    } finally {
+      rmSync(join('output', domain), { recursive: true, force: true });
+    }
+  });
+
+  it('serves a working preview for a site whose only page is not at the root', async () => {
+    const domain = 'no-root-page-preview-test.com';
+    rmSync(join('output', domain), { recursive: true, force: true });
+
+    const start = await fetch(`${base}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ example: 'broken', domain }),
+    }).then((r) => r.json());
+
+    try {
+      await readUntilDone(start.buildId);
+
+      // fetch() follows the redirect automatically, the same way a browser follows the link the
+      // UI hands out (see factory/public/app.js) — this must land on the real page, not a 404.
+      const response = await fetch(`${base}/preview/${domain}/`);
+      expect(response.status).toBe(200);
+      expect(await response.text()).toContain('a single string');
+    } finally {
+      rmSync(join('output', domain), { recursive: true, force: true });
+    }
+  });
+
+  it('still serves the root page directly when a build does have one', async () => {
+    // Regression guard: a normal build with a real "/" page must not be redirected anywhere.
+    const response = await fetch(`${base}/preview/api-test.com/`);
+    expect(response.status).toBe(200);
+    expect(response.redirected).toBe(false);
+    expect(await response.text()).toContain('Find what actually works');
+  });
+});
+
+// final-fix-5, follow-up 2: the failed-build guard above (C2) only ever consults the in-memory
+// `builds` Map, which is empty again after every server restart — so a build that crashed in a
+// previous process is indistinguishable from one that finished cleanly, and its (possibly
+// partial) output becomes downloadable again. Astro's own `.prerender/` staging directory is a
+// durable, on-disk fact instead: a crashed build leaves it behind, and any build that actually
+// finishes — successfully, and regardless of whether it has a page at "/" — always removes it
+// (verified directly against this repo's real `astro build` before writing this check). This
+// adds that check alongside the in-memory one rather than replacing it, since the in-memory
+// check is still what the fake-child-process tests above rely on to reach the 'failed' state
+// deterministically, with no real Astro process involved to leave a real `.prerender/` behind.
+describe('final-fix-5: a leftover .prerender/ directory is a durable crash signal (C2 follow-up)', () => {
+  it('refuses to zip a domain with a leftover .prerender/ even with no build recorded at all', async () => {
+    const domain = 'prerender-leftover-no-record.com';
+    const dir = join('output', domain);
+    rmSync(dir, { recursive: true, force: true });
+    mkdirSync(join(dir, '.prerender'), { recursive: true });
+    writeFileSync(join(dir, 'index.html'), '<html>partial, from a crash a previous process saw</html>');
+
+    try {
+      const response = await fetch(`${base}/api/output/${domain}/zip`);
+      expect(response.status).toBe(409);
+      const data = await response.json();
+      expect(data.error).toContain(domain);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('still serves a zip once nothing is left behind but a real, finished build', async () => {
+    // Sanity check for the test above: the SAME shape of domain, with `.prerender/` actually
+    // cleaned up (as any build that truly finished would leave it), must serve normally.
+    const domain = 'prerender-cleaned-up.com';
+    const dir = join('output', domain);
+    rmSync(dir, { recursive: true, force: true });
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'index.html'), '<html>finished</html>');
+
+    try {
+      const response = await fetch(`${base}/api/output/${domain}/zip`);
+      expect(response.status).toBe(200);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 // These exercise the chunk-decoding and process-handling logic directly rather than through
 // the HTTP API: a real Astro build's stdout/stderr chunking is not controllable from a test
 // (chunk boundaries depend on OS pipe buffering), so there is no reliable way to force a

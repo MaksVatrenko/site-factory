@@ -571,3 +571,135 @@ describe('final-fix-4: the path-length cap counts the same unit as the segment c
     }
   });
 });
+
+// final-fix-5: four rounds of generalizing one predictive dimension at a time (character rules,
+// then names, then case folding) still left a gap no amount of listing closes — a rejected code
+// point, a public asset one level down, a fallback numbering scheme that disagreed with the
+// dedupe check about case, and a filesystem that folds more than `.toLowerCase()` does. The way
+// out is to stop predicting: normalizeSite now accepts an optional `options.prober`, a
+// `(segments) => boolean` function that PROVES a slug's directory can be created instead of
+// guessing — src/lib/slug-prober.mjs supplies a real one (see tests/slug-prober.test.mjs and the
+// real-`astro build` property test in tests/render.test.mjs); these tests pin the two-phase
+// resolution algorithm itself with a fast, in-memory fake so the ordering logic is checked
+// without touching a real filesystem. Calling normalizeSite with no `prober` at all — every test
+// above this one in this file — must keep behaving exactly as it does today; that is the entire
+// point of making it optional rather than replacing the old path outright.
+describe('final-fix-5: normalizeSite proves a slug against a prober instead of predicting it', () => {
+  // A minimal stand-in for the real tryClaim: tracks claimed paths in memory and, when
+  // `foldCase` is set, folds them the way a case-insensitive filesystem (APFS) would — just
+  // enough to exercise the *ordering* logic. `refuse` lets a test force a specific claim to fail
+  // outright, standing in for an OS-level refusal (a bad code point, a reserved file).
+  function fakeProber({ foldCase = false, refuse = () => false } = {}) {
+    const claimed = new Set();
+    return (segments) => {
+      const path = segments.join('/');
+      if (refuse(path)) return false;
+      const key = foldCase ? path.toLowerCase() : path;
+      if (claimed.has(key)) return false;
+      claimed.add(key);
+      return true;
+    };
+  }
+
+  it('claims every ordinary slug in order and reports no warnings', () => {
+    const { site, warnings } = normalizeSite(
+      { pages: [{ slug: '/' }, { slug: '/about' }, { slug: '/contact' }] },
+      { supportedBlocks: BLOCKS, prober: fakeProber() },
+    );
+    expect(site.pages.map((p) => p.slug)).toEqual(['/', '/about', '/contact']);
+    expect(warnings).toHaveLength(0);
+  });
+
+  it('lets a real, explicit slug win over an earlier-processed placeholder fallback (finding 4)', () => {
+    // The exact repro: a page with no slug at all sits BEFORE the page that genuinely asked for
+    // "/Page-1". A prober that folds case (as APFS does) must still let the real page keep its
+    // own name — the placeholder is the one bumped to a different number, regardless of array
+    // order, unlike the pure path's case-sensitive `reserved` Set (see resolvePageSlugs above).
+    const { site, warnings } = normalizeSite(
+      {
+        pages: [
+          { slug: '/', meta: { title: 'Home' } },
+          { meta: { title: 'Blank' } },
+          { slug: '/Page-1', meta: { title: 'RealPageOne' } },
+        ],
+      },
+      { supportedBlocks: BLOCKS, prober: fakeProber({ foldCase: true }) },
+    );
+    expect(site.pages).toHaveLength(3);
+    expect(new Set(site.pages.map((p) => p.slug)).size).toBe(3);
+
+    const real = site.pages.find((p) => p.meta.title === 'RealPageOne');
+    expect(real.slug).toBe('/Page-1');
+    const blank = site.pages.find((p) => p.meta.title === 'Blank');
+    expect(blank.slug.toLowerCase()).not.toBe('/page-1');
+    // The blank page never asked for anything, so it is not a content error — same rule as the
+    // pure path (M2 above).
+    expect(warnings.some((w) => w.includes('недопустим'))).toBe(false);
+  });
+
+  it('falls back to page-N and warns "invalid", never "duplicate", when a claim fails', () => {
+    const { site, warnings } = normalizeSite(
+      {
+        pages: [
+          { slug: '/', meta: { title: 'Home' } },
+          { slug: '/about', meta: { title: 'First' } },
+          { slug: '/about', meta: { title: 'Second' } },
+        ],
+      },
+      { supportedBlocks: BLOCKS, prober: fakeProber() },
+    );
+    // Unlike the pure (no-prober) path, a claim failure is never a silent drop: the page is
+    // still built, just under the next name the prober actually grants.
+    expect(site.pages).toHaveLength(3);
+    const second = site.pages.find((p) => p.meta.title === 'Second');
+    expect(second.slug).not.toBe('/about');
+    expect(warnings.some((w) => w.includes('недопустим'))).toBe(true);
+    expect(warnings.some((w) => w.includes('дубликат'))).toBe(false);
+  });
+
+  it('keeps two slugs distinct when the prober does not fold them, even though JS toLowerCase would', () => {
+    // Regression guard for the opposite mistake: with a prober present, the OLD case-folded
+    // seenSlugs dedupe inside normalizeSite must not also run, or it would drop a page the
+    // filesystem itself was perfectly happy to keep (Turkish İ/ı, fullwidth forms all behave
+    // this way on real APFS — see tests/slug-prober.test.mjs) even though nothing here collided.
+    const { site, warnings } = normalizeSite(
+      {
+        pages: [
+          { slug: '/', meta: { title: 'Home' } },
+          { slug: '/About', meta: { title: 'Upper' } },
+          { slug: '/about', meta: { title: 'Lower' } },
+        ],
+      },
+      { supportedBlocks: BLOCKS, prober: fakeProber({ foldCase: false }) },
+    );
+    expect(site.pages).toHaveLength(3);
+    expect(site.pages.map((p) => p.slug)).toEqual(['/', '/About', '/about']);
+    expect(warnings).toHaveLength(0);
+  });
+
+  it('retries past an already-claimed page-N fallback until it finds one the prober grants', () => {
+    const { site, warnings } = normalizeSite(
+      { pages: [{ slug: '/' }, { slug: '/index.html' }] },
+      { supportedBlocks: BLOCKS, prober: fakeProber({ refuse: (p) => p === 'page-1' }) },
+    );
+    expect(site.pages.map((p) => p.slug)).toEqual(['/', '/page-2']);
+    expect(warnings.join(' ')).toContain('/index.html');
+  });
+
+  it('still runs the old predictive path when no prober is given at all', () => {
+    // Same content as the "invalid, never duplicate" test above, but with no prober option at
+    // all — must reproduce today's pure behaviour exactly: the second page is dropped outright,
+    // not given a fallback, and reported as a duplicate.
+    const { site, warnings } = normalizeSite(
+      {
+        pages: [
+          { slug: '/about', meta: { title: 'First' } },
+          { slug: '/about', meta: { title: 'Second' } },
+        ],
+      },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(site.pages).toHaveLength(1);
+    expect(warnings.join(' ')).toContain('дубликат');
+  });
+});

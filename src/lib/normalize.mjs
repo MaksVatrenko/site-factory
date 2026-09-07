@@ -68,7 +68,8 @@ function decodeSlug(value) {
 //      default APFS) regardless of where in the slug it appears.
 //
 // A slug that has nothing left after these rules, or that still contains a reserved name
-// anywhere, cannot be rewritten safely and is refused outright; resolvePageSlugs (below) picks a
+// anywhere, cannot be rewritten safely and is refused outright; resolvePageSlugsPredictively or
+// resolveSlugsByProof (below — which one runs depends on whether a prober is available) picks a
 // page-N fallback for it that cannot collide with any other page in the file.
 const MAX_SLUG_SEGMENT_LENGTH = 100; // mirrors safeName's cap in factory/server.mjs
 const MAX_SLUG_SEGMENT_BYTES = 255; // the per-path-component byte limit ext4 and most Linux
@@ -187,6 +188,12 @@ function buildSlugCandidate(value, index) {
 // A fallback slug must not collide with any real slug in the file — not just the ones already
 // assigned by the time this page is reached, but ones later pages are still going to produce —
 // nor with a fallback already handed to an earlier page. `reserved` carries all of the above.
+//
+// This is a STRING comparison, deliberately — it is only ever used by resolvePageSlugsPredictively
+// below, the path with no filesystem to ask. It is not, and cannot be made, a substitute for
+// resolveSlugsByProof's real claim-by-claim resolution: see that function's own comment for why a
+// second string-comparison rule here (e.g. folding case to match the dedupe check elsewhere) is
+// exactly the mistake this file's history keeps repeating, rather than the fix.
 function pickFallbackSlug(index, reserved) {
   let n = index;
   let candidate = `/page-${n}`;
@@ -204,8 +211,14 @@ function pickFallbackSlug(index, reserved) {
 // the file already uses as its real, content-given slug — which used to silently drop that
 // page's content as a "duplicate" of the real one instead of reporting the actual problem: an
 // invalid slug. Genuine repeats among these resolved slugs are still left for the caller's
-// existing duplicate check, which runs afterward with full knowledge of the final values.
-function resolvePageSlugs(pages, warnings) {
+// own case-folded duplicate check in normalizeSite, which runs afterward with full knowledge of
+// the final values.
+//
+// This is the PURE fallback, used only when normalizeSite is called with no `options.prober` —
+// which is deliberately still exactly today's behaviour, warts included (see finding 4 in
+// resolveSlugsByProof's comment below): normalizeSite has to stay usable with no filesystem in
+// reach at all, for the unit tests elsewhere in this file that call it directly.
+function resolvePageSlugsPredictively(pages, warnings) {
   const candidates = pages.map((page, index) => buildSlugCandidate(page.slug, index));
   const reserved = new Set(
     candidates.filter((candidate) => candidate.slug !== null).map((candidate) => candidate.slug),
@@ -222,6 +235,93 @@ function resolvePageSlugs(pages, warnings) {
     }
     return fallback;
   });
+}
+
+// Splits a resolved candidate slug ("/", "/about", "/a/b") back into the path segments a
+// prober claims against — the inverse of the `/${segments.join('/')}` join in buildSlugCandidate.
+function segmentsOf(slug) {
+  return slug === '/' ? [] : slug.slice(1).split('/');
+}
+
+// --- Proof, not prediction --------------------------------------------------------------------
+//
+// Four review rounds fixed the predictive approach above the same way each time: find one more
+// hostile shape, teach it one more rule. That is how RESERVED_ROOT_OUTPUT_NAMES, the segment
+// cleaning above and resolvePageSlugsPredictively's own `reserved` Set all came to exist — and
+// how they came to drift from each other. Two examples the review named directly:
+//
+//   Finding 4: resolvePageSlugsPredictively's `reserved` Set (above) compares slugs as exact
+//   strings, but normalizeSite's own duplicate check (below) folds case before comparing. Pages
+//   ['/', <no slug>, '/Page-1'] build "successfully" while the page that asked for '/Page-1' is
+//   silently dropped as a "duplicate" of the placeholder that raced it to '/page-1' — two rules
+//   about the same question, quietly disagreeing.
+//
+//   Finding 5: even a single, internally-consistent case fold is not enough — a real filesystem
+//   folds more than `.toLowerCase()` does (German ß, NFC/NFD, Greek final sigma) and *less* in
+//   other cases a naive fold would wrongly flag (Turkish İ/ı, fullwidth forms). No string-level
+//   rule written in JavaScript can be relied on to match what a specific filesystem actually
+//   does, because the answer is a property of that filesystem, not of Unicode in the abstract.
+//
+// A prober — `(segments) => boolean`, see src/lib/slug-prober.mjs — sidesteps both by refusing to
+// predict at all: it performs the exact operation the real build performs (mkdir the directory,
+// create the index.html marker inside it) against a scratch tree seeded to look like the output
+// root will, and reports whether the OS accepted it. That single question subsumes every rule
+// above at once: a reserved engine file, a publicDir asset, a case fold, a normalization fold and
+// an unassigned code point are all just "the filesystem refused this path" to a prober, with no
+// separate string comparison anywhere to drift out of sync with another one.
+//
+// Two phases keep finding 4 fixed regardless of array order:
+//   Phase 1 claims every page's own, real (non-missing) candidate slug, in content order — so a
+//   page that never asked for anything is never even considered until every page that DID ask
+//   for something has had first claim on it, no matter which one appears earlier in the file.
+//   Phase 2 hands out page-N fallbacks — to pages that had nothing to claim, and to pages whose
+//   phase-1 claim lost — trying successive numbers until the prober actually grants one, so a
+//   fallback is proven exactly like any other slug and can never collide either.
+//
+// A claim failure is always reported with the "invalid slug" warning below, never the separate
+// "duplicate slug" one normalizeSite's own pure-path dedupe uses: the prober cannot tell a
+// genuine repeat from two strings a filesystem happens to fold together, so neither does this
+// function — the distinction that predictive code used to draw between them was never something
+// the filesystem could confirm anyway.
+function resolveSlugsByProof(pages, warnings, prober) {
+  const candidates = pages.map((page, index) => buildSlugCandidate(page.slug, index));
+  const finalSlugs = new Array(pages.length).fill(null);
+
+  candidates.forEach((candidate, index) => {
+    if (candidate.slug === null) return;
+    if (prober(segmentsOf(candidate.slug))) {
+      finalSlugs[index] = candidate.slug;
+    }
+    // A claim failure leaves this null, falling through to the fallback pass below exactly like
+    // a page whose text never sanitized into anything usable in the first place.
+  });
+
+  // A generous but finite cap: page-N is plain ASCII, so the prober should grant one almost
+  // immediately, but this must never spin forever if the scratch filesystem itself is somehow
+  // refusing everything (a full disk, say) — see createOutputProber's own "never throws" contract
+  // in src/lib/slug-prober.mjs for why that is treated as an infrastructure problem, not a reason
+  // to hang a content build.
+  const MAX_FALLBACK_ATTEMPTS = 100000;
+
+  candidates.forEach((candidate, index) => {
+    if (finalSlugs[index] !== null) return;
+    let n = index;
+    let attempts = 0;
+    let fallback = `/page-${n}`;
+    while (!prober(segmentsOf(fallback)) && attempts < MAX_FALLBACK_ATTEMPTS) {
+      n += 1;
+      attempts += 1;
+      fallback = `/page-${n}`;
+    }
+    finalSlugs[index] = fallback;
+    // Same rule as the predictive path: a page that never provided a slug at all is not
+    // reporting a content error, so it is not warned about.
+    if (!candidate.missing) {
+      warnings.push(`Слаг «${candidate.raw}» недопустим — использован «${fallback}»`);
+    }
+  });
+
+  return finalSlugs;
 }
 
 function pickOverride(override, fromFile, fallback) {
@@ -268,23 +368,38 @@ export function normalizeSite(raw, options = {}) {
     pages = [{}];
   }
 
-  const slugs = resolvePageSlugs(pages, warnings);
+  // With a real prober (a real build, via loadContext), slug resolution asks the filesystem
+  // directly and every returned slug is already proven mutually distinct — see
+  // resolveSlugsByProof's own comment for why. With no prober (normalizeSite called directly, as
+  // every test elsewhere in this file does), fall back to the pure, predictive path, unchanged.
+  const prober = typeof options.prober === 'function' ? options.prober : null;
+  const slugs = prober
+    ? resolveSlugsByProof(pages, warnings, prober)
+    : resolvePageSlugsPredictively(pages, warnings);
   // Keyed by lower-cased slug: a case-insensitive filesystem (macOS's default APFS) collapses
   // "/about", "/About" and "/ABOUT" into the exact same directory regardless of what
   // normalizeSite thinks they are, so duplicate detection has to agree with the filesystem
   // (finding M3). Each surviving page still keeps its own slug's original casing below — only
   // the comparison is case-folded, not the stored value.
+  //
+  // This check is skipped entirely when a prober resolved the slugs above: re-checking already
+  // proven-distinct slugs with a JS-side `.toLowerCase()` fold cannot find a real collision (the
+  // prober already ruled those out) and can only ever introduce a FALSE one — folding together
+  // two strings a real filesystem treats as genuinely different, such as Turkish İ/ı or fullwidth
+  // forms (finding 5) — and dropping a page for a collision that was never going to happen.
   const seenSlugs = new Set();
   const normalizedPages = [];
 
   pages.forEach((page, index) => {
     const slug = slugs[index];
-    const dedupeKey = slug.toLowerCase();
-    if (seenSlugs.has(dedupeKey)) {
-      warnings.push(`${slug}: дубликат слага — страница пропущена`);
-      return;
+    if (!prober) {
+      const dedupeKey = slug.toLowerCase();
+      if (seenSlugs.has(dedupeKey)) {
+        warnings.push(`${slug}: дубликат слага — страница пропущена`);
+        return;
+      }
+      seenSlugs.add(dedupeKey);
     }
-    seenSlugs.add(dedupeKey);
 
     const meta = isPlainObject(page.meta) ? page.meta : {};
     const blocks = [];

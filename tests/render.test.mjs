@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { existsSync, mkdtempSync, writeFileSync, rmSync, readdirSync } from 'node:fs';
+import { existsSync, mkdtempSync, writeFileSync, rmSync, readdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildSite, readOutput } from './helpers/build.mjs';
@@ -314,10 +314,18 @@ describe('hostile slugs that used to crash the build (C1)', () => {
 // surrogates, astral characters sitting right on the truncation boundary, "index.html" in every
 // position, mixed percent/Unicode encoding, separators only) must still succeed, and every page
 // must be accounted for: either it made it into the output, or normalizeSite's own warnings say
-// why it did not (a genuine duplicate). `normalizeSite` is called directly on the exact same
-// content as the oracle for "what should happen" — the real `astro build` then either agrees
-// with it (proving the invariant holds end to end) or crashes (proving it does not), which a
-// pure unit test on normalizeSite alone could never observe.
+// why it did not.
+//
+// final-fix-5 changed what "accounted for" means, and this test's own oracle along with it. A
+// prober-backed real build (see src/lib/slug-prober.mjs) never silently drops a page the way the
+// pure, no-prober path still does for a genuine duplicate — every collision, whatever caused it,
+// resolves to a page-N fallback and a warning instead, so a separate pure `normalizeSite(content,
+// {})` call is no longer a valid oracle for what the real build does: the two are now allowed to
+// disagree on collisions by design (see resolveSlugsByProof's own comment in normalize.mjs). This
+// test instead checks the real build's own output and log directly — every page's content must
+// exist somewhere on disk, the ones that needed no fallback at all must sit at exactly the path
+// their own slug implies with no warning, and the disk page count must match the content's page
+// count exactly (proving nothing was silently lost OR silently duplicated).
 describe('normalizeSlug holds as an invariant across a wide range of hostile slugs, not six special cases (final-fix-3)', () => {
   const longSegment = 'q'.repeat(300);
   const deepSegment = 'd'.repeat(100);
@@ -369,6 +377,21 @@ describe('normalizeSlug holds as an invariant across a wide range of hostile slu
     { label: 'percent only, reduces to nothing', slug: '%' },
     { label: 'slash plus percent, reduces to nothing', slug: '/%' },
     { label: 'triple percent, reduces to nothing', slug: '%%%' },
+    // final-fix-5: five collision shapes no predictive rule can see at all, because each is
+    // either not a fixed "name" (a code point, a fold) or not a name the engine controls in the
+    // first place (a publicDir asset varies per build). Only asking the real filesystem catches
+    // these — see src/lib/slug-prober.mjs and tests/slug-prober.test.mjs for the mechanism
+    // pinned in isolation; this is that same mechanism exercised through a real astro build.
+    // Confirmed against this repo's actual filesystem (APFS) before being written here: see the
+    // review's own findings.
+    { label: 'unassigned code point U+0378 (ENOENT on APFS)', slug: `/bad${String.fromCodePoint(0x0378)}name` },
+    { label: 'Unicode noncharacter U+FFFE (ENOENT on APFS)', slug: `/bad${String.fromCodePoint(0xfffe)}name` },
+    { label: 'collides with a file the example publicDir copies to the output root', slug: '/images/logo.svg' },
+    { label: 'ASCII case pair, first (STRASSE) — must win its own claim, unwarned', slug: '/STRASSE' },
+    { label: 'ASCII/non-ASCII case pair, second (straße folds onto STRASSE on APFS)', slug: '/straße' },
+    { label: 'Greek final-sigma pair, first (ΣΟΣ) — must win its own claim, unwarned', slug: '/ΣΟΣ' },
+    { label: 'Greek final-sigma pair, second (σος folds onto ΣΟΣ on APFS)', slug: '/σος' },
+    { label: 'NFD café — folds onto the separate benign NFC /café page on APFS', slug: `/${'café'.normalize('NFD')}` },
   ];
 
   function content() {
@@ -378,6 +401,22 @@ describe('normalizeSlug holds as an invariant across a wide range of hostile slu
       brand: { name: 'Hostile Wide' },
       pages: [
         { slug: '/', meta: { title: 'Hostile Wide Home' }, blocks: [] },
+        // final-fix-5 (finding 4): a page with NO slug at all, sitting right next to a page that
+        // genuinely asked for "/Page-1" — the exact repro. A real, explicit slug must always win
+        // its own claim over a placeholder synthesized for a page that asked for nothing, no
+        // matter which one the content lists first (see resolveSlugsByProof's two-phase design).
+        { meta: { title: 'Missing Slug Page' }, blocks: [] }, // `slug` key entirely absent
+        { slug: '/Page-1', meta: { title: 'Real Page One' }, blocks: [] },
+        // Ordinary slugs that must survive completely untouched, with no warning at all — proof
+        // that a mechanism now capable of refusing more hostile input does not start refusing
+        // safe input too. '/café' (NFC) also plays the "wins its own claim" half of the NFD
+        // collision pair added to hostilePages below.
+        { slug: 'about/', meta: { title: 'Benign About' }, blocks: [] },
+        { slug: '//guide', meta: { title: 'Benign Guide' }, blocks: [] },
+        { slug: 'a//b', meta: { title: 'Benign A B' }, blocks: [] },
+        { slug: `/${'café'.normalize('NFC')}`, meta: { title: 'Benign Cafe NFC' }, blocks: [] },
+        { slug: '/日本語', meta: { title: 'Benign Japanese' }, blocks: [] },
+        { slug: '/%41', meta: { title: 'Benign Percent Decoded' }, blocks: [] },
         ...hostilePages.map((page, i) => ({
           slug: page.slug,
           meta: { title: `Hostile page ${i}: ${page.label}` },
@@ -402,48 +441,125 @@ describe('normalizeSlug holds as an invariant across a wide range of hostile slu
     return count;
   }
 
+  // Every `index.html` anywhere in the tree, as text — used below to confirm a page's content
+  // survived SOMEWHERE, regardless of whether it landed at its own requested path or a fallback.
+  function readAllPageHtml(dir) {
+    const htmls = [];
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) htmls.push(...readAllPageHtml(full));
+      else if (entry.name === 'index.html') htmls.push(readFileSync(full, 'utf8'));
+    }
+    return htmls;
+  }
+
+  // Slugs that must survive completely untouched — at exactly the path their own content
+  // implies, carrying their own title, with no "invalid slug" warning naming them. This is the
+  // regression guard half of the invariant: a mechanism now able to refuse more hostile input
+  // must not start refusing safe input too. Their raw slug text (used for the "no warning names
+  // this slug" check below) is deliberately kept alongside the resolved path and title.
+  const untouchedSlugs = [
+    { raw: '/', slug: '/', title: 'Hostile Wide Home' },
+    { raw: 'about/', slug: '/about', title: 'Benign About' },
+    { raw: '//guide', slug: '/guide', title: 'Benign Guide' },
+    { raw: 'a//b', slug: '/a/b', title: 'Benign A B' },
+    { raw: `/${'café'.normalize('NFC')}`, slug: '/café', title: 'Benign Cafe NFC' },
+    { raw: '/日本語', slug: '/日本語', title: 'Benign Japanese' },
+    { raw: '/%41', slug: '/A', title: 'Benign Percent Decoded' },
+    { raw: '/Page-1', slug: '/Page-1', title: 'Real Page One' },
+    // The FIRST of each colliding pair below wins its own claim (content order: these two
+    // pages precede their colliding partners in content()) and so is never warned about either,
+    // exactly like any of the untouched slugs above — winning a race is not "surviving
+    // unmodified" in quite the same sense, but it is still "built at its own path, unwarned".
+    { raw: '/STRASSE', slug: '/STRASSE', title: undefined },
+    { raw: '/ΣΟΣ', slug: '/ΣΟΣ', title: undefined },
+    // These hostile-LOOKING entries from hostilePages above are, once the character-level
+    // sanitizing in normalize.mjs runs, already valid and unique — "hostile" here means unusual
+    // input, not a collision with anything, so the prober grants each one's own claim on the
+    // first try and none of them is warned about either. Pinning the exact resolved path here
+    // (not just "found somewhere", per the loop above) is what makes the warned/unwarned
+    // accounting below exact rather than approximate.
+    { raw: `/${longSegment}`, slug: `/${longSegment.slice(0, 100)}`, title: undefined },
+    { raw: `/${Array(12).fill(deepSegment).join('/')}`, slug: `/${deepSegment}`, title: undefined },
+    { raw: `/ctrl${NUL}${BEL}${UNIT_SEPARATOR}${DEL}name`, slug: '/ctrlname', title: undefined },
+    { raw: `/high${HIGH_SURROGATE}surrogate`, slug: '/highsurrogate', title: undefined },
+    { raw: `/low${LOW_SURROGATE}surrogate`, slug: '/lowsurrogate', title: undefined },
+    { raw: `/${'x'.repeat(99)}😀`, slug: `/${'x'.repeat(99)}😀`, title: undefined },
+    { raw: `/${'y'.repeat(100)}😀`, slug: `/${'y'.repeat(100)}`, title: undefined },
+    { raw: '/%41/café', slug: '/A/café', title: undefined },
+    { raw: '/../../ESCAPED', slug: '/ESCAPED', title: undefined },
+    { raw: '/Dup', slug: '/Dup', title: undefined },
+  ];
+
   it('builds successfully and accounts for every page, hostile or not', () => {
-    // Exactly one genuine collision is deliberately included above (two different encodings of
-    // the same real slug, "/Dup") to prove the "or was warned about" branch of the invariant —
-    // everything else here must survive as its own distinct page.
-    const { site, warnings } = normalizeSite(content(), {});
-    // 1 home page is added, 1 duplicate pair collapses to 1 survivor: net count is unchanged.
-    expect(site.pages.length).toBe(hostilePages.length);
+    const allContent = content();
+    const totalPages = allContent.pages.length;
 
     const dir = mkdtempSync(join(tmpdir(), 'site-factory-hostile-wide-'));
     const file = join(dir, 'site.json');
-    writeFileSync(file, JSON.stringify(content()));
+    writeFileSync(file, JSON.stringify(allContent));
 
     try {
-      // The real build succeeding at all — no ENAMETOOLONG, no ENOTDIR, no "URI malformed" —
-      // is the core of the invariant. buildSite throws with the process's exit code and full
-      // output if it does not.
+      // The real build succeeding at all — no ENAMETOOLONG, no ENOTDIR, no "URI malformed", and
+      // now no ENOENT from an unassigned code point either — is the core of the invariant.
+      // buildSite throws with the process's exit code and full output if it does not.
       const { outDir, log } = buildSite({
         outDir: join('output', 'test-hostile-wide'),
         env: { SITE_JSON: file },
       });
 
-      // Every surviving page (per normalizeSite, the same function the real build itself uses)
-      // must exist on disk at exactly the path its slug implies, carrying its own title.
-      for (const page of site.pages) {
-        const target = outputPathFor(outDir, page.slug);
-        expect(existsSync(target), `expected ${target} for slug ${page.slug}`).toBe(true);
-        expect(readOutput(outDir, target.slice(outDir.length + 1))).toContain(page.meta.title);
+      // Nothing was silently lost AND nothing was silently duplicated: the number of index.html
+      // files on disk matches the number of pages the content declared, exactly. A silent
+      // overwrite (finding 5) would make this LOWER; a page leaking into the output twice would
+      // make it HIGHER — either way, this single count catches it.
+      expect(countIndexHtmlFiles(outDir)).toBe(totalPages);
+
+      // Every page's own content exists somewhere in the output, whether at its own requested
+      // path or a page-N fallback — nothing was corrupted, swapped, or dropped outright.
+      const allHtml = readAllPageHtml(outDir);
+      for (const page of allContent.pages) {
+        expect(
+          allHtml.some((html) => html.includes(page.meta.title)),
+          `expected to find a page titled "${page.meta.title}" somewhere under ${outDir}`,
+        ).toBe(true);
       }
 
-      // No extra pages leaked out, and none went missing.
-      expect(countIndexHtmlFiles(outDir)).toBe(site.pages.length);
-
-      // The one deliberate duplicate must be reported as a duplicate — and everything else that
-      // needed a fallback must be reported as invalid, never folded into the duplicate warning.
-      const droppedTitles = content()
-        .pages.map((p) => p.meta.title)
-        .filter((title) => !site.pages.some((p) => p.meta.title === title));
-      expect(droppedTitles).toHaveLength(1);
-      expect(warnings.filter((w) => w.includes('дубликат'))).toHaveLength(1);
-      for (const title of droppedTitles) {
-        expect(readOutput(outDir)).not.toContain(title);
+      // The untouched slugs land at exactly the path their own content implies, carrying their
+      // own title, and trigger no "invalid slug" warning naming them.
+      for (const { raw, slug, title } of untouchedSlugs) {
+        const target = outputPathFor(outDir, slug);
+        expect(existsSync(target), `expected ${target} for untouched slug ${slug}`).toBe(true);
+        if (title) {
+          expect(readOutput(outDir, target.slice(outDir.length + 1))).toContain(title);
+        }
+        expect(log, `slug ${raw} should not have been warned about`).not.toContain(
+          `Слаг «${raw}» недопустим`,
+        );
       }
+
+      // Finding 4, directly: the real "/Page-1" page's own directory holds ONLY its own
+      // content — the missing-slug page processed right next to it in content() never claimed
+      // it, overwrote it, or merged into it.
+      const pageOneHtml = readOutput(outDir, join('Page-1', 'index.html'));
+      expect(pageOneHtml).toContain('Real Page One');
+      expect(pageOneHtml).not.toContain('Missing Slug Page');
+
+      // Every OTHER page — everything not in untouchedSlugs and not the missing-slug page —
+      // needed a fallback and so was warned about as invalid, never as a duplicate: with a
+      // prober in play, a collision is never reported using the separate "duplicate slug"
+      // warning text (see normalizeSite's own comment on this), whatever caused it.
+      const unwarnedCount = untouchedSlugs.length + 1; // + the missing-slug page
+      const warnedCount = (log.match(/Слаг «[^»]*» недопустим/g) || []).length;
+      expect(warnedCount).toBe(totalPages - unwarnedCount);
+      expect(log).not.toContain('дубликат');
+
+      // The two colliding pairs each end up on disk at TWO DIFFERENT paths, not one overwriting
+      // the other — the second half of each pair (straße, σος) must exist somewhere but not at
+      // the first half's own path.
+      expect(readOutput(outDir, join('STRASSE', 'index.html'))).not.toContain('straße folds');
+      expect(allHtml.some((html) => html.includes('straße folds onto STRASSE'))).toBe(true);
+      expect(readOutput(outDir, join('ΣΟΣ', 'index.html'))).not.toContain('σος folds');
+      expect(allHtml.some((html) => html.includes('σος folds onto'))).toBe(true);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
