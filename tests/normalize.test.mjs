@@ -149,4 +149,44 @@ describe('normalizeSite', () => {
     );
     expect(site.pages[0].slug).toBe('/a/b');
   });
+
+  it('decodes percent-encoded escapes in a slug', () => {
+    const { site } = normalizeSite(
+      { pages: [{ slug: '/%41' }] },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(site.pages[0].slug).toBe('/A');
+  });
+
+  it('leaves non-ASCII slug characters untouched', () => {
+    const { site } = normalizeSite(
+      { pages: [{ slug: '/café' }] },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(site.pages[0].slug).toBe('/café');
+  });
+
+  it('falls back to stripping % when a slug has a malformed percent-escape', () => {
+    const { site } = normalizeSite(
+      { pages: [{ slug: '/50% off' }] },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(site.pages[0].slug).toBe('/50 off');
+    expect(site.pages[0].slug).not.toContain('%');
+  });
+
+  it('treats two encodings of the same slug as duplicates', () => {
+    const { site, warnings } = normalizeSite(
+      {
+        pages: [
+          { slug: '/A', meta: { title: 'First' } },
+          { slug: '/%41', meta: { title: 'Second' } },
+        ],
+      },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(site.pages).toHaveLength(1);
+    expect(site.pages[0].meta.title).toBe('First');
+    expect(warnings.join(' ')).toContain('/A');
+  });
 });

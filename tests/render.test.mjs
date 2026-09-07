@@ -155,3 +155,32 @@ describe('hero survives junk props', () => {
     expect(html).not.toMatch(/<img[^>]*\ssrc="\[object Object\]"/);
   });
 });
+
+describe('percent-encoded slugs', () => {
+  it('builds a page for a slug containing a percent-encoded sequence', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'site-factory-slug-'));
+    const file = join(dir, 'site.json');
+    writeFileSync(
+      file,
+      JSON.stringify({
+        domain: 'example.com',
+        locale: 'en-US',
+        brand: { name: 'Encoded' },
+        pages: [
+          { slug: '/', meta: { title: 'Home' }, blocks: [] },
+          { slug: '/%41', meta: { title: 'Decoded Page' }, blocks: [] },
+        ],
+      }),
+    );
+    try {
+      const { outDir } = buildSite({
+        outDir: join('output', 'test-encoded-slug'),
+        env: { SITE_JSON: file },
+      });
+      expect(existsSync(join(outDir, 'A', 'index.html'))).toBe(true);
+      expect(readOutput(outDir, join('A', 'index.html'))).toContain('Decoded Page');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});

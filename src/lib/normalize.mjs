@@ -17,9 +17,18 @@ function toText(value, fallback = '') {
   return typeof value === 'string' && value.trim() !== '' ? value.trim() : fallback;
 }
 
+function decodeSlug(value) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value.replace(/%/g, '');
+  }
+}
+
 function normalizeSlug(value, index) {
   const raw = toText(value, index === 0 ? '/' : `page-${index}`);
-  const trimmed = raw.replace(/\/+/g, '/').replace(/^\/+/, '').replace(/\/+$/, '');
+  const decoded = decodeSlug(raw);
+  const trimmed = decoded.replace(/\/+/g, '/').replace(/^\/+/, '').replace(/\/+$/, '');
   return trimmed === '' ? '/' : `/${trimmed}`;
 }
 

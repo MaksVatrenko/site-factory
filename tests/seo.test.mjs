@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { writeFileSync, rmSync } from 'node:fs';
+import { writeFileSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -164,5 +164,38 @@ describe('SEO artefacts with an unset SITE_URL', () => {
     expect(readOutput(outDir, 'about/index.html')).toContain(
       `<link rel="canonical" href="https://${domain}/about"`,
     );
+  });
+});
+
+describe('SEO artefacts with a scheme-only domain and no SITE_URL', () => {
+  let outDir;
+
+  beforeAll(() => {
+    const file = writeTempSiteJson({
+      domain: 'https://',
+      locale: 'en-US',
+      brand: { name: 'SchemeOnly' },
+      pages: [{ slug: '/', meta: { title: 'Home' }, blocks: [] }],
+    });
+    try {
+      outDir = buildSite({
+        template: 't1',
+        scheme: 'blue',
+        outDir: 'output/test-seo-scheme-only-domain',
+        env: { SITE_JSON: file, SITE_URL: '' },
+      }).outDir;
+    } finally {
+      rmSync(file, { force: true });
+    }
+  });
+
+  it('still builds the home page instead of crashing', () => {
+    expect(existsSync(join(outDir, 'index.html'))).toBe(true);
+  });
+
+  it('still produces a sitemap', () => {
+    const xml = readOutput(outDir, 'sitemap.xml');
+    expect(xml).toContain('<urlset');
+    expect(xml).toContain('<loc>');
   });
 });
