@@ -1,0 +1,33 @@
+---
+const { site } = Astro.props;
+const year = new Date().getFullYear();
+const disclaimer = 'Данный обзор носит информационный характер.';
+---
+
+<footer class="footer">
+  <div class="shell footer__inner">
+    <p>{disclaimer}</p>
+    <p class="footer__meta">
+      {site?.brand?.name} · © {year} {site?.domain}
+    </p>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    margin-top: 2rem;
+    padding-block: 2rem;
+    border-top: 1px solid var(--c-border);
+  }
+
+  .footer__inner {
+    display: grid;
+    gap: 0.5rem;
+    color: var(--c-muted);
+    font-size: 0.9rem;
+  }
+
+  .footer__meta {
+    font-weight: 600;
+  }
+</style>

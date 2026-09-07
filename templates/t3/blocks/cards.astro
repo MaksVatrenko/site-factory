@@ -1,0 +1,68 @@
+---
+import { asRecords, asText } from '../../_shared/props.mjs';
+
+const { heading, items } = Astro.props;
+const title = asText(heading);
+const cards = asRecords(items)
+  .map((item) => ({ title: asText(item.title), text: asText(item.text) }))
+  .filter((card) => card.title !== '' || card.text !== '');
+---
+
+{cards.length > 0 && (
+  <section class="cards">
+    <div class="shell">
+      {title && <h2>{title}</h2>}
+      <ol class="cards__list">
+        {cards.map((card) => (
+          <li class="cards__item">
+            <h3>{card.title}</h3>
+            <p>{card.text}</p>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </section>
+)}
+
+<style>
+  .cards {
+    padding-block: 2.5rem;
+  }
+
+  .cards__list {
+    margin-top: 1.5rem;
+    padding: 0;
+    list-style: none;
+    counter-reset: card;
+    display: grid;
+    gap: 1rem;
+  }
+
+  .cards__item {
+    counter-increment: card;
+    padding: 1.25rem 1.25rem 1.25rem 3.5rem;
+    position: relative;
+    border-radius: var(--radius-sm);
+    background: var(--c-surface);
+  }
+
+  .cards__item::before {
+    content: counter(card);
+    position: absolute;
+    inset-inline-start: 1.25rem;
+    top: 1.25rem;
+    width: 1.6rem;
+    height: 1.6rem;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--c-primary);
+    color: var(--c-primary-fg);
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+
+  .cards__item p {
+    color: var(--c-muted);
+  }
+</style>

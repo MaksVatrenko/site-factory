@@ -1,0 +1,53 @@
+---
+import { asRecords, asText } from '../../_shared/props.mjs';
+
+const { heading, items } = Astro.props;
+const title = asText(heading);
+const questions = asRecords(items)
+  .map((item) => ({ q: asText(item.q), a: asText(item.a) }))
+  .filter((entry) => entry.q !== '' || entry.a !== '');
+---
+
+{questions.length > 0 && (
+  <section class="faq">
+    <div class="shell">
+      {title && <h2>{title}</h2>}
+      <div class="faq__list">
+        {questions.map((item, index) => (
+          <details class="faq__item" open={index === 0}>
+            <summary>{item.q}</summary>
+            <p>{item.a}</p>
+          </details>
+        ))}
+      </div>
+    </div>
+  </section>
+)}
+
+<style>
+  .faq {
+    padding-block: 2.5rem;
+  }
+
+  .faq__list {
+    margin-top: 1.5rem;
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .faq__item {
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--c-border);
+    border-radius: var(--radius-sm);
+  }
+
+  .faq__item summary {
+    cursor: pointer;
+    font-weight: 650;
+  }
+
+  .faq__item p {
+    margin-top: 0.75rem;
+    color: var(--c-muted);
+  }
+</style>

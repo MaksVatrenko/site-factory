@@ -96,14 +96,41 @@ describe('engine build', () => {
   });
 });
 
-describe('templates are interchangeable', () => {
-  it('renders the same content with t2', () => {
-    const { outDir } = buildSite({ template: 't2', scheme: 'green' });
-    const html = readOutput(outDir);
-    expect(html).toContain('Find what actually works');
-    expect(html).toContain('Questions we get a lot');
-    expect(html).toContain('#10794a');
-    expect(html).not.toMatch(/<script[^>]*\ssrc=/i);
+describe('templates are interchangeable and distinct', () => {
+  const rendered = {};
+
+  beforeAll(() => {
+    for (const template of ['t1', 't2', 't3']) {
+      const { outDir } = buildSite({ template, scheme: 'blue' });
+      rendered[template] = readOutput(outDir);
+    }
+  });
+
+  it('renders the same content in every template', () => {
+    for (const html of Object.values(rendered)) {
+      expect(html).toContain('Find what actually works');
+      expect(html).toContain('Why this guide exists');
+      expect(html).toContain('Questions we get a lot');
+    }
+  });
+
+  it('produces visibly different markup per template', () => {
+    const [first, second, third] = Object.values(rendered);
+    expect(first).not.toBe(second);
+    expect(second).not.toBe(third);
+    expect(first).not.toBe(third);
+  });
+
+  it('renders the FAQ as native disclosure widgets in t3 only', () => {
+    expect(rendered.t3).toContain('<details');
+    expect(rendered.t1).not.toContain('<details');
+    expect(rendered.t2).not.toContain('<details');
+  });
+
+  it('ships no JavaScript in any template', () => {
+    for (const html of Object.values(rendered)) {
+      expect(html).not.toMatch(/<script[^>]*\ssrc=/i);
+    }
   });
 });
 

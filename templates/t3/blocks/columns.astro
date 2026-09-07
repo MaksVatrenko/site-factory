@@ -1,0 +1,67 @@
+---
+import { asRecords, asList, asText } from '../../_shared/props.mjs';
+
+const { heading, items } = Astro.props;
+const title = asText(heading);
+const columns = asRecords(items)
+  .map((item) => ({
+    title: asText(item.title),
+    links: asList(item.links)
+      .map((link) => asText(link))
+      .filter((link) => link !== ''),
+  }))
+  .filter((column) => column.title !== '' || column.links.length > 0);
+---
+
+{columns.length > 0 && (
+  <section class="columns">
+    <div class="shell">
+      {title && <h2>{title}</h2>}
+      <div class="columns__groups">
+        {columns.map((column) => (
+          <div class="columns__group">
+            <h3>{column.title}</h3>
+            {column.links.length > 0 && (
+              <div class="columns__tags">
+                {column.links.map((link) => (
+                  <span class="tag">{link}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+)}
+
+<style>
+  .columns {
+    padding-block: 2.5rem;
+  }
+
+  .columns__groups {
+    margin-top: 1.5rem;
+    display: grid;
+    gap: 1.5rem;
+  }
+
+  .columns__group h3 {
+    margin-bottom: 0.6rem;
+    font-size: 0.95rem;
+    color: var(--c-muted);
+  }
+
+  .columns__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .tag {
+    padding: 0.35rem 0.8rem;
+    border: 1px solid var(--c-border);
+    border-radius: 999px;
+    font-size: 0.9rem;
+  }
+</style>
