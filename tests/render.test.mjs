@@ -106,3 +106,19 @@ describe('templates are interchangeable', () => {
     expect(html).not.toMatch(/<script[^>]*\ssrc=/i);
   });
 });
+
+describe('hero survives junk props', () => {
+  it('does not leak object junk into t1 hero markup', () => {
+    const { outDir } = buildSite({ example: 'broken', template: 't1' });
+    const html = readOutput(outDir, join('sloppy', 'index.html'));
+    expect(html).not.toContain('[object Object]');
+    expect(html).not.toMatch(/<img[^>]*\ssrc="\[object Object\]"/);
+  });
+
+  it('does not leak object junk into t2 hero markup', () => {
+    const { outDir } = buildSite({ example: 'broken', template: 't2' });
+    const html = readOutput(outDir, join('sloppy', 'index.html'));
+    expect(html).not.toContain('[object Object]');
+    expect(html).not.toMatch(/<img[^>]*\ssrc="\[object Object\]"/);
+  });
+});

@@ -1,16 +1,21 @@
 ---
+import { asText } from '../../_shared/props.mjs';
+
 const { title, subtitle, cta, image, site } = Astro.props;
-const buttonLabel = cta || 'Подробнее';
+const heading = asText(title, site?.brand?.name || 'Заголовок');
+const subtitleText = asText(subtitle);
+const buttonLabel = asText(cta, 'Подробнее');
 const buttonHref = site?.partnerUrl;
+const imageSrc = asText(image);
 ---
 
 <section class="hero section">
   <div class="container hero__inner">
     {site?.brand?.name && <p class="eyebrow">{site.brand.name}</p>}
-    <h1>{title || site?.brand?.name || 'Заголовок'}</h1>
-    {subtitle && <p class="hero__subtitle">{subtitle}</p>}
+    <h1>{heading}</h1>
+    {subtitleText && <p class="hero__subtitle">{subtitleText}</p>}
     {site?.partnerUrl && <a class="button" href={buttonHref}>{buttonLabel}</a>}
-    {image && <img class="hero__image" src={image} alt="" loading="eager" />}
+    {imageSrc && <img class="hero__image" src={imageSrc} alt="" loading="eager" />}
   </div>
 </section>
 
