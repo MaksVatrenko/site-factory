@@ -1,15 +1,23 @@
 ---
-const { site } = Astro.props;
+import { asText } from '../../_shared/props.mjs';
+
+const { site, cta } = Astro.props;
 const year = new Date().getFullYear();
 const disclaimer = 'Данный обзор носит информационный характер.';
+const buttonLabel = asText(cta, 'Подробнее');
+const logoSrc = asText(site?.brand?.logo);
 ---
 
 <footer class="footer">
   <div class="shell footer__inner">
+    {logoSrc && <img class="footer__logo" src={logoSrc} alt="" />}
     <p>{disclaimer}</p>
     <p class="footer__meta">
       {site?.brand?.name} · © {year} {site?.domain}
     </p>
+    {site?.partnerUrl && (
+      <a class="button footer__cta" href={site.partnerUrl}>{buttonLabel}</a>
+    )}
   </div>
 </footer>
 
@@ -22,12 +30,24 @@ const disclaimer = 'Данный обзор носит информационн�
 
   .footer__inner {
     display: grid;
+    justify-items: start;
     gap: 0.5rem;
     color: var(--c-muted);
     font-size: 0.9rem;
   }
 
+  .footer__logo {
+    max-height: 1.75rem;
+    max-width: 8rem;
+    width: auto;
+    height: auto;
+  }
+
   .footer__meta {
     font-weight: 600;
+  }
+
+  .footer__cta {
+    margin-top: 0.5rem;
   }
 </style>

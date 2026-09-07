@@ -290,3 +290,133 @@ describe('hostile slugs that used to crash the build (C1)', () => {
     expect(log).toContain('index.html');
   });
 });
+
+// Findings M1/W1/W2/carried-minor: the affiliate CTA reached only the hero (one placement, and
+// only on pages that declare one), site.brand.logo was normalized and shipped in every example
+// but rendered by nothing, t3 dropped hero.image outright, and cards/faq rendered an empty
+// secondary element (<p> / <dd>) whenever only one of a record's two text fields was filled.
+// One content file — a partnerUrl, a brand logo, a hero image, a second page with no hero block
+// at all, and cards/faq records with only one field set — is built through all three templates
+// so every fix is checked against real markup, not just against the source.
+describe('affiliate CTA reaches every placement, brand logo renders, no empty partner elements (M1/W1/W2/carried minor)', () => {
+  const partnerUrl = 'https://partner.example/go';
+  const logoPath = 'images/logo.svg';
+  const heroImagePath = 'images/hero.jpg';
+
+  function contentWithSecondPageMissingHero() {
+    return {
+      domain: 'example.com',
+      locale: 'en-US',
+      partnerUrl,
+      brand: { name: 'CTA Test', logo: logoPath },
+      pages: [
+        {
+          slug: '/',
+          meta: { title: 'Home' },
+          blocks: [
+            { type: 'hero', props: { title: 'Home hero', image: heroImagePath } },
+            {
+              type: 'cards',
+              props: {
+                heading: 'Cards',
+                items: [
+                  { title: 'Card One', text: 'First card text' },
+                  { title: 'Only Title Card' },
+                ],
+              },
+            },
+            {
+              type: 'faq',
+              props: {
+                heading: 'FAQ',
+                items: [
+                  { q: 'Answered question', a: 'An answer' },
+                  { q: 'Only Question FAQ' },
+                ],
+              },
+            },
+          ],
+        },
+        {
+          // No hero block at all — this is the page M1 found unmonetised.
+          slug: '/about',
+          meta: { title: 'About' },
+          blocks: [{ type: 'richtext', props: { heading: 'About', paragraphs: ['Some text.'] } }],
+        },
+      ],
+    };
+  }
+
+  function buildWithContent(template, dirName) {
+    const dir = mkdtempSync(join(tmpdir(), 'site-factory-cta-'));
+    const file = join(dir, 'site.json');
+    writeFileSync(file, JSON.stringify(contentWithSecondPageMissingHero()));
+    try {
+      return buildSite({
+        template,
+        scheme: 'blue',
+        outDir: join('output', dirName),
+        env: { SITE_JSON: file },
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  // Attribute order on a tag is not guaranteed (Astro may inject its own scoped-style attribute
+  // alongside `class`), so this matches on the class prefix wherever it lands rather than
+  // assuming `class` is the first attribute.
+  function extractElement(html, tag, classPrefix) {
+    const re = new RegExp(`<${tag}[^>]*class="${classPrefix}[^"]*"[^>]*>([\\s\\S]*?)<\\/${tag}>`);
+    return html.match(re)?.[0] || '';
+  }
+
+  for (const template of ['t1', 't2', 't3']) {
+    describe(`template ${template}`, () => {
+      let homeHtml;
+      let aboutHtml;
+
+      beforeAll(() => {
+        const { outDir } = buildWithContent(template, `test-cta-${template}`);
+        homeHtml = readOutput(outDir);
+        aboutHtml = readOutput(outDir, join('about', 'index.html'));
+      });
+
+      it('reaches a page with no hero at all (M1 regression)', () => {
+        expect(aboutHtml).not.toContain('Home hero');
+        expect(aboutHtml).toContain(partnerUrl);
+      });
+
+      it('appears in the footer', () => {
+        const footer = extractElement(aboutHtml, 'footer', 'footer');
+        expect(footer).not.toBe('');
+        expect(footer).toContain(partnerUrl);
+      });
+
+      it('appears after the card grid', () => {
+        const cardsSection = extractElement(homeHtml, 'section', 'cards');
+        expect(cardsSection).not.toBe('');
+        expect(cardsSection).toContain(partnerUrl);
+        const lastCardIndex = cardsSection.indexOf('Only Title Card');
+        const ctaIndex = cardsSection.indexOf(partnerUrl);
+        expect(lastCardIndex).toBeGreaterThan(-1);
+        expect(ctaIndex).toBeGreaterThan(lastCardIndex);
+      });
+
+      it('renders the brand logo', () => {
+        expect(homeHtml).toMatch(/<img[^>]*\ssrc="images\/logo\.svg"/);
+      });
+
+      it('renders a hero image suited to the template layout', () => {
+        expect(homeHtml).toContain(heroImagePath);
+      });
+
+      it('emits no empty secondary element when only one of two text fields is filled', () => {
+        expect(homeHtml).toContain('Only Title Card');
+        expect(homeHtml).toContain('Only Question FAQ');
+        expect(homeHtml).not.toMatch(/<p[^>]*><\/p>/);
+        expect(homeHtml).not.toMatch(/<dd[^>]*><\/dd>/);
+      });
+    });
+  }
+});

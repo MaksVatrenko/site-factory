@@ -16,7 +16,7 @@ const questions = asRecords(items)
         {questions.map((item) => (
           <div class="faq__item">
             <dt>{item.q}</dt>
-            <dd>{item.a}</dd>
+            {item.a && <dd>{item.a}</dd>}
           </div>
         ))}
       </dl>

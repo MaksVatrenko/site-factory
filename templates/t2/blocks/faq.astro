@@ -16,7 +16,7 @@ const questions = asRecords(items)
         {questions.map((item) => (
           <div class="faq__item">
             <p class="faq__q">{item.q}</p>
-            <p class="faq__a">{item.a}</p>
+            {item.a && <p class="faq__a">{item.a}</p>}
           </div>
         ))}
       </div>

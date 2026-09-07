@@ -16,7 +16,7 @@ const questions = asRecords(items)
         {questions.map((item, index) => (
           <details class="faq__item" open={index === 0}>
             <summary>{item.q}</summary>
-            <p>{item.a}</p>
+            {item.a && <p>{item.a}</p>}
           </details>
         ))}
       </div>

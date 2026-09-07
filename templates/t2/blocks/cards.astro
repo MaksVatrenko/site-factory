@@ -1,11 +1,13 @@
 ---
 import { asRecords, asText } from '../../_shared/props.mjs';
 
-const { heading, items } = Astro.props;
+const { heading, items, cta, site } = Astro.props;
 const title = asText(heading);
 const cards = asRecords(items)
   .map((item) => ({ title: asText(item.title), text: asText(item.text) }))
   .filter((card) => card.title !== '' || card.text !== '');
+const buttonLabel = asText(cta, 'Подробнее');
+const partnerUrl = site?.partnerUrl;
 ---
 
 {cards.length > 0 && (
@@ -18,11 +20,14 @@ const cards = asRecords(items)
             <span class="card__number">{String(index + 1).padStart(2, '0')}</span>
             <div>
               <h3>{card.title}</h3>
-              <p>{card.text}</p>
+              {card.text && <p>{card.text}</p>}
             </div>
           </article>
         ))}
       </div>
+      {partnerUrl && (
+        <a class="button cards__cta" href={partnerUrl}>{buttonLabel}</a>
+      )}
     </div>
   </section>
 )}
@@ -56,5 +61,9 @@ const cards = asRecords(items)
 
   .card p {
     color: var(--c-muted);
+  }
+
+  .cards__cta {
+    margin-top: 2rem;
   }
 </style>
