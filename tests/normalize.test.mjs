@@ -189,4 +189,22 @@ describe('normalizeSite', () => {
     expect(site.pages[0].meta.title).toBe('First');
     expect(warnings.join(' ')).toContain('/A');
   });
+
+  it('falls back to stripping % for a double-encoded slug that would re-decode further', () => {
+    const { site } = normalizeSite(
+      { pages: [{ slug: '/%2541' }] },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(site.pages[0].slug).toBe('/2541');
+    expect(site.pages[0].slug).not.toMatch(/%[0-9a-fA-F]{2}/);
+  });
+
+  it('falls back to stripping % for a triple-encoded slug no matter how deep the nesting', () => {
+    const { site } = normalizeSite(
+      { pages: [{ slug: '/%252541' }] },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(site.pages[0].slug).toBe('/252541');
+    expect(site.pages[0].slug).not.toMatch(/%[0-9a-fA-F]{2}/);
+  });
 });

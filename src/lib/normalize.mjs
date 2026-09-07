@@ -17,11 +17,16 @@ function toText(value, fallback = '') {
   return typeof value === 'string' && value.trim() !== '' ? value.trim() : fallback;
 }
 
+function stripPercent(value) {
+  return value.replace(/%/g, '');
+}
+
 function decodeSlug(value) {
   try {
-    return decodeURIComponent(value);
+    const decoded = decodeURIComponent(value);
+    return /%[0-9a-fA-F]{2}/.test(decoded) ? stripPercent(value) : decoded;
   } catch {
-    return value.replace(/%/g, '');
+    return stripPercent(value);
   }
 }
 

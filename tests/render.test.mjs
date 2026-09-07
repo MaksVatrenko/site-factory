@@ -184,3 +184,32 @@ describe('percent-encoded slugs', () => {
     }
   });
 });
+
+describe('double-encoded slugs', () => {
+  it('builds a page for a double-encoded slug instead of crashing', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'site-factory-slug-'));
+    const file = join(dir, 'site.json');
+    writeFileSync(
+      file,
+      JSON.stringify({
+        domain: 'example.com',
+        locale: 'en-US',
+        brand: { name: 'DoubleEncoded' },
+        pages: [
+          { slug: '/', meta: { title: 'Home' }, blocks: [] },
+          { slug: '/%2541', meta: { title: 'Double Encoded Page' }, blocks: [] },
+        ],
+      }),
+    );
+    try {
+      const { outDir } = buildSite({
+        outDir: join('output', 'test-double-encoded-slug'),
+        env: { SITE_JSON: file },
+      });
+      expect(existsSync(join(outDir, '2541', 'index.html'))).toBe(true);
+      expect(readOutput(outDir, join('2541', 'index.html'))).toContain('Double Encoded Page');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
