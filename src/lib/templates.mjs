@@ -12,9 +12,21 @@ export function readManifest(id, root = process.cwd()) {
   if (!existsSync(file)) {
     throw new Error(`Template "${id}" not found: no manifest at ${file}`);
   }
-  const raw = JSON.parse(readFileSync(file, 'utf8'));
+  const text = readFileSync(file, 'utf8');
+  let raw;
+  try {
+    raw = JSON.parse(text);
+  } catch (err) {
+    throw new Error(`Template manifest ${file} is not valid JSON: ${err.message}`);
+  }
+  if (typeof raw.id === 'string' && raw.id !== '' && raw.id !== id) {
+    throw new Error(`Template manifest ${file} declares id "${raw.id}" but lives in folder "${id}"`);
+  }
+  if (raw.blocks !== undefined && !Array.isArray(raw.blocks)) {
+    throw new Error(`Template manifest ${file} has a "blocks" field that is not an array`);
+  }
   return {
-    id: typeof raw.id === 'string' && raw.id !== '' ? raw.id : id,
+    id,
     name: typeof raw.name === 'string' && raw.name !== '' ? raw.name : id,
     description: typeof raw.description === 'string' ? raw.description : '',
     blocks: Array.isArray(raw.blocks) ? raw.blocks.filter((b) => typeof b === 'string') : [],

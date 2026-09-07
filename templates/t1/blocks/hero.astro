@@ -1,7 +1,7 @@
 ---
 const { title, subtitle, cta, image, site } = Astro.props;
 const buttonLabel = cta || 'Подробнее';
-const buttonHref = site?.partnerUrl || '#';
+const buttonHref = site?.partnerUrl;
 ---
 
 <section class="hero section">

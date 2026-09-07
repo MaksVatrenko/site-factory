@@ -1,10 +1,21 @@
 import { describe, it, expect } from 'vitest';
+import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   listTemplates,
   readManifest,
   loadTemplate,
   missingBlockFiles,
 } from '../src/lib/templates.mjs';
+
+function makeTemplateRoot(folderId, manifestText) {
+  const root = mkdtempSync(join(tmpdir(), 'site-factory-templates-'));
+  const dir = join(root, 'templates', folderId);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, 'manifest.json'), manifestText);
+  return root;
+}
 
 describe('template registry', () => {
   it('finds at least one template', () => {
@@ -47,5 +58,31 @@ describe('template registry', () => {
   it('reports a block file that does not exist', () => {
     const broken = { id: 't1', blocks: ['hero', 'imaginary'] };
     expect(missingBlockFiles(broken)).toEqual(['imaginary']);
+  });
+
+  it('throws when a manifest id does not match its folder', () => {
+    const root = makeTemplateRoot('t1', JSON.stringify({ id: 'zzz', blocks: ['hero'] }));
+    expect(() => readManifest('t1', root)).toThrow(/t1/);
+    expect(() => readManifest('t1', root)).toThrow(/zzz/);
+  });
+
+  it('keeps using the folder name when a manifest has no id field', () => {
+    const root = makeTemplateRoot('fixture', JSON.stringify({ blocks: ['hero'] }));
+    expect(readManifest('fixture', root).id).toBe('fixture');
+  });
+
+  it('throws when blocks is present but not an array', () => {
+    const root = makeTemplateRoot('fixture', JSON.stringify({ id: 'fixture', blocks: 'hero' }));
+    expect(() => readManifest('fixture', root)).toThrow(/blocks/);
+  });
+
+  it('defaults to an empty block list when blocks is absent', () => {
+    const root = makeTemplateRoot('fixture', JSON.stringify({ id: 'fixture' }));
+    expect(readManifest('fixture', root).blocks).toEqual([]);
+  });
+
+  it('names the file when the manifest is not valid JSON', () => {
+    const root = makeTemplateRoot('fixture', '{ this is not json');
+    expect(() => readManifest('fixture', root)).toThrow(/manifest\.json/);
   });
 });
