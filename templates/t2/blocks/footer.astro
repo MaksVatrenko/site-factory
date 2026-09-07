@@ -18,7 +18,7 @@ const logoSrc = asText(site?.brand?.logo);
       </div>
       <p class="footer__copy">© {year} {site?.domain}</p>
       {site?.partnerUrl && (
-        <a class="button footer__cta" href={site.partnerUrl}>{buttonLabel}</a>
+        <a class="button footer__cta" href={site.partnerUrl} rel="nofollow sponsored">{buttonLabel}</a>
       )}
     </div>
     <p class="footer__disclaimer">{disclaimer}</p>

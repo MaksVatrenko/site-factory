@@ -14,7 +14,9 @@ const imageSrc = asText(image);
     {site?.brand?.name && <p class="eyebrow">{site.brand.name}</p>}
     <h1>{heading}</h1>
     {subtitleText && <p class="hero__subtitle">{subtitleText}</p>}
-    {site?.partnerUrl && <a class="button" href={buttonHref}>{buttonLabel}</a>}
+    {site?.partnerUrl && (
+      <a class="button" href={buttonHref} rel="nofollow sponsored">{buttonLabel}</a>
+    )}
     {imageSrc && <img class="hero__image" src={imageSrc} alt="" loading="eager" />}
   </div>
 </section>

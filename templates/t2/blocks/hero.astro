@@ -14,7 +14,9 @@ const imageSrc = asText(image);
       {site?.brand?.name && <p class="eyebrow">{site.brand.name}</p>}
       <h1>{heading}</h1>
       {subtitleText && <p class="hero__subtitle">{subtitleText}</p>}
-      {site?.partnerUrl && <a class="button" href={site.partnerUrl}>{buttonLabel}</a>}
+      {site?.partnerUrl && (
+        <a class="button" href={site.partnerUrl} rel="nofollow sponsored">{buttonLabel}</a>
+      )}
     </div>
     <div class="hero__aside">
       {imageSrc ? <img src={imageSrc} alt="" /> : <div class="hero__panel" />}

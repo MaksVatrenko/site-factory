@@ -260,3 +260,141 @@ describe('normalizeSlug hardening for hostile content (C1)', () => {
     expect(site.pages[0].slug).toBe('/日本語');
   });
 });
+
+// Follow-up review: the C1 hardening above pinned exactly the six shapes the original finding
+// named instead of the invariant behind them — it capped a segment but not the whole path,
+// checked only the last segment for "index.html", and truncated with `.slice(0, 100)`, which
+// counts UTF-16 code units rather than characters. These tests pin the invariant itself — "a
+// normalized slug is always usable as a static route and a directory path" — rather than any one
+// shape, so a fifth or sixth hostile input does not need a fifth or sixth special case.
+describe('normalizeSlug establishes the invariant, not six special cases (final-fix-3)', () => {
+  it('refuses "index.html" as the first of two segments, not only the last', () => {
+    // This exact shape (index.html first) is the one the previous fix's last-segment-only check
+    // missed: Astro's home page always writes a plain `index.html` FILE at the output root, so a
+    // *first* segment named "index.html" collides with it just as surely as a last segment
+    // collides with a sibling page's own file.
+    const { site, warnings } = normalizeSite(
+      { pages: [{ slug: '/' }, { slug: '/index.html/x' }] },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(site.pages.map((p) => p.slug)).toEqual(['/', '/page-1']);
+    expect(warnings.join(' ')).toContain('недопустим');
+  });
+
+  it('refuses "index.html" in a middle segment too', () => {
+    const { site, warnings } = normalizeSite(
+      { pages: [{ slug: '/' }, { slug: '/a/index.html/b' }] },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(site.pages.map((p) => p.slug)).toEqual(['/', '/page-1']);
+    expect(warnings.join(' ')).toContain('недопустим');
+  });
+
+  it('caps the whole path length, not just one segment, for a slug many segments deep', () => {
+    const segment = 'a'.repeat(100);
+    const deepSlug = `/${Array(12).fill(segment).join('/')}`; // 12 × 100 chars — the exact
+    // shape that used to reach mkdir as ENAMETOOLONG even though each individual segment was
+    // already under the old per-segment cap.
+    const { site } = normalizeSite(
+      { pages: [{ slug: deepSlug }] },
+      { supportedBlocks: BLOCKS },
+    );
+    const slug = site.pages[0].slug;
+    // 12 full segments would be 12 * 100 + 11 separators = 1211 characters; a real cap keeps
+    // this far short of that regardless of the exact number chosen.
+    expect(slug.length).toBeLessThan(300);
+    // Whole segments are dropped, never sliced mid-segment: what survives starts with the first
+    // complete 100-character segment untouched.
+    expect(slug.startsWith(`/${segment}`)).toBe(true);
+  });
+
+  it('truncates a segment by character, not by UTF-16 code unit, at an astral boundary', () => {
+    // 99 ASCII characters + one astral emoji (a surrogate pair) is exactly 100 *characters* but
+    // 101 UTF-16 code units. `.slice(0, 100)` — the previous fix's approach — cuts after the
+    // 100th code unit, landing inside the surrogate pair and leaving a lone high surrogate that
+    // later throws "URI malformed". A character-aware cap must keep the emoji whole.
+    const segment = `${'x'.repeat(99)}😀`;
+    const { site } = normalizeSite(
+      { pages: [{ slug: `/${segment}` }] },
+      { supportedBlocks: BLOCKS },
+    );
+    // Exact equality already proves the emoji survived as one whole, unsplit character — a
+    // split would leave a lone surrogate behind and change this string.
+    expect(site.pages[0].slug).toBe(`/${segment}`);
+  });
+
+  it('drops an astral character entirely, never split, once it falls past the cap', () => {
+    const segment = `${'x'.repeat(100)}😀`; // 101 characters — one past the cap
+    const { site } = normalizeSite(
+      { pages: [{ slug: `/${segment}` }] },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(site.pages[0].slug).toBe(`/${'x'.repeat(100)}`);
+    expect(site.pages[0].slug).not.toMatch(/[\uD800-\uDFFF]/);
+  });
+
+  it('removes an unpaired surrogate from valid JSON content instead of letting it through', () => {
+    // JSON.parse('"a\\ud800b"') is valid JSON and produces a JS string containing a lone,
+    // unpaired surrogate — nothing in the JSON spec forbids it. That surrogate has no UTF-8
+    // representation, so it must be stripped like any other unusable character rather than
+    // carried into a route param that later throws "URI malformed".
+    const raw = JSON.parse('{"slug": "/a\\ud800b"}').slug;
+    const { site } = normalizeSite({ pages: [{ slug: raw }] }, { supportedBlocks: BLOCKS });
+    expect(site.pages[0].slug).toBe('/ab');
+    expect(site.pages[0].slug).not.toMatch(/[\uD800-\uDFFF]/);
+  });
+
+  it('keeps the home page at "/" only when the slug is genuinely "/" or empty', () => {
+    const { site, warnings } = normalizeSite(
+      { pages: [{ slug: '/' }, { slug: '///' }, { slug: '..' }, { slug: '/./' }, { slug: '/\\' }] },
+      { supportedBlocks: BLOCKS },
+    );
+    // None of the four garbage slugs are a spelling of the root, so none of them may silently
+    // collapse onto it — every one gets its own page-N fallback instead, and each is distinct
+    // (the review's data-loss case: four different unusable slugs must not all collide).
+    const slugs = site.pages.map((p) => p.slug);
+    expect(slugs[0]).toBe('/');
+    expect(new Set(slugs).size).toBe(5);
+    for (const slug of slugs.slice(1)) {
+      expect(slug).toMatch(/^\/page-\d+$/);
+    }
+    // Every fallback is reported as an invalid slug, never as a duplicate of the home page.
+    expect(warnings.filter((w) => w.includes('недопустим'))).toHaveLength(4);
+    expect(warnings.some((w) => w.includes('дубликат'))).toBe(false);
+  });
+
+  it('still keeps a genuinely empty or "/" slug as the home page, not a page-N fallback', () => {
+    const { site, warnings } = normalizeSite(
+      { pages: [{ slug: '' }, { slug: '/about' }] },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(site.pages[0].slug).toBe('/');
+    expect(warnings.some((w) => w.includes('недопустим') || w.includes('page-0'))).toBe(false);
+  });
+
+  it('picks a fallback that does not collide with a real slug elsewhere in the file, in either order', () => {
+    // Naively numbering fallbacks by array position alone can produce a string ("page-1") that a
+    // different page in the same file already uses as its real, content-given slug. When that
+    // happens the invalid page's content used to be silently dropped as a "duplicate" of the
+    // real page — data loss reported as the wrong kind of warning.
+    const orderA = normalizeSite(
+      { pages: [{ slug: '/index.html' }, { slug: '/page-1' }] },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(orderA.site.pages).toHaveLength(2);
+    expect(new Set(orderA.site.pages.map((p) => p.slug)).size).toBe(2);
+    expect(orderA.site.pages.map((p) => p.slug)).toContain('/page-1');
+
+    const orderB = normalizeSite(
+      { pages: [{ slug: '/page-1' }, { slug: '/index.html' }] },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(orderB.site.pages).toHaveLength(2);
+    expect(new Set(orderB.site.pages.map((p) => p.slug)).size).toBe(2);
+    expect(orderB.site.pages.map((p) => p.slug)).toContain('/page-1');
+    // The invalid page must be reported as invalid, never folded into a "duplicate slug" warning
+    // that blames the wrong page for the collision.
+    expect(orderB.warnings.some((w) => w.includes('недопустим'))).toBe(true);
+    expect(orderB.warnings.some((w) => w.includes('дубликат'))).toBe(false);
+  });
+});

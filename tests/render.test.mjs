@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { existsSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, writeFileSync, rmSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildSite, readOutput } from './helpers/build.mjs';
+import { normalizeSite } from '../src/lib/normalize.mjs';
 
 describe('engine build', () => {
   let outDir;
@@ -136,6 +137,20 @@ describe('templates are interchangeable and distinct', () => {
   it('ships no JavaScript in any template', () => {
     for (const html of Object.values(rendered)) {
       expect(html).not.toMatch(/<script[^>]*\ssrc=/i);
+    }
+  });
+
+  // Follow-up finding: correct today on all three templates (every affiliate anchor is already
+  // gated behind `site?.partnerUrl &&`), but nothing pinned it — and the review calls an empty or
+  // "#" affiliate href worse than no link at all. The `default` example this suite builds from
+  // sets no partnerUrl at all, so `rendered` here already exercises exactly that case; every
+  // affiliate anchor across every template shares the "button" class and nothing else in any
+  // template ever renders one, so its absence is a direct proxy for "no CTA anchor at all".
+  it('renders no CTA anchor at all when partnerUrl is unset, in every template', () => {
+    for (const [template, html] of Object.entries(rendered)) {
+      expect(html, `template ${template} rendered a CTA with no partnerUrl set`).not.toMatch(
+        /<a\b[^>]*class="[^"]*\bbutton\b/,
+      );
     }
   });
 });
@@ -291,6 +306,136 @@ describe('hostile slugs that used to crash the build (C1)', () => {
   });
 });
 
+// Follow-up review: the fix above pinned exactly the six shapes the original finding listed
+// rather than the invariant behind them, and one of the four new crashes it missed was
+// introduced by that very fix (`.slice(0, 100)` truncating by UTF-16 code unit). The point of
+// this test is that NONE of the individual shapes matter — a single real build carrying a wide,
+// deliberately hostile range of slugs (long, deep, empty, dot-only, control characters, lone
+// surrogates, astral characters sitting right on the truncation boundary, "index.html" in every
+// position, mixed percent/Unicode encoding, separators only) must still succeed, and every page
+// must be accounted for: either it made it into the output, or normalizeSite's own warnings say
+// why it did not (a genuine duplicate). `normalizeSite` is called directly on the exact same
+// content as the oracle for "what should happen" — the real `astro build` then either agrees
+// with it (proving the invariant holds end to end) or crashes (proving it does not), which a
+// pure unit test on normalizeSite alone could never observe.
+describe('normalizeSlug holds as an invariant across a wide range of hostile slugs, not six special cases (final-fix-3)', () => {
+  const longSegment = 'q'.repeat(300);
+  const deepSegment = 'd'.repeat(100);
+  // Built via String.fromCharCode rather than source-level escapes, so the exact
+  // characters are unambiguous and the file itself stays plain, readable ASCII.
+  const NUL = String.fromCharCode(0);
+  const SOH = String.fromCharCode(1);
+  const STX = String.fromCharCode(2);
+  const BEL = String.fromCharCode(7);
+  const UNIT_SEPARATOR = String.fromCharCode(31);
+  const DEL = String.fromCharCode(127);
+  const HIGH_SURROGATE = String.fromCharCode(0xd800);
+  const LOW_SURROGATE = String.fromCharCode(0xdc00);
+
+  const hostilePages = [
+    { label: 'long segment', slug: `/${longSegment}` },
+    { label: 'deep path', slug: `/${Array(12).fill(deepSegment).join('/')}` },
+    { label: 'separators only', slug: '///' },
+    { label: 'dot only', slug: '..' },
+    { label: 'dot segment', slug: '/./' },
+    { label: 'lone backslash', slug: '/\\' },
+    { label: 'only control characters', slug: `/${NUL}${SOH}${STX}` },
+    { label: 'control characters amid text', slug: `/ctrl${NUL}${BEL}${UNIT_SEPARATOR}${DEL}name` },
+    { label: 'lone high surrogate', slug: `/high${HIGH_SURROGATE}surrogate` },
+    { label: 'lone low surrogate', slug: `/low${LOW_SURROGATE}surrogate` },
+    { label: 'astral character exactly at the cap', slug: `/${'x'.repeat(99)}😀` },
+    { label: 'astral character just past the cap', slug: `/${'y'.repeat(100)}😀` },
+    { label: 'index.html alone', slug: '/index.html' },
+    { label: 'index.html first of two', slug: '/index.html/tail' },
+    { label: 'index.html last of two', slug: '/head/index.html' },
+    { label: 'index.html in the middle', slug: '/head/index.html/tail' },
+    { label: 'index.html mixed case', slug: '/InDeX.HtMl' },
+    { label: 'percent-encoding mixed with literal Unicode', slug: '/%41/café' },
+    { label: 'path traversal', slug: '/../../ESCAPED' },
+    { label: 'dot segment in the middle', slug: '/a/../b' },
+    { label: 'duplicate of a later page via percent-encoding (first)', slug: '/Dup' },
+    { label: 'duplicate of an earlier page via percent-encoding (second)', slug: '/%44up' },
+  ];
+
+  function content() {
+    return {
+      domain: 'example.com',
+      locale: 'en-US',
+      brand: { name: 'Hostile Wide' },
+      pages: [
+        { slug: '/', meta: { title: 'Hostile Wide Home' }, blocks: [] },
+        ...hostilePages.map((page, i) => ({
+          slug: page.slug,
+          meta: { title: `Hostile page ${i}: ${page.label}` },
+          blocks: [],
+        })),
+      ],
+    };
+  }
+
+  function outputPathFor(outDir, slug) {
+    const parts = slug === '/' ? [] : slug.slice(1).split('/');
+    return join(outDir, ...parts, 'index.html');
+  }
+
+  function countIndexHtmlFiles(dir) {
+    let count = 0;
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) count += countIndexHtmlFiles(full);
+      else if (entry.name === 'index.html') count += 1;
+    }
+    return count;
+  }
+
+  it('builds successfully and accounts for every page, hostile or not', () => {
+    // Exactly one genuine collision is deliberately included above (two different encodings of
+    // the same real slug, "/Dup") to prove the "or was warned about" branch of the invariant —
+    // everything else here must survive as its own distinct page.
+    const { site, warnings } = normalizeSite(content(), {});
+    // 1 home page is added, 1 duplicate pair collapses to 1 survivor: net count is unchanged.
+    expect(site.pages.length).toBe(hostilePages.length);
+
+    const dir = mkdtempSync(join(tmpdir(), 'site-factory-hostile-wide-'));
+    const file = join(dir, 'site.json');
+    writeFileSync(file, JSON.stringify(content()));
+
+    try {
+      // The real build succeeding at all — no ENAMETOOLONG, no ENOTDIR, no "URI malformed" —
+      // is the core of the invariant. buildSite throws with the process's exit code and full
+      // output if it does not.
+      const { outDir, log } = buildSite({
+        outDir: join('output', 'test-hostile-wide'),
+        env: { SITE_JSON: file },
+      });
+
+      // Every surviving page (per normalizeSite, the same function the real build itself uses)
+      // must exist on disk at exactly the path its slug implies, carrying its own title.
+      for (const page of site.pages) {
+        const target = outputPathFor(outDir, page.slug);
+        expect(existsSync(target), `expected ${target} for slug ${page.slug}`).toBe(true);
+        expect(readOutput(outDir, target.slice(outDir.length + 1))).toContain(page.meta.title);
+      }
+
+      // No extra pages leaked out, and none went missing.
+      expect(countIndexHtmlFiles(outDir)).toBe(site.pages.length);
+
+      // The one deliberate duplicate must be reported as a duplicate — and everything else that
+      // needed a fallback must be reported as invalid, never folded into the duplicate warning.
+      const droppedTitles = content()
+        .pages.map((p) => p.meta.title)
+        .filter((title) => !site.pages.some((p) => p.meta.title === title));
+      expect(droppedTitles).toHaveLength(1);
+      expect(warnings.filter((w) => w.includes('дубликат'))).toHaveLength(1);
+      for (const title of droppedTitles) {
+        expect(readOutput(outDir)).not.toContain(title);
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 // Findings M1/W1/W2/carried-minor: the affiliate CTA reached only the hero (one placement, and
 // only on pages that declare one), site.brand.logo was normalized and shipped in every example
 // but rendered by nothing, t3 dropped hero.image outright, and cards/faq rendered an empty
@@ -416,6 +561,24 @@ describe('affiliate CTA reaches every placement, brand logo renders, no empty pa
         expect(homeHtml).toContain('Only Question FAQ');
         expect(homeHtml).not.toMatch(/<p[^>]*><\/p>/);
         expect(homeHtml).not.toMatch(/<dd[^>]*><\/dd>/);
+      });
+
+      // Follow-up finding: search engines expect outbound paid/affiliate links to be marked, and
+      // an unmarked affiliate network is a real SEO liability. `homeHtml` carries the hero and
+      // cards CTAs (this content's home page has both); `aboutHtml` — the hero-less page — still
+      // carries the footer CTA every page gets. Together they cover all three placements.
+      it('marks every affiliate link as nofollow sponsored', () => {
+        const anchorPattern = /<a\b[^>]*class="[^"]*\bbutton\b[^"]*"[^>]*>/g;
+        const anchors = [
+          ...homeHtml.matchAll(anchorPattern),
+          ...aboutHtml.matchAll(anchorPattern),
+        ].map((match) => match[0]);
+        // Sanity check that this actually found the hero, cards AND footer CTAs, not zero anchors
+        // vacuously "passing" the loop below.
+        expect(anchors.length).toBeGreaterThanOrEqual(3);
+        for (const anchor of anchors) {
+          expect(anchor).toMatch(/\srel="nofollow sponsored"/);
+        }
       });
     });
   }

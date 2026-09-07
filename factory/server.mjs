@@ -37,6 +37,15 @@ function trimmedString(value) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+// `trimmedString` maps every non-string value to '' — the same result as a field that was never
+// sent — which is correct for a field where absence and "use the default" are the same thing,
+// but it also means a *present* value of the wrong type (a number, an array, `null`) silently
+// passes as "absent" instead of being refused. This tells those two cases apart: `undefined`
+// (the key was never sent) is fine, anything else that is not a string is not.
+function isPresentNonString(value) {
+  return value !== undefined && typeof value !== 'string';
+}
+
 function listExamples() {
   if (!existsSync(EXAMPLES_DIR)) return [];
   return readdirSync(EXAMPLES_DIR)
@@ -212,12 +221,22 @@ export function createApp() {
 
     // Empty/absent template or scheme stay valid — they mean "use the default", which the
     // engine already resolves (loadTemplate('') and readScheme('') both fall back on their own).
+    // A *present* value of the wrong type is neither of those things, so it is refused the same
+    // way an unknown string id already is, instead of being coerced into '' and treated as absent.
+    if (isPresentNonString(body.template)) {
+      res.status(400).json({ error: 'Поле «template» должно быть строкой' });
+      return;
+    }
     const template = trimmedString(body.template);
     if (template !== '' && !listTemplates(ROOT).some((candidate) => candidate.id === template)) {
       res.status(400).json({ error: `Шаблон «${template}» не найден` });
       return;
     }
 
+    if (isPresentNonString(body.scheme)) {
+      res.status(400).json({ error: 'Поле «scheme» должно быть строкой' });
+      return;
+    }
     const scheme = trimmedString(body.scheme);
     if (scheme !== '' && !listSchemes(ROOT).includes(scheme)) {
       res.status(400).json({ error: `Цветовая схема «${scheme}» не найдена` });

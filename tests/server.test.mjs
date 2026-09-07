@@ -434,6 +434,36 @@ describe('example, template and scheme are validated against the real lists, not
       rmSync(join('output', domain), { recursive: true, force: true });
     }
   });
+
+  // Follow-up finding: `trimmedString` maps ANY non-string value (a number, an object, `null`,
+  // an array) to '' — the exact same result as a field that was never sent at all — so
+  // `{"template": 42}` used to sail past the `template !== ''` guard and silently build with the
+  // first available template instead of being refused the way an unknown *string* id already is.
+  // That is asymmetric: a caller who sends garbage of the right type gets a clear 400, but a
+  // caller who sends garbage of the wrong type gets an unannounced substitution.
+  it('refuses a present but non-string template instead of silently using the default', async () => {
+    const domain = 'non-string-template-test.com';
+    rmSync(join('output', domain), { recursive: true, force: true });
+    const response = await fetch(`${base}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ example: 'default', template: 42, domain }),
+    });
+    expect(response.status).toBe(400);
+    expect(existsSync(join('output', domain))).toBe(false);
+  });
+
+  it('refuses a present but non-string scheme instead of silently using the default', async () => {
+    const domain = 'non-string-scheme-test.com';
+    rmSync(join('output', domain), { recursive: true, force: true });
+    const response = await fetch(`${base}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ example: 'default', scheme: 42, domain }),
+    });
+    expect(response.status).toBe(400);
+    expect(existsSync(join('output', domain))).toBe(false);
+  });
 });
 
 // Finding M3: nothing followed BRAND, LOCALE, DOMAIN or PARTNER_URL all the way from the form
@@ -471,6 +501,10 @@ describe('form values reach the built HTML end to end (M3)', () => {
       expect(html).toContain('lang="fr"');
       expect(html).toContain(`<link rel="canonical" href="https://${domain}/"`);
       expect(html).toContain('href="https://partner.example/seam-test-affiliate"');
+      // The one field this test posted but never checked: a rename of GEO on either side of the
+      // server<->engine env-variable boundary would leave every other assertion here green while
+      // silently dropping meta[name=geo.region] from every built site.
+      expect(html).toContain('name="geo.region" content="ID"');
     } finally {
       rmSync(join('output', domain), { recursive: true, force: true });
     }

@@ -13,7 +13,9 @@ const imageSrc = asText(image);
     <div class="hero__badge">{site?.brand?.name}</div>
     <h1>{heading}</h1>
     {lead && <p class="hero__subtitle">{lead}</p>}
-    {site?.partnerUrl && <a class="button" href={site.partnerUrl}>{buttonLabel}</a>}
+    {site?.partnerUrl && (
+      <a class="button" href={site.partnerUrl} rel="nofollow sponsored">{buttonLabel}</a>
+    )}
     {imageSrc && <img class="hero__image" src={imageSrc} alt="" loading="eager" />}
   </div>
 </section>
