@@ -33,6 +33,10 @@ function safeName(value, fallback = '') {
   return cleaned || fallback;
 }
 
+function trimmedString(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
 function listExamples() {
   if (!existsSync(EXAMPLES_DIR)) return [];
   return readdirSync(EXAMPLES_DIR)
@@ -78,6 +82,9 @@ export function createLineSplitter(onLine) {
   return { write, flush };
 }
 
+// Exported for tests only (it lets tests start a build with a fake spawnFn instead of a real
+// Astro process). It is not a public entry point: the 409 "already running" guard lives in the
+// /api/generate route handler below, not here, so calling this directly skips that check.
 export function startBuild(options, spawnFn = spawn) {
   const build = {
     id: randomUUID(),
@@ -182,16 +189,38 @@ export function createApp() {
 
   app.post('/api/generate', (req, res) => {
     const body = req.body ?? {};
-    const example = safeName(body.example, 'default');
-    const exampleDir = join(EXAMPLES_DIR, example);
-    if (!existsSync(join(exampleDir, 'site.json'))) {
+
+    // example, template and scheme are ids the server's own list endpoints already read
+    // verbatim from disk (folder names, template ids, scheme filenames). They must be checked
+    // against those exact lists, not rewritten with safeName — safeName is for `domain`, which
+    // is correct there because that value names a directory this server creates. Mangling a
+    // real id before checking it makes a legitimately listed value fail to round-trip: it stops
+    // matching the entry it came from (see finding M2).
+    const exampleInput = trimmedString(body.example);
+    const example = exampleInput === '' ? 'default' : exampleInput;
+    if (!listExamples().includes(example)) {
       res.status(400).json({ error: `Папка с примерами «${example}» не найдена` });
       return;
     }
+    const exampleDir = join(EXAMPLES_DIR, example);
 
     const domain = safeName(body.domain, example);
     if (isBuildRunning(domain)) {
       res.status(409).json({ error: `Сборка для домена «${domain}» уже выполняется` });
+      return;
+    }
+
+    // Empty/absent template or scheme stay valid — they mean "use the default", which the
+    // engine already resolves (loadTemplate('') and readScheme('') both fall back on their own).
+    const template = trimmedString(body.template);
+    if (template !== '' && !listTemplates(ROOT).some((candidate) => candidate.id === template)) {
+      res.status(400).json({ error: `Шаблон «${template}» не найден` });
+      return;
+    }
+
+    const scheme = trimmedString(body.scheme);
+    if (scheme !== '' && !listSchemes(ROOT).includes(scheme)) {
+      res.status(400).json({ error: `Цветовая схема «${scheme}» не найдена` });
       return;
     }
 
@@ -204,8 +233,8 @@ export function createApp() {
       env: {
         SITE_JSON: join(exampleDir, 'site.json'),
         PUBLIC_DIR: existsSync(examplePublic) ? examplePublic : '',
-        TEMPLATE: safeName(body.template, ''),
-        SCHEME: safeName(body.scheme, ''),
+        TEMPLATE: template,
+        SCHEME: scheme,
         OUT_DIR: outDir,
         SITE_URL: `https://${domain}`,
         DOMAIN: domain,

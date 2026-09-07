@@ -208,3 +208,55 @@ describe('normalizeSite', () => {
     expect(site.pages[0].slug).not.toMatch(/%[0-9a-fA-F]{2}/);
   });
 });
+
+// Finding C1: normalizeSlug used to only collapse/trim slashes on the slug as a single string,
+// so it never inspected segment *content* — a traversal token, a backslash, a raw control
+// character, an over-long segment, or a segment that collides with the "index.html" Astro
+// itself writes all passed straight through unexamined. These crashed real builds (verified in
+// tests/render.test.mjs, which exercises the actual Astro path resolution); the tests below
+// pin down the pure normalizeSlug behaviour that the fix relies on.
+describe('normalizeSlug hardening for hostile content (C1)', () => {
+  it('drops "." and ".." segments instead of letting them escape the routing tree', () => {
+    const { site } = normalizeSite(
+      { pages: [{ slug: '/../../ESCAPED' }, { slug: '/./x' }] },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(site.pages.map((p) => p.slug)).toEqual(['/ESCAPED', '/x']);
+  });
+
+  it('strips backslashes and control characters out of a slug segment', () => {
+    const { site } = normalizeSite(
+      { pages: [{ slug: '/a\\b' }, { slug: '/a\nb' }, { slug: '/a\tb' }] },
+      { supportedBlocks: BLOCKS },
+    );
+    // All three sanitize down to the same value, so the last two are dropped as duplicates —
+    // proof that the existing dedup logic runs on the sanitized result, not the raw one.
+    expect(site.pages).toHaveLength(1);
+    expect(site.pages[0].slug).toBe('/ab');
+  });
+
+  it('caps an oversized slug segment at 100 characters', () => {
+    const { site } = normalizeSite(
+      { pages: [{ slug: `/${'a'.repeat(300)}` }] },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(site.pages[0].slug).toBe(`/${'a'.repeat(100)}`);
+  });
+
+  it('refuses a slug that would collide with the index.html Astro writes, falling back to page-N', () => {
+    const { site, warnings } = normalizeSite(
+      { pages: [{ slug: '/' }, { slug: '/index.html' }] },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(site.pages.map((p) => p.slug)).toEqual(['/', '/page-1']);
+    expect(warnings.join(' ')).toContain('/index.html');
+  });
+
+  it('leaves non-Latin slug characters such as Japanese untouched', () => {
+    const { site } = normalizeSite(
+      { pages: [{ slug: '/日本語' }] },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(site.pages[0].slug).toBe('/日本語');
+  });
+});

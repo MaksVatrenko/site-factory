@@ -1,6 +1,14 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { EventEmitter } from 'node:events';
-import { existsSync, mkdirSync, readdirSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { ZipArchive } from 'archiver';
 import {
@@ -283,6 +291,189 @@ describe('factory API', () => {
   it('answers 404 for an unknown build', async () => {
     const response = await fetch(`${base}/api/builds/nope`);
     expect(response.status).toBe(404);
+  });
+});
+
+// Finding M2: example, template and scheme used to be pushed through safeName — the same
+// lowercase-and-strip-unsafe-characters helper that is correct for `domain`, because a domain
+// names a directory this server creates. But these three values are ids the server's own list
+// endpoints already read verbatim from disk (folder names, template ids, scheme filenames), so
+// mangling them before checking makes a perfectly real, listed value fail to round-trip: it
+// stops matching the real entry and the request silently resolves to something else (or, for
+// `example`, is wrongly rejected as not found). The fixture ids below use a space/parentheses —
+// characters safeName replaces, not just re-cases — chosen to sort after every real t1/t2/t3
+// template and blue/dark/green scheme id, so a fallback-to-first-available would never
+// coincidentally land on the right file and mask the bug.
+describe('example, template and scheme are validated against the real lists, not rewritten (M2)', () => {
+  it('accepts an example folder name safeName would mangle into a 404', async () => {
+    const exampleId = 'My Example';
+    const exampleDir = join('data', 'examples', exampleId);
+    const domain = 'safename-example-test.com';
+    mkdirSync(exampleDir, { recursive: true });
+    writeFileSync(
+      join(exampleDir, 'site.json'),
+      JSON.stringify({
+        pages: [{ slug: '/', meta: { title: 'Fixture Example Content' }, blocks: [] }],
+      }),
+    );
+
+    try {
+      const response = await fetch(`${base}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ example: exampleId, domain }),
+      });
+      expect(response.status).toBe(200);
+
+      const data = await response.json();
+      await readUntilDone(data.buildId);
+      expect(readFileSync(join('output', domain, 'index.html'), 'utf8')).toContain(
+        'Fixture Example Content',
+      );
+    } finally {
+      rmSync(exampleDir, { recursive: true, force: true });
+      rmSync(join('output', domain), { recursive: true, force: true });
+    }
+  });
+
+  it('accepts a colour scheme id safeName would mangle past recognition', async () => {
+    const schemeId = 'warm (sunset)';
+    const schemeFile = join('styles', 'schemes', `${schemeId}.css`);
+    const domain = 'safename-scheme-test.com';
+    // Copies an existing scheme's variables verbatim (so the "every scheme defines the same
+    // variables" invariant still holds) but keeps a --c-primary no real scheme uses, so the
+    // built page can prove which file actually got read.
+    writeFileSync(schemeFile, readFileSync(join('styles', 'schemes', 'dark.css'), 'utf8'));
+
+    try {
+      const response = await fetch(`${base}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ example: 'default', template: 't1', scheme: schemeId, domain }),
+      });
+      expect(response.status).toBe(200);
+
+      const data = await response.json();
+      await readUntilDone(data.buildId);
+      expect(readFileSync(join('output', domain, 'index.html'), 'utf8')).toContain('#4d97ff');
+    } finally {
+      rmSync(schemeFile, { force: true });
+      rmSync(join('output', domain), { recursive: true, force: true });
+    }
+  });
+
+  it('accepts a template id safeName would mangle past recognition', async () => {
+    const templateId = 'warm (sunset)';
+    const templateDir = join('templates', templateId);
+    const domain = 'safename-template-test.com';
+    mkdirSync(join(templateDir, 'blocks'), { recursive: true });
+    writeFileSync(
+      join(templateDir, 'manifest.json'),
+      JSON.stringify({ id: templateId, name: 'Fixture', blocks: [], defaultScheme: 'dark' }),
+    );
+
+    try {
+      // No scheme in the request: the engine falls back to the resolved template's own
+      // defaultScheme, so the colour in the page proves which template actually got used.
+      const response = await fetch(`${base}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ example: 'default', template: templateId, domain }),
+      });
+      expect(response.status).toBe(200);
+
+      const data = await response.json();
+      await readUntilDone(data.buildId);
+      expect(readFileSync(join('output', domain, 'index.html'), 'utf8')).toContain('#4d97ff');
+    } finally {
+      rmSync(templateDir, { recursive: true, force: true });
+      rmSync(join('output', domain), { recursive: true, force: true });
+    }
+  });
+
+  it('refuses a colour scheme that is not in the real list instead of silently substituting one', async () => {
+    const domain = 'safename-scheme-reject-test.com';
+    const response = await fetch(`${base}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ example: 'default', scheme: 'totally-bogus-scheme', domain }),
+    });
+    expect(response.status).toBe(400);
+    const data = await response.json();
+    expect(data.error).toContain('totally-bogus-scheme');
+    expect(existsSync(join('output', domain))).toBe(false);
+  });
+
+  it('refuses a template that is not in the real list instead of silently substituting one', async () => {
+    const domain = 'safename-template-reject-test.com';
+    const response = await fetch(`${base}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ example: 'default', template: 'totally-bogus-template', domain }),
+    });
+    expect(response.status).toBe(400);
+    const data = await response.json();
+    expect(data.error).toContain('totally-bogus-template');
+    expect(existsSync(join('output', domain))).toBe(false);
+  });
+
+  it('still treats an absent template and scheme as "use the default"', async () => {
+    const domain = 'safename-defaults-test.com';
+    const response = await fetch(`${base}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ example: 'default', domain }),
+    });
+    expect(response.status).toBe(200);
+
+    const data = await response.json();
+    try {
+      await readUntilDone(data.buildId);
+      expect(existsSync(join('output', domain, 'index.html'))).toBe(true);
+    } finally {
+      rmSync(join('output', domain), { recursive: true, force: true });
+    }
+  });
+});
+
+// Finding M3: nothing followed BRAND, LOCALE, DOMAIN or PARTNER_URL all the way from the form
+// through the server's env plumbing into the actual built HTML — tests/server.test.mjs posted
+// brand/partnerUrl but only ever checked that the build succeeded. That gap would let the two
+// ends of the factory/server.mjs <-> src/lib/site-context.mjs env-variable contract drift (e.g.
+// a rename on one side) without a single one of the 116 existing tests noticing, even though
+// every generated site would silently lose the field. This drives a real build through the
+// public HTTP API with all four fields set and reads them back out of the generated page.
+describe('form values reach the built HTML end to end (M3)', () => {
+  it('carries brand, locale, domain and the affiliate link from the form into the built HTML', async () => {
+    const domain = 'seam-test.example';
+    const response = await fetch(`${base}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        example: 'default',
+        template: 't1',
+        scheme: 'dark',
+        domain,
+        brand: 'Seam Test Brand',
+        geo: 'ID',
+        locale: 'fr-FR',
+        partnerUrl: 'https://partner.example/seam-test-affiliate',
+      }),
+    });
+    expect(response.status).toBe(200);
+
+    const data = await response.json();
+    try {
+      await readUntilDone(data.buildId);
+
+      const html = readFileSync(join('output', domain, 'index.html'), 'utf8');
+      expect(html).toContain('Seam Test Brand');
+      expect(html).toContain('lang="fr"');
+      expect(html).toContain(`<link rel="canonical" href="https://${domain}/"`);
+      expect(html).toContain('href="https://partner.example/seam-test-affiliate"');
+    } finally {
+      rmSync(join('output', domain), { recursive: true, force: true });
+    }
   });
 });
 

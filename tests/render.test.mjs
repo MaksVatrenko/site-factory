@@ -213,3 +213,80 @@ describe('double-encoded slugs', () => {
     }
   });
 });
+
+// Finding C1: normalizeSlug only collapsed/trimmed slashes and never inspected segment
+// *content*, so these six hostile shapes reached Astro's own path resolution unexamined and
+// crashed the build outright (NoMatchingStaticPathFound from Astro's static-path matcher, or
+// ENAMETOOLONG / ENOTDIR from the eventual mkdir) — a red, exit-1 build with no site at all,
+// even though "content can never fail a build" is supposed to hold no matter what a slug
+// contains. A unit test on normalizeSlug alone would not catch this: the failure is in how
+// Astro resolves the normalized value, not in the return value by itself, so each case here
+// goes through a real `astro build`.
+describe('hostile slugs that used to crash the build (C1)', () => {
+  function buildWithSlug(slug, dirName) {
+    const dir = mkdtempSync(join(tmpdir(), 'site-factory-hostile-slug-'));
+    const file = join(dir, 'site.json');
+    writeFileSync(
+      file,
+      JSON.stringify({
+        domain: 'example.com',
+        locale: 'en-US',
+        brand: { name: 'Hostile' },
+        pages: [
+          { slug: '/', meta: { title: 'Home' }, blocks: [] },
+          { slug, meta: { title: 'Hostile Page' }, blocks: [] },
+        ],
+      }),
+    );
+    try {
+      return buildSite({ outDir: join('output', dirName), env: { SITE_JSON: file } });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  it('resolves a path-traversal slug instead of escaping the routing tree', () => {
+    const { outDir } = buildWithSlug('/../../ESCAPED', 'test-slug-traversal');
+    expect(existsSync(join(outDir, 'ESCAPED', 'index.html'))).toBe(true);
+    expect(readOutput(outDir, join('ESCAPED', 'index.html'))).toContain('Hostile Page');
+  });
+
+  it('resolves a slug containing a bare "." segment', () => {
+    const { outDir } = buildWithSlug('/./x', 'test-slug-dot-segment');
+    expect(existsSync(join(outDir, 'x', 'index.html'))).toBe(true);
+    expect(readOutput(outDir, join('x', 'index.html'))).toContain('Hostile Page');
+  });
+
+  it('strips a backslash out of a slug segment', () => {
+    const { outDir } = buildWithSlug('/a\\b', 'test-slug-backslash');
+    expect(existsSync(join(outDir, 'ab', 'index.html'))).toBe(true);
+    expect(readOutput(outDir, join('ab', 'index.html'))).toContain('Hostile Page');
+  });
+
+  it('strips a newline control character out of a slug segment', () => {
+    const { outDir } = buildWithSlug('/a\nb', 'test-slug-control-newline');
+    expect(existsSync(join(outDir, 'ab', 'index.html'))).toBe(true);
+    expect(readOutput(outDir, join('ab', 'index.html'))).toContain('Hostile Page');
+  });
+
+  it('strips a tab control character out of a slug segment', () => {
+    const { outDir } = buildWithSlug('/a\tb', 'test-slug-control-tab');
+    expect(existsSync(join(outDir, 'ab', 'index.html'))).toBe(true);
+    expect(readOutput(outDir, join('ab', 'index.html'))).toContain('Hostile Page');
+  });
+
+  it('caps an oversized slug segment instead of letting mkdir hit ENAMETOOLONG', () => {
+    const longSegment = 'a'.repeat(300);
+    const { outDir } = buildWithSlug(`/${longSegment}`, 'test-slug-too-long');
+    const capped = longSegment.slice(0, 100);
+    expect(existsSync(join(outDir, capped, 'index.html'))).toBe(true);
+    expect(readOutput(outDir, join(capped, 'index.html'))).toContain('Hostile Page');
+  });
+
+  it('refuses a slug that would collide with the index.html Astro writes, falling back to page-N', () => {
+    const { outDir, log } = buildWithSlug('/index.html', 'test-slug-index-html');
+    expect(existsSync(join(outDir, 'page-1', 'index.html'))).toBe(true);
+    expect(readOutput(outDir, join('page-1', 'index.html'))).toContain('Hostile Page');
+    expect(log).toContain('index.html');
+  });
+});

@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { describe, it, expect, afterAll } from 'vitest';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -9,8 +9,14 @@ import {
   missingBlockFiles,
 } from '../src/lib/templates.mjs';
 
+// Each fixture root created below is a real mkdtemp'd directory under the OS temp folder, which
+// nothing else ever cleans up — left alone, one accumulates per test run forever. Tracking the
+// roots this file itself creates (and only those) lets afterAll remove exactly what it made.
+const createdRoots = [];
+
 function makeTemplateRoot(folderId, manifestText) {
   const root = mkdtempSync(join(tmpdir(), 'site-factory-templates-'));
+  createdRoots.push(root);
   const dir = join(root, 'templates', folderId);
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, 'manifest.json'), manifestText);
@@ -18,6 +24,10 @@ function makeTemplateRoot(folderId, manifestText) {
 }
 
 describe('template registry', () => {
+  afterAll(() => {
+    for (const root of createdRoots) rmSync(root, { recursive: true, force: true });
+  });
+
   it('finds at least one template', () => {
     const templates = listTemplates();
     expect(templates.length).toBeGreaterThan(0);
