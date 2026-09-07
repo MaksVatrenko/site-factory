@@ -1,8 +1,15 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { EventEmitter } from 'node:events';
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
-import { createApp, createLineSplitter, startBuild } from '../factory/server.mjs';
+import { ZipArchive } from 'archiver';
+import {
+  createApp,
+  createLineSplitter,
+  startBuild,
+  countEntriesRecursively,
+  guardArchiveCompleteness,
+} from '../factory/server.mjs';
 
 let server;
 let base;
@@ -29,6 +36,59 @@ async function readUntilDone(buildId) {
   }
   await reader.cancel();
   return text;
+}
+
+// --- Minimal, dependency-free ZIP parsing — just enough to prove an archive is complete. ---
+// archiver (the only zip-related package in this project) only ever writes zips, so there is
+// no library already available to read one back with, and none may be added. These read the
+// raw bytes directly instead; the two signatures and the EOCD field offset below are the
+// entire ZIP layout this needs.
+
+const EOCD_SIGNATURE = Buffer.from([0x50, 0x4b, 0x05, 0x06]);
+const LOCAL_FILE_HEADER_SIGNATURE = Buffer.from([0x50, 0x4b, 0x03, 0x04]);
+
+// Finds the End Of Central Directory record by scanning backward from the end of the buffer
+// for its signature, then reads the total-entry-count field at offset 10 of that record.
+// Throws if no EOCD record is found — which is exactly what a truncated or otherwise
+// corrupted archive looks like, since every valid zip ends with one.
+function readZipEntryCount(buffer) {
+  for (let offset = buffer.length - EOCD_SIGNATURE.length; offset >= 0; offset -= 1) {
+    if (buffer.subarray(offset, offset + EOCD_SIGNATURE.length).equals(EOCD_SIGNATURE)) {
+      return buffer.readUInt16LE(offset + 10);
+    }
+  }
+  throw new Error('End Of Central Directory record not found — not a complete zip archive');
+}
+
+// Reads every entry name recorded in a local file header (signature 50 4B 03 04). Each
+// header's file-name length sits at a fixed offset, immediately followed by the name itself,
+// so this walks the buffer header by header without needing a real zip parser.
+function readZipEntryNames(buffer) {
+  const names = [];
+  let searchFrom = 0;
+  for (;;) {
+    const headerStart = buffer.indexOf(LOCAL_FILE_HEADER_SIGNATURE, searchFrom);
+    if (headerStart === -1) break;
+    const nameLength = buffer.readUInt16LE(headerStart + 26);
+    const extraLength = buffer.readUInt16LE(headerStart + 28);
+    const nameStart = headerStart + 30;
+    names.push(buffer.toString('utf8', nameStart, nameStart + nameLength));
+    searchFrom = nameStart + nameLength + extraLength;
+  }
+  return names;
+}
+
+// Counts every filesystem entry (files and directories alike) under `dir`, recursively — the
+// same notion of "entry" archiver itself uses when it walks a directory (a zip gets its own
+// entry per subdirectory too, not just per file), so this is what a complete archive's total
+// entry count is expected to match.
+function countFsEntriesRecursively(dir) {
+  let count = 0;
+  for (const item of readdirSync(dir, { withFileTypes: true })) {
+    count += 1;
+    if (item.isDirectory()) count += countFsEntriesRecursively(join(dir, item.name));
+  }
+  return count;
 }
 
 describe('factory API', () => {
@@ -86,14 +146,53 @@ describe('factory API', () => {
     const response = await fetch(`${base}/api/output/api-test.com/zip`);
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toContain('zip');
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    expect(bytes.length).toBeGreaterThan(100);
-    expect(String.fromCharCode(bytes[0], bytes[1])).toBe('PK');
+    const buffer = Buffer.from(await response.arrayBuffer());
+    expect(buffer.length).toBeGreaterThan(100);
+    expect(buffer.toString('ascii', 0, 2)).toBe('PK');
+
+    // Being over 100 bytes and starting with 'PK' is also true of a truncated, corrupt zip
+    // (see the test below) — actually inspect the archive: every filesystem entry on disk,
+    // nested ones included, must have made it in.
+    const expectedEntries = countFsEntriesRecursively(join('output', 'api-test.com'));
+    expect(readZipEntryCount(buffer)).toBe(expectedEntries);
+
+    const names = readZipEntryNames(buffer);
+    expect(names).toContain('about/index.html');
+    expect(names).toContain('images/logo.svg');
+  });
+
+  it('rejects a truncated copy of the same archive as corrupt', async () => {
+    const response = await fetch(`${base}/api/output/api-test.com/zip`);
+    const buffer = Buffer.from(await response.arrayBuffer());
+
+    // The central directory and the End Of Central Directory record both live at the tail of
+    // the file; chopping it off leaves the 'PK' header and well over 100 bytes intact, so the
+    // old assertions would both still pass on this — exactly the gap this test closes.
+    const truncated = buffer.subarray(0, 500);
+    expect(truncated.length).toBeGreaterThan(100);
+    expect(truncated.toString('ascii', 0, 2)).toBe('PK');
+
+    expect(() => readZipEntryCount(truncated)).toThrow();
   });
 
   it('answers 404 when there is nothing to zip', async () => {
     const response = await fetch(`${base}/api/output/never-built.com/zip`);
     expect(response.status).toBe(404);
+  });
+
+  it('refuses to zip a domain whose build is still running', async () => {
+    const domain = 'zip-during-build.com';
+    const fakeChild = new EventEmitter();
+    fakeChild.stdout = new EventEmitter();
+    fakeChild.stderr = new EventEmitter();
+    // The fake child never emits 'close', so this build stays 'running' for the life of the
+    // test — enough to prove the zip route refuses it, with no need for a real racing rebuild.
+    startBuild({ domain, outDir: join('output', domain), env: {} }, () => fakeChild);
+
+    const response = await fetch(`${base}/api/output/${domain}/zip`);
+    expect(response.status).toBe(409);
+    const data = await response.json();
+    expect(data.error).toContain(domain);
   });
 
   it('falls back to the example name when no domain is given', async () => {
@@ -214,5 +313,106 @@ describe('build process handling', () => {
 
     expect(build.status).toBe('failed');
     expect(build.lines).toEqual(['Не удалось запустить сборку: spawn astro ENOENT']);
+  });
+});
+
+// These drive the zip route's data-loss detection directly, the same way the section above
+// drives startBuild directly: hitting the route over HTTP and hoping a delete lands inside
+// archiver's directory scan from outside the process is not reliable. The first three cases
+// below exercise the decision logic with a fake archive/response; the last one reproduces a
+// genuine vanished-file race deterministically, by controlling exactly when the file is
+// deleted relative to two synchronous calls instead of relying on timing luck.
+describe('zip archive completeness guard', () => {
+  it('destroys the response when fewer entries arrive than were counted on disk', () => {
+    const archive = new EventEmitter();
+    let destroyed = false;
+    const res = { destroy: () => { destroyed = true; } };
+
+    guardArchiveCompleteness(archive, res, 3);
+    archive.emit('entry', { name: 'a' });
+    archive.emit('entry', { name: 'b' });
+    // The third entry never arrives — e.g. its file disappeared before archiver's directory
+    // scan reached it, which fires neither 'error' nor 'warning'.
+    archive.emit('end');
+
+    expect(destroyed).toBe(true);
+  });
+
+  it('leaves the response alone when every expected entry made it into the archive', () => {
+    const archive = new EventEmitter();
+    let destroyed = false;
+    const res = { destroy: () => { destroyed = true; } };
+
+    guardArchiveCompleteness(archive, res, 2);
+    archive.emit('entry', { name: 'a' });
+    archive.emit('entry', { name: 'b' });
+    archive.emit('end');
+
+    expect(destroyed).toBe(false);
+  });
+
+  it('destroys the response on a warning even when the entry count matches', () => {
+    const archive = new EventEmitter();
+    let destroyed = false;
+    const res = { destroy: () => { destroyed = true; } };
+
+    guardArchiveCompleteness(archive, res, 1);
+    archive.emit('warning', new Error('ENOENT: no such file or directory, lstat'));
+    archive.emit('entry', { name: 'a' });
+    archive.emit('end');
+
+    expect(destroyed).toBe(true);
+  });
+
+  it('counts files and directories recursively, matching what archiver emits an entry for', () => {
+    const dir = join('output', '__count-entries-guard-test__');
+    rmSync(dir, { recursive: true, force: true });
+    mkdirSync(join(dir, 'about'), { recursive: true });
+    mkdirSync(join(dir, 'images'), { recursive: true });
+    writeFileSync(join(dir, 'index.html'), 'x');
+    writeFileSync(join(dir, 'about', 'index.html'), 'x');
+    writeFileSync(join(dir, 'images', 'logo.svg'), 'x');
+
+    // index.html, about/, about/index.html, images/, images/logo.svg = 5. archiver's
+    // directory() walk (readdir-glob without `nodir`) emits an 'entry' for subdirectories
+    // too, not just for files, so this count must include them to ever match a real archive.
+    expect(countEntriesRecursively(dir)).toBe(5);
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('catches a real file deleted right after the scan starts, with no error or warning from archiver', async () => {
+    const dir = join('output', '__guard-real-race-test__');
+    rmSync(dir, { recursive: true, force: true });
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'a.txt'), 'a');
+    writeFileSync(join(dir, 'b.txt'), 'b');
+
+    const expectedEntryCount = countEntriesRecursively(dir);
+    let destroyed = false;
+    const res = { destroy: () => { destroyed = true; } };
+    const archive = new ZipArchive({ zlib: { level: 9 } });
+    let sawError = false;
+    let sawWarning = false;
+    archive.on('error', () => { sawError = true; });
+    archive.on('warning', () => { sawWarning = true; });
+    archive.on('data', () => {}); // drain so the stream actually reaches 'end'
+    guardArchiveCompleteness(archive, res, expectedEntryCount);
+
+    // archiver's directory scan only starts on a callback scheduled by directory(), not
+    // synchronously within the call itself — so deleting a file right after that call, in the
+    // same synchronous block, is guaranteed to land before the scan ever lists it. This
+    // reproduces the exact race from the finding deterministically, with no real timing luck.
+    archive.directory(dir, false);
+    unlinkSync(join(dir, 'b.txt'));
+    archive.finalize();
+
+    await new Promise((resolve) => archive.on('end', resolve));
+
+    expect(sawError).toBe(false);
+    expect(sawWarning).toBe(false);
+    expect(destroyed).toBe(true);
+
+    rmSync(dir, { recursive: true, force: true });
   });
 });

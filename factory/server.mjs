@@ -40,6 +40,10 @@ function listExamples() {
     .sort();
 }
 
+function isBuildRunning(domain) {
+  return [...builds.values()].some((build) => build.domain === domain && build.status === 'running');
+}
+
 function pushLine(build, line) {
   build.lines.push(line);
   for (const listener of build.listeners) listener.send(line);
@@ -118,6 +122,48 @@ export function startBuild(options, spawnFn = spawn) {
   return build;
 }
 
+// Counts every filesystem entry (files and directories alike) under `dir`, recursively.
+// archiver's `.directory()` walks the same tree with a glob that includes subdirectories, and
+// fires an `entry` event for each match — not just for files — so this is the count a complete
+// archive is expected to match.
+export function countEntriesRecursively(dir) {
+  let count = 0;
+  for (const item of readdirSync(dir, { withFileTypes: true })) {
+    count += 1;
+    if (item.isDirectory()) {
+      count += countEntriesRecursively(join(dir, item.name));
+    }
+  }
+  return count;
+}
+
+// Watches an in-flight archive for signs that it came out short. A file that disappears
+// between the route's existence check and archiver's own directory scan reaching it leaves no
+// 'error' and no 'warning' — just one fewer 'entry' than expected — so comparing the expected
+// and actual entry counts once the archive ends is the only way to catch that case. A
+// 'warning' (e.g. a file that vanished a little later, after the scan had already listed it,
+// but before it could be read) is treated as the same kind of failure.
+//
+// The 'end' listener is prepended so it runs before the listener `.pipe()` installs — that
+// listener calls `res.end()`, which would otherwise let a short-but-structurally-valid zip
+// complete with a clean 200 before this ever gets a chance to abort it.
+export function guardArchiveCompleteness(archive, res, expectedEntryCount) {
+  let actualEntryCount = 0;
+  let hadWarning = false;
+
+  archive.on('entry', () => {
+    actualEntryCount += 1;
+  });
+  archive.on('warning', () => {
+    hadWarning = true;
+  });
+  archive.prependListener('end', () => {
+    if (hadWarning || actualEntryCount !== expectedEntryCount) {
+      res.destroy();
+    }
+  });
+}
+
 export function createApp() {
   const app = express();
   app.use(express.json());
@@ -144,10 +190,7 @@ export function createApp() {
     }
 
     const domain = safeName(body.domain, example);
-    const hasRunningBuild = [...builds.values()].some(
-      (build) => build.domain === domain && build.status === 'running',
-    );
-    if (hasRunningBuild) {
+    if (isBuildRunning(domain)) {
       res.status(409).json({ error: `Сборка для домена «${domain}» уже выполняется` });
       return;
     }
@@ -219,15 +262,27 @@ export function createApp() {
 
   app.get('/api/output/:domain/zip', (req, res) => {
     const domain = safeName(req.params.domain, '');
+    // A build in progress can still be writing into this exact directory — refuse rather than
+    // risk archiving it mid-write, the same way a second build for the domain is refused.
+    if (isBuildRunning(domain)) {
+      res.status(409).json({ error: `Сборка для домена «${domain}» уже выполняется` });
+      return;
+    }
+
     const dir = join(OUTPUT_DIR, domain);
     if (domain === '' || !existsSync(join(dir, 'index.html'))) {
       res.status(404).json({ error: 'Собранного сайта с таким именем нет' });
       return;
     }
 
+    // Snapshot the tree now, before archiver gets its own look at it — this is what "expected"
+    // means for guardArchiveCompleteness below.
+    const expectedEntryCount = countEntriesRecursively(dir);
+
     res.attachment(`${domain}.zip`);
     const archive = new ZipArchive({ zlib: { level: 9 } });
     archive.on('error', () => res.destroy());
+    guardArchiveCompleteness(archive, res, expectedEntryCount);
     archive.pipe(res);
     archive.directory(dir, false);
     archive.finalize();
