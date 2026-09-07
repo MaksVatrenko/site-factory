@@ -58,6 +58,20 @@ describe('normalizeSite', () => {
     expect(site.pages[0].meta.title).toBe('Acme');
   });
 
+  it('trims whitespace so disk name and URL cannot disagree', () => {
+    const { site } = normalizeSite(
+      { pages: [{ slug: '/about' }, { slug: '/about /' }, { slug: '/  ' }] },
+      { supportedBlocks: BLOCKS },
+    );
+    const slugs = site.pages.map((page) => page.slug);
+    expect(slugs[0]).toBe('/about');
+    expect(slugs).not.toContain('/about ');
+    expect(new Set(slugs).size).toBe(slugs.length);
+    for (const slug of slugs) {
+      expect(slug).toBe(new URL(slug, 'https://example.com').pathname);
+    }
+  });
+
   it('normalizes slugs to a single leading slash', () => {
     const { site } = normalizeSite(
       { pages: [{ slug: '/' }, { slug: 'about/' }, { slug: '//guide' }] },

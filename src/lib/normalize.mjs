@@ -111,7 +111,10 @@ function sanitizeSlugSegment(segment) {
     characters.pop();
   }
 
-  return characters.join('');
+  // The WHATWG URL parser strips leading and trailing whitespace, so a segment keeping it would
+  // land on disk under one name while its canonical link and sitemap entry named another — two
+  // pages then claim one URL. Trimming here keeps disk, URL and prober looking at the same name.
+  return characters.join('').trim();
 }
 
 function byteLength(characters) {
