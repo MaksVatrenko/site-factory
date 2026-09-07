@@ -1,8 +1,9 @@
 ---
 import baseCss from '../../styles/base.css?raw';
+import { resolveOrigin, pageUrl } from '../lib/urls.mjs';
 
 const { site, page, scheme } = Astro.props;
-const canonical = new URL(page.slug, Astro.site ?? `https://${site.domain}`).href;
+const canonical = pageUrl(resolveOrigin(Astro.site, site.domain), page.slug);
 ---
 
 <html lang={site.lang} dir={site.dir}>

@@ -1,10 +1,11 @@
 import { loadContext } from '../lib/site-context.mjs';
+import { resolveOrigin, pageUrl, escapeXml } from '../lib/urls.mjs';
 
 export function GET(context) {
   const { site } = loadContext();
-  const origin = (context.site?.origin ?? `https://${site.domain}`).replace(/\/$/, '');
+  const origin = resolveOrigin(context.site, site.domain);
   const urls = site.pages
-    .map((page) => `  <url><loc>${origin}${page.slug}</loc></url>`)
+    .map((page) => `  <url><loc>${escapeXml(pageUrl(origin, page.slug))}</loc></url>`)
     .join('\n');
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
