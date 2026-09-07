@@ -1,0 +1,39 @@
+---
+const { title, subtitle, cta, image, site } = Astro.props;
+const buttonLabel = cta || 'Подробнее';
+const buttonHref = site?.partnerUrl || '#';
+---
+
+<section class="hero section">
+  <div class="container hero__inner">
+    {site?.brand?.name && <p class="eyebrow">{site.brand.name}</p>}
+    <h1>{title || site?.brand?.name || 'Заголовок'}</h1>
+    {subtitle && <p class="hero__subtitle">{subtitle}</p>}
+    {site?.partnerUrl && <a class="button" href={buttonHref}>{buttonLabel}</a>}
+    {image && <img class="hero__image" src={image} alt="" loading="eager" />}
+  </div>
+</section>
+
+<style>
+  .hero {
+    background: var(--c-surface);
+    text-align: center;
+  }
+
+  .hero__inner {
+    display: grid;
+    justify-items: center;
+    gap: 1.25rem;
+    max-width: 46rem;
+  }
+
+  .hero__subtitle {
+    color: var(--c-muted);
+    font-size: 1.15rem;
+  }
+
+  .hero__image {
+    margin-top: 1rem;
+    border-radius: var(--radius);
+  }
+</style>
