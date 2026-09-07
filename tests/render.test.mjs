@@ -44,9 +44,20 @@ describe('engine build', () => {
     expect(html).not.toMatch(/<link\b[^>]*\srel=["']?modulepreload["']?/i);
   });
 
+  it('renders every block type the template declares', () => {
+    const html = readOutput(outDir);
+    expect(html).toContain('Why this guide exists');
+    expect(html).toContain('What we check');
+    expect(html).toContain('Browse by topic');
+    expect(html).toContain('Questions we get a lot');
+    expect(html).toContain('Материалы носят информационный характер');
+  });
+
   it('survives a broken content file', () => {
     const broken = buildSite({ example: 'broken', outDir: join('output', 'test-broken') });
-    expect(existsSync(join(broken.outDir, 'sloppy', 'index.html'))).toBe(true);
+    const html = readOutput(broken.outDir, join('sloppy', 'index.html'));
+    expect(html).toContain('a single string');
+    expect(html).toContain('only a question');
     expect(broken.log).toContain('carousel');
   });
 

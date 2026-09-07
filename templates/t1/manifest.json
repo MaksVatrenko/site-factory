@@ -2,6 +2,6 @@
   "id": "t1",
   "name": "Классический",
   "description": "Широкий hero по центру, карточки сеткой три в ряд",
-  "blocks": ["hero", "footer"],
+  "blocks": ["hero", "richtext", "cards", "columns", "faq", "footer"],
   "defaultScheme": "blue"
 }

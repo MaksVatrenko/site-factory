@@ -1,0 +1,47 @@
+---
+import { asList, asText } from '../../_shared/props.mjs';
+
+const { heading, items } = Astro.props;
+const questions = asList(items).filter((item) => item && typeof item === 'object');
+---
+
+<section class="faq section section--surface">
+  <div class="container faq__inner">
+    {heading && <h2>{heading}</h2>}
+    <dl class="faq__list">
+      {questions.map((item) => (
+        <div class="faq__item">
+          <dt>{asText(item.q)}</dt>
+          <dd>{asText(item.a)}</dd>
+        </div>
+      ))}
+    </dl>
+  </div>
+</section>
+
+<style>
+  .faq__inner {
+    max-width: 46rem;
+  }
+
+  .faq__list {
+    margin-top: 1.75rem;
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  .faq__item {
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--c-border);
+  }
+
+  .faq__item dt {
+    font-weight: 650;
+    margin-bottom: 0.35rem;
+  }
+
+  .faq__item dd {
+    margin: 0;
+    color: var(--c-muted);
+  }
+</style>
