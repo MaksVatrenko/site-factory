@@ -150,6 +150,10 @@ select:focus {
   gap: 1rem;
 }
 
+.result[hidden] {
+  display: none;
+}
+
 .link {
   color: var(--brand);
 }
