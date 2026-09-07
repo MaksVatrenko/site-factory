@@ -58,8 +58,18 @@ export function createOutputProber({ outDir, publicDir } = {}) {
     return null;
   }
 
+  // publicDir is mirrored in BEFORE the reserved engine names are seeded, never the other way
+  // around (final-fix-6, F2). A content package can legitimately ship a public/ directory named
+  // exactly like a reserved name (Astro itself handles that shape fine — see astro's own
+  // "Skipping ... because a file with the same name exists in the public folder" behaviour) —
+  // mirroring it first means it already occupies that name before this module ever tries to seed
+  // it, so the seed step below simply finds the name taken and moves on, the correct outcome.
+  // Seeding used to run FIRST, so the mirror copy raced INTO a name this module had just written
+  // itself and threw ENOTDIR, taking the entire prober down with it — not just refusing that one
+  // name — because a single content-side directory then disabled the whole mechanism and silently
+  // handed slug resolution back to the old predictive path, which cannot save the build from a
+  // genuinely hostile slug elsewhere in the same file (see tests/render.test.mjs's F2 repro).
   try {
-    seedReservedRootFiles(root);
     if (publicDir && existsSync(publicDir)) {
       cpSync(publicDir, root, { recursive: true });
     }
@@ -67,6 +77,8 @@ export function createOutputProber({ outDir, publicDir } = {}) {
     rmSync(root, { recursive: true, force: true });
     return null;
   }
+
+  seedReservedRootFiles(root);
 
   // segments: the slug's path segments with no leading/trailing slash, e.g. [] for the site
   // root, ['about'] for "/about", ['a', 'b'] for "/a/b". Attempts the exact two filesystem calls
@@ -99,9 +111,19 @@ function seedReservedRootFiles(root) {
     // The home page's own slug ("/") is the one page allowed to legitimately produce this exact
     // file — normalize.mjs runs it through tryClaim([]) the same as any other candidate, so
     // seeding index.html here would make the real home page look like a collision with itself.
-    // sitemap.xml and robots.txt have no such carve-out: nothing renders a page for them, they
-    // are always there, and both are treated as occupied from the very start.
+    // sitemap.xml, robots.txt and .prerender have no such carve-out: nothing renders a page for
+    // them, they are always there, and all three are treated as occupied from the very start.
     if (name.toLowerCase() === MARKER_FILE) continue;
-    writeFileSync(join(root, name), '');
+    // Each name is seeded independently (final-fix-6, F2): publicDir has already been mirrored in
+    // by the time this runs (see createOutputProber above), so a name a content package's own
+    // publicDir legitimately already placed here (a real directory, most often) makes this write
+    // fail — EEXIST/EISDIR/ENOTDIR depending on shape. That failure means the name is ALREADY
+    // occupied, which is exactly the outcome seeding it would have produced anyway, so it is
+    // silently accepted rather than aborting the rest of this loop (or the whole prober) over it.
+    try {
+      writeFileSync(join(root, name), '');
+    } catch {
+      // Already occupied by a mirrored publicDir asset — nothing further to do for this name.
+    }
   }
 }

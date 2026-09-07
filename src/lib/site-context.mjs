@@ -70,6 +70,28 @@ export function loadContext(root = process.cwd()) {
     // guaranteed to fire whether the build succeeds or crashes — and rmSync is synchronous, so
     // it completes even from inside an 'exit' handler.
     process.once('exit', prober.cleanup);
+
+    // 'exit' alone misses SIGINT/SIGTERM (final-fix-6, F3): Node does not emit 'exit' for a
+    // process a signal kills outright, so Ctrl-C (or a supervisor's SIGTERM) mid-build used to
+    // leave the scratch tree — a full publicDir mirror — behind under output/ forever. Adding a
+    // listener for a signal replaces Node's own default "terminate the process" action for it, so
+    // each handler here cleans up and then re-sends the SAME signal to this same process with no
+    // listener of its own left to catch it (the `once` below already removed itself before this
+    // body runs) — the default action fires immediately after and the process still dies exactly
+    // as it would have with no handler at all, just with the scratch directory already gone.
+    for (const signal of ['SIGINT', 'SIGTERM']) {
+      process.once(signal, () => {
+        prober.cleanup();
+        process.kill(process.pid, signal);
+      });
+    }
+  } else {
+    // Final-fix-6, F5: with no prober, slug resolution silently drops back to the old predictive
+    // path — the one with no rule for a publicDir collision, a case fold, or an unassigned code
+    // point — and nothing else about a build's own log looks any different when that happens. A
+    // real crash (or a bug like final-fix-6's own F2) two steps away then looks unrelated to this,
+    // because there is nothing here to point at the moment the safety net actually went away.
+    console.warn('[factory] Проверка слагов через файловую систему недоступна — слаги разрешаются без неё');
   }
 
   const { site, warnings } = normalizeSite(raw, {

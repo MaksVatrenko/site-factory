@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { existsSync, mkdtempSync, writeFileSync, rmSync, readdirSync, readFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  writeFileSync,
+  rmSync,
+  readdirSync,
+  readFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildSite, readOutput } from './helpers/build.mjs';
@@ -392,6 +400,15 @@ describe('normalizeSlug holds as an invariant across a wide range of hostile slu
     { label: 'Greek final-sigma pair, first (ΣΟΣ) — must win its own claim, unwarned', slug: '/ΣΟΣ' },
     { label: 'Greek final-sigma pair, second (σος folds onto ΣΟΣ on APFS)', slug: '/σος' },
     { label: 'NFD café — folds onto the separate benign NFC /café page on APFS', slug: `/${'café'.normalize('NFD')}` },
+    // final-fix-6 (F1): `.prerender` is a name Astro itself occupies at the output root for the
+    // whole build — it stages this directory while generating pages and unconditionally deletes
+    // it afterward, exactly like sitemap.xml/robots.txt are always-occupied root names, except
+    // this one never survives into the finished output at all. Before this fix nothing seeded it
+    // into the scratch tree, so the prober wrongly granted it, Astro built real content there,
+    // and then deleted that content out from under itself with no warning — plain ASCII, no
+    // trickery, see the finding for the exact repro this mirrors.
+    { label: '.prerender exact match — Astro deletes this staging dir unconditionally after build', slug: '/.prerender' },
+    { label: '.prerender nested one level — same staging-dir collision, one level deeper', slug: '/.prerender/deep' },
   ];
 
   function content() {
@@ -439,6 +456,35 @@ describe('normalizeSlug holds as an invariant across a wide range of hostile slu
       else if (entry.name === 'index.html') count += 1;
     }
     return count;
+  }
+
+  // final-fix-6 (F1): reverses exactly what src/pages/sitemap.xml.js and src/lib/urls.mjs do to
+  // build each <loc> (pageUrl -> `new URL(slug, origin).href`, then escapeXml) to recover the
+  // on-disk path each sitemap entry claims to point at. Safe for every slug this file's content
+  // can produce: by the time a slug reaches site.pages it has already been stripped of raw
+  // control characters and unpaired surrogates (see sanitizeSlugSegment in normalize.mjs), which
+  // is exactly the input domain new URL()'s percent-encoding and decodeURIComponent round-trip
+  // cleanly, and none of this file's content contains a literal "&" for escapeXml to touch.
+  function sitemapLocPaths(outDir) {
+    const xml = readOutput(outDir, 'sitemap.xml');
+    const escaped = [...xml.matchAll(/<loc>([\s\S]*?)<\/loc>/g)].map((match) => match[1]);
+    return escaped.map((value) => {
+      const unescaped = value
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&apos;/g, "'")
+        .replace(/&amp;/g, '&'); // last: undoing escapeXml's own escaping order in reverse
+      const { pathname } = new URL(unescaped);
+      const segments =
+        pathname === '/'
+          ? []
+          : pathname
+              .slice(1)
+              .split('/')
+              .map((segment) => decodeURIComponent(segment));
+      return join(outDir, ...segments, 'index.html');
+    });
   }
 
   // Every `index.html` anywhere in the tree, as text — used below to confirm a page's content
@@ -560,6 +606,84 @@ describe('normalizeSlug holds as an invariant across a wide range of hostile slu
       expect(allHtml.some((html) => html.includes('straße folds onto STRASSE'))).toBe(true);
       expect(readOutput(outDir, join('ΣΟΣ', 'index.html'))).not.toContain('σος folds');
       expect(allHtml.some((html) => html.includes('σος folds onto'))).toBe(true);
+
+      // final-fix-6 (F1): the sitemap is generated from the SAME resolved site.pages list Astro
+      // writes a directory per page from, so the two can only disagree if something OUTSIDE that
+      // resolution step deletes a page's files afterward — exactly what Astro's own `.prerender/`
+      // build-staging cleanup used to do to a page slugged into that name. No URL the sitemap
+      // advertises may be missing its page on disk.
+      for (const target of sitemapLocPaths(outDir)) {
+        expect(existsSync(target), `sitemap.xml advertises a page not on disk: ${target}`).toBe(true);
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+// Final-fix-6, F2: createOutputProber used to seed its reserved-name marker FILES before
+// mirroring publicDir in. A content package can legitimately ship a public/ directory named
+// exactly like one of those reserved names (Astro itself handles that shape fine — it just skips
+// generating its own endpoint for that route) — but mirroring it SECOND meant the copy collided
+// with the marker this module had already written there itself (cpSync -> ENOTDIR), and that
+// exception took the ENTIRE prober down, not just refused this one name. With no prober,
+// normalizeSite silently fell back to the old predictive path, which has no rule at all for an
+// unassigned Unicode code point — so a completely unrelated hostile page in the SAME build then
+// crashed `astro build` outright, reintroducing the exact failure the prober exists to prevent.
+// Reproduced here exactly like that: one publicDir/sitemap.xml directory, one page no predictive
+// rule can save, in the same real build.
+describe('a publicDir asset sharing a reserved name cannot disable the whole prober (final-fix-6, F2)', () => {
+  it('still builds, still mirrors the publicDir asset, and still saves a page only a live prober can catch', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'site-factory-prober-publicdir-'));
+    const publicDir = join(dir, 'public');
+    mkdirSync(join(publicDir, 'sitemap.xml'), { recursive: true });
+    writeFileSync(join(publicDir, 'sitemap.xml', 'note.txt'), 'not actually a sitemap');
+
+    const file = join(dir, 'site.json');
+    writeFileSync(
+      file,
+      JSON.stringify({
+        domain: 'example.com',
+        locale: 'en-US',
+        brand: { name: 'ProberPublicDir' },
+        pages: [
+          { slug: '/', meta: { title: 'ProberPublicDir Home' }, blocks: [] },
+          // Only a live prober catches this shape: buildSlugCandidate never filters an unassigned
+          // code point, so the pure predictive path lets it straight through to Astro's own
+          // mkdir, which is what used to crash the build (see the ENOENT repro this mirrors in
+          // src/lib/slug-prober.mjs's own docstring, finding 1).
+          {
+            slug: `/bad${String.fromCodePoint(0x0378)}name`,
+            meta: { title: 'Unassigned Codepoint Page' },
+            blocks: [],
+          },
+        ],
+      }),
+    );
+
+    try {
+      // buildSite throws with the exit status and full output if the real `astro build` process
+      // does not exit 0 — a disabled prober crashes here (ENOENT from the unassigned code point
+      // reaching Astro's own mkdir unexamined), exactly the failure this test pins shut.
+      const { outDir, log } = buildSite({
+        outDir: join('output', 'test-prober-publicdir-collision'),
+        env: { SITE_JSON: file, PUBLIC_DIR: publicDir },
+      });
+
+      expect(existsSync(join(outDir, 'index.html'))).toBe(true);
+
+      // The unassigned-code-point page survived by falling back to a page-N — proof the PROBER,
+      // not the predictive path, resolved it (the predictive path has no rule for this shape at
+      // all, so it would have let the raw slug through unwarned instead).
+      expect(log).toContain('недопустим');
+      const fallbackTitles = readdirSync(outDir, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory() && entry.name.startsWith('page-'))
+        .map((entry) => readOutput(outDir, join(entry.name, 'index.html')));
+      expect(fallbackTitles.some((html) => html.includes('Unassigned Codepoint Page'))).toBe(true);
+
+      // The degradation warning added in final-fix-6 (F5) is specifically ABSENT — proof the
+      // prober itself was never disabled, not just that this one build happened to survive.
+      expect(log).not.toContain('Проверка слагов через файловую систему недоступна');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
