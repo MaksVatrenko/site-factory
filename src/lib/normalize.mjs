@@ -14,12 +14,12 @@ function toArray(value) {
 }
 
 function toText(value, fallback = '') {
-  return typeof value === 'string' && value.trim() !== '' ? value : fallback;
+  return typeof value === 'string' && value.trim() !== '' ? value.trim() : fallback;
 }
 
 function normalizeSlug(value, index) {
   const raw = toText(value, index === 0 ? '/' : `page-${index}`);
-  const trimmed = raw.replace(/^\/+/, '').replace(/\/+$/, '');
+  const trimmed = raw.replace(/\/+/g, '/').replace(/^\/+/, '').replace(/\/+$/, '');
   return trimmed === '' ? '/' : `/${trimmed}`;
 }
 
@@ -67,8 +67,17 @@ export function normalizeSite(raw, options = {}) {
     pages = [{}];
   }
 
-  site.pages = pages.map((page, index) => {
+  const seenSlugs = new Set();
+  const normalizedPages = [];
+
+  pages.forEach((page, index) => {
     const slug = normalizeSlug(page.slug, index);
+    if (seenSlugs.has(slug)) {
+      warnings.push(`${slug}: дубликат слага — страница пропущена`);
+      return;
+    }
+    seenSlugs.add(slug);
+
     const meta = isPlainObject(page.meta) ? page.meta : {};
     const blocks = [];
 
@@ -97,15 +106,17 @@ export function normalizeSite(raw, options = {}) {
       blocks.push({ type: 'footer', props: {} });
     }
 
-    return {
+    normalizedPages.push({
       slug,
       meta: {
         title: toText(meta.title, brand.name),
         description: toText(meta.description, ''),
       },
       blocks,
-    };
+    });
   });
+
+  site.pages = normalizedPages;
 
   return { site, warnings };
 }

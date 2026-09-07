@@ -120,4 +120,33 @@ describe('normalizeSite', () => {
     );
     expect(site.pages[0].blocks.filter((b) => b.type === 'footer')).toHaveLength(1);
   });
+
+  it('keeps the first page when two pages share a slug', () => {
+    const { site, warnings } = normalizeSite(
+      {
+        pages: [
+          { slug: '/about', meta: { title: 'First' } },
+          { slug: '/about', meta: { title: 'Second' } },
+        ],
+      },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(site.pages).toHaveLength(1);
+    expect(site.pages[0].meta.title).toBe('First');
+    expect(warnings.join(' ')).toContain('/about');
+  });
+
+  it('trims returned text values', () => {
+    const { site } = normalizeSite({ locale: ' ar-AE' }, { supportedBlocks: BLOCKS });
+    expect(site.lang).toBe('ar');
+    expect(site.dir).toBe('rtl');
+  });
+
+  it('collapses embedded double slashes inside a slug', () => {
+    const { site } = normalizeSite(
+      { pages: [{ slug: 'a//b' }] },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(site.pages[0].slug).toBe('/a/b');
+  });
 });
