@@ -8,6 +8,6 @@ export default defineConfig({
   site: process.env.SITE_URL || 'https://example.com',
   outDir: process.env.OUT_DIR || './output/preview',
   publicDir,
-  build: { format: 'directory' },
+  build: { format: 'directory', inlineStylesheets: 'always' },
   devToolbar: { enabled: false },
 });

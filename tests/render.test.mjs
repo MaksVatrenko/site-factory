@@ -44,6 +44,12 @@ describe('engine build', () => {
     expect(html).not.toMatch(/<link\b[^>]*\srel=["']?modulepreload["']?/i);
   });
 
+  it('inlines all stylesheets', () => {
+    const html = readOutput(outDir);
+    expect(html).not.toMatch(/<link\b[^>]*\srel=["']?stylesheet["']?/i);
+    expect(html).not.toContain('/_astro/');
+  });
+
   it('renders every block type the template declares', () => {
     const html = readOutput(outDir);
     expect(html).toContain('Why this guide exists');
