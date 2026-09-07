@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { existsSync } from 'node:fs';
+import { existsSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildSite, readOutput } from './helpers/build.mjs';
 
@@ -38,12 +39,34 @@ describe('engine build', () => {
   });
 
   it('ships no JavaScript bundles', () => {
-    expect(readOutput(outDir)).not.toMatch(/<script[^>]*\ssrc=/i);
+    const html = readOutput(outDir);
+    expect(html).not.toMatch(/<script\b/i);
+    expect(html).not.toMatch(/<link\b[^>]*\srel=["']?modulepreload["']?/i);
   });
 
   it('survives a broken content file', () => {
     const broken = buildSite({ example: 'broken', outDir: join('output', 'test-broken') });
     expect(existsSync(join(broken.outDir, 'sloppy', 'index.html'))).toBe(true);
     expect(broken.log).toContain('carousel');
+  });
+
+  it('fails the build when the content file does not exist', () => {
+    const missing = join('data', 'examples', 'default', 'does-not-exist.json');
+    expect(() =>
+      buildSite({ outDir: join('output', 'test-missing-json'), env: { SITE_JSON: missing } }),
+    ).toThrow(missing);
+  });
+
+  it('fails the build when the content file is not valid JSON', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'site-factory-render-'));
+    const file = join(dir, 'site.json');
+    writeFileSync(file, '{ not valid json');
+    try {
+      expect(() =>
+        buildSite({ outDir: join('output', 'test-invalid-json'), env: { SITE_JSON: file } }),
+      ).toThrow(file);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
