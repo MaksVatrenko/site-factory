@@ -57,6 +57,19 @@ function isBuildRunning(domain) {
   return [...builds.values()].some((build) => build.domain === domain && build.status === 'running');
 }
 
+// The most recently STARTED build recorded for a domain. `builds` is a Map keyed by a random
+// build id, but Map iteration visits entries in insertion order, so the last matching entry seen
+// while walking it is the most recent one. Returns undefined when this process has no record of
+// ever building this domain at all (a fresh server process, or an output folder that predates
+// it) — the caller must treat that as "unknown", not as evidence of failure.
+function latestBuildForDomain(domain) {
+  let latest;
+  for (const build of builds.values()) {
+    if (build.domain === domain) latest = build;
+  }
+  return latest;
+}
+
 function pushLine(build, line) {
   build.lines.push(line);
   for (const listener of build.listeners) listener.send(line);
@@ -314,6 +327,21 @@ export function createApp() {
     // risk archiving it mid-write, the same way a second build for the domain is refused.
     if (isBuildRunning(domain)) {
       res.status(409).json({ error: `Сборка для домена «${domain}» уже выполняется` });
+      return;
+    }
+
+    // A build that finished but failed can still leave real files behind — a previous
+    // successful build's own output, or even a crash's own partial output, including an
+    // already-written index.html if the crash happened after the home page but before the rest
+    // (see finding C1). The plain existence check below cannot tell "finished" from "died
+    // partway through", so this only refuses when the most recent attempt is actually known to
+    // have failed; no record at all (server restarted, or the folder predates this process) is
+    // not evidence of anything, and falls through to that check exactly as before.
+    const latestBuild = latestBuildForDomain(domain);
+    if (latestBuild && latestBuild.status === 'failed') {
+      res.status(409).json({
+        error: `Последняя сборка для домена «${domain}» завершилась с ошибкой — архив недоступен`,
+      });
       return;
     }
 

@@ -398,3 +398,176 @@ describe('normalizeSlug establishes the invariant, not six special cases (final-
     expect(orderB.warnings.some((w) => w.includes('дубликат'))).toBe(false);
   });
 });
+
+// final-fix-4: three more review rounds found the same pattern — each fix generalized one
+// dimension of the slug invariant and left another as a list. The previous round (above) made
+// the *character* rules (control bytes, length, index.html) a real invariant; these findings
+// close the same gap for *names* (C1), for what counts as "genuinely the root" (M1), for the
+// synthesized default a missing slug gets (M2), for how duplicates are detected (M3), and for
+// what "long enough to cap" actually means on a real filesystem (m1/m2).
+describe('final-fix-4: reserved names are a set, not one string (C1)', () => {
+  it('refuses a slug that would collide with sitemap.xml, falling back to page-N', () => {
+    const { site, warnings } = normalizeSite(
+      { pages: [{ slug: '/' }, { slug: '/sitemap.xml/deep' }] },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(site.pages.map((p) => p.slug)).toEqual(['/', '/page-1']);
+    expect(warnings.join(' ')).toContain('sitemap.xml');
+  });
+
+  it('refuses "robots.txt" as a middle segment, case-insensitively', () => {
+    // Astro's own endpoint route only ever writes the lowercase `robots.txt`, but a
+    // case-insensitive filesystem (macOS's default APFS) treats "ROBOTS.TXT" as the exact same
+    // path — the collision is real regardless of the casing a content author typed.
+    const { site, warnings } = normalizeSite(
+      { pages: [{ slug: '/' }, { slug: '/a/ROBOTS.TXT/b' }] },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(site.pages.map((p) => p.slug)).toEqual(['/', '/page-1']);
+    expect(warnings.join(' ')).toContain('недопустим');
+  });
+
+  it('refuses an exact single-segment sitemap.xml or robots.txt slug instead of letting the endpoint route swallow it silently', () => {
+    // Before this fix, `/sitemap.xml` and `/robots.txt` did not crash the build — Astro's own
+    // literal endpoint route for that exact path wins over the catch-all's generated page, so
+    // the content page simply vanished from the output with no warning at all.
+    const { site, warnings } = normalizeSite(
+      { pages: [{ slug: '/' }, { slug: '/sitemap.xml' }, { slug: '/robots.txt' }] },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(site.pages.map((p) => p.slug)).toEqual(['/', '/page-1', '/page-2']);
+    expect(warnings.filter((w) => w.includes('недопустим'))).toHaveLength(2);
+  });
+});
+
+describe('final-fix-4: only an actual "/" or absent slug may claim the root (M1)', () => {
+  it('does not let a percent-only slug that decodes to nothing hijack the real home page', () => {
+    // Reproduces the exact finding: a garbage "%" slug used to reduce to "" during decoding and
+    // silently pass the (buggy) "genuinely the root" check, stealing index.html from the page
+    // that actually asked for "/" — which was then dropped as a "duplicate" of it.
+    const { site, warnings } = normalizeSite(
+      {
+        pages: [
+          { slug: '%', meta: { title: 'GARBAGE' } },
+          { slug: '/', meta: { title: 'REAL-HOME' } },
+        ],
+      },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(site.pages).toHaveLength(2);
+    const home = site.pages.find((p) => p.slug === '/');
+    expect(home).toBeTruthy();
+    expect(home.meta.title).toBe('REAL-HOME');
+    const garbage = site.pages.find((p) => p.meta.title === 'GARBAGE');
+    expect(garbage).toBeTruthy();
+    expect(garbage.slug).toMatch(/^\/page-\d+$/);
+    expect(warnings.some((w) => w.includes('недопустим'))).toBe(true);
+    expect(warnings.some((w) => w.includes('дубликат'))).toBe(false);
+  });
+
+  it('treats "/%" and "%%%" the same way — reducing to nothing is not a spelling of the root', () => {
+    const { site, warnings } = normalizeSite(
+      {
+        pages: [
+          { slug: '/', meta: { title: 'REAL-HOME' } },
+          { slug: '/%', meta: { title: 'A' } },
+          { slug: '%%%', meta: { title: 'B' } },
+        ],
+      },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(site.pages).toHaveLength(3);
+    expect(site.pages[0].slug).toBe('/');
+    expect(new Set(site.pages.map((p) => p.slug)).size).toBe(3);
+    expect(warnings.filter((w) => w.includes('недопустим'))).toHaveLength(2);
+    expect(warnings.some((w) => w.includes('дубликат'))).toBe(false);
+  });
+});
+
+describe('final-fix-4: a missing slug\'s generated default is reserved like any other fallback (M2)', () => {
+  it('does not let a blank slug\'s "page-N" placeholder steal a slug another page really asked for', () => {
+    const { site, warnings } = normalizeSite(
+      {
+        pages: [
+          { slug: '/', meta: { title: 'Home' } },
+          { slug: '', meta: { title: 'Blank' } },
+          { slug: '/page-1', meta: { title: 'RealPageOne' } },
+        ],
+      },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(site.pages).toHaveLength(3);
+    expect(new Set(site.pages.map((p) => p.slug)).size).toBe(3);
+
+    const realPageOne = site.pages.find((p) => p.meta.title === 'RealPageOne');
+    expect(realPageOne.slug).toBe('/page-1');
+    const blank = site.pages.find((p) => p.meta.title === 'Blank');
+    expect(blank.slug).not.toBe('/page-1');
+
+    // A page with no slug at all is not a content error — it must not be reported the way
+    // garbage, unusable slug text is.
+    expect(warnings.some((w) => w.includes('недопустим'))).toBe(false);
+    expect(warnings.some((w) => w.includes('дубликат'))).toBe(false);
+  });
+});
+
+describe('final-fix-4: duplicate slugs are detected case-insensitively (M3)', () => {
+  it('collapses /about, /About and /ABOUT into one survivor, warning for each dropped case', () => {
+    const { site, warnings } = normalizeSite(
+      {
+        pages: [
+          { slug: '/about', meta: { title: 'First' } },
+          { slug: '/About', meta: { title: 'Second' } },
+          { slug: '/ABOUT', meta: { title: 'Third' } },
+        ],
+      },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(site.pages).toHaveLength(1);
+    // The survivor keeps its own original casing rather than being forced to lower case.
+    expect(site.pages[0].slug).toBe('/about');
+    expect(site.pages[0].meta.title).toBe('First');
+    expect(warnings.filter((w) => w.includes('дубликат'))).toHaveLength(2);
+  });
+});
+
+describe('final-fix-4: a slug segment is also capped by UTF-8 byte length (m1)', () => {
+  it('caps a 100-code-point CJK segment at 255 bytes, not just 100 characters', () => {
+    const segment = '日'.repeat(100); // 100 code points (exactly at the character cap) but 300
+    // UTF-8 bytes (3 bytes each) — comfortably under macOS's 255-*character* limit, but over a
+    // 255-*byte* per-component limit that ext4 and most Linux filesystems enforce.
+    const { site } = normalizeSite({ pages: [{ slug: `/${segment}` }] }, { supportedBlocks: BLOCKS });
+    const resultSegment = site.pages[0].slug.slice(1);
+    expect(resultSegment).toBe('日'.repeat(85)); // floor(255 / 3) = 85 whole characters = 255 bytes
+    expect(Buffer.byteLength(resultSegment, 'utf8')).toBe(255);
+  });
+
+  it('drops a trailing emoji whole rather than splitting its surrogate pair once the byte cap is hit', () => {
+    const segment = '😀'.repeat(64); // 64 code points (well under the 100-character cap) but
+    // 256 UTF-8 bytes (4 bytes each) — one byte over the cap.
+    const { site } = normalizeSite({ pages: [{ slug: `/${segment}` }] }, { supportedBlocks: BLOCKS });
+    const resultSegment = site.pages[0].slug.slice(1);
+    expect(resultSegment).toBe('😀'.repeat(63));
+    expect(Buffer.byteLength(resultSegment, 'utf8')).toBe(252);
+    // 63 emoji × 2 UTF-16 units each = an even length; a mid-character split would leave a lone
+    // surrogate behind and produce an odd one instead.
+    expect(resultSegment.length).toBe(126);
+  });
+});
+
+describe('final-fix-4: the path-length cap counts the same unit as the segment cap (m2)', () => {
+  it('keeps all three 60-emoji segments instead of dropping the last two to a UTF-16-unit overcount', () => {
+    // Each segment is 60 code points (well under the 100 cap) and 120 UTF-16 units. Counted in
+    // code points the whole path is 60+1+60+1+60 = 182, under the 200-character path cap, so all
+    // three must survive. The old `.length`-based count (UTF-16 units) would put the running
+    // total over 200 while still inside the second segment, silently dropping the third.
+    const segment = '😀'.repeat(60);
+    const deepSlug = `/${segment}/${segment}/${segment}`;
+    const { site } = normalizeSite({ pages: [{ slug: deepSlug }] }, { supportedBlocks: BLOCKS });
+    const segments = site.pages[0].slug.slice(1).split('/');
+    expect(segments).toHaveLength(3);
+    for (const s of segments) {
+      expect([...s]).toHaveLength(60);
+    }
+  });
+});

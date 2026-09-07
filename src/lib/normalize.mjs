@@ -1,3 +1,5 @@
+import { isReservedOutputName } from './reserved-output-names.mjs';
+
 const RTL_LANGUAGES = new Set(['ar', 'fa', 'he', 'ur']);
 const DEFAULT_BRAND = 'Site';
 const DEFAULT_DOMAIN = 'example.com';
@@ -46,22 +48,35 @@ function decodeSlug(value) {
 //   2. Each segment is capped at MAX_SLUG_SEGMENT_LENGTH *characters* (Unicode code points, not
 //      UTF-16 code units), so a multi-unit astral character is never split. Splitting one is
 //      exactly how the previous fix's `.slice(0, 100)` created a fresh "URI malformed" crash: it
-//      can cut a surrogate pair in half and leave the lone half behind.
+//      can cut a surrogate pair in half and leave the lone half behind. A second, independent cap
+//      then trims by MAX_SLUG_SEGMENT_BYTES *UTF-8 bytes* — macOS is comfortable with a
+//      100-character segment, but a single CJK or emoji character can take up to 4 UTF-8 bytes,
+//      so a 100-character segment can be 400 bytes, well past the 255-byte-per-component limit
+//      ext4 and most Linux filesystems enforce. Both caps drop whole characters from the end,
+//      never slicing one apart, for the same reason as the code-point cap above.
 //   3. The path as a whole — not just each segment — is capped at MAX_SLUG_PATH_LENGTH
-//      characters, because a chain of individually-legal segments can still add up to a path
-//      long enough for mkdir to reject with ENAMETOOLONG. Segments are dropped whole, never
-//      sliced mid-segment, once the budget runs out.
-//   4. "index.html" is refused as a segment in ANY position, not only the last: Astro's home
-//      page always writes a plain `index.html` FILE at the output root, so a first segment named
-//      "index.html" collides with it (ENOTDIR) exactly the way a last segment collides with a
-//      sibling page's own file — there is no position where the name is safe.
+//      *characters* (the same code-point unit as the segment cap, not UTF-16 code units — the
+//      two must agree, or an astral-heavy path gets truncated more aggressively than an
+//      ASCII path of the same visible length), because a chain of individually-legal segments
+//      can still add up to a path long enough for mkdir to reject with ENAMETOOLONG. Segments
+//      are dropped whole, never sliced mid-segment, once the budget runs out.
+//   4. A segment matching any name in RESERVED_ROOT_OUTPUT_NAMES (case-insensitively) is refused
+//      in ANY position, not only the last: Astro always writes each of those names as a plain
+//      FILE at the output root — the home page's own `index.html`, plus every root-level
+//      endpoint route such as `sitemap.xml`/`robots.txt` — so a segment with that name collides
+//      with it (ENOTDIR, or the same thing via a case-insensitive filesystem such as macOS's
+//      default APFS) regardless of where in the slug it appears.
 //
-// A slug that has nothing left after these rules, or that still contains "index.html" anywhere,
-// cannot be rewritten safely and is refused outright; resolvePageSlugs (below) picks a page-N
-// fallback for it that cannot collide with any other page in the file.
+// A slug that has nothing left after these rules, or that still contains a reserved name
+// anywhere, cannot be rewritten safely and is refused outright; resolvePageSlugs (below) picks a
+// page-N fallback for it that cannot collide with any other page in the file.
 const MAX_SLUG_SEGMENT_LENGTH = 100; // mirrors safeName's cap in factory/server.mjs
-const MAX_SLUG_PATH_LENGTH = 200; // a generous multiple of the segment cap, comfortably under
-// every OS's real path-length limit even once the output dir and domain are prepended
+const MAX_SLUG_SEGMENT_BYTES = 255; // the per-path-component byte limit ext4 and most Linux
+// filesystems enforce; see point 2 above.
+const MAX_SLUG_PATH_LENGTH = 200; // a generous multiple of the segment cap — comfortably under
+// every OS's real path-length limit even once the output dir and domain are prepended, since
+// each individual segment is separately held to MAX_SLUG_SEGMENT_BYTES regardless of how many
+// code points it took to get there.
 // eslint-disable-next-line no-control-regex -- deliberately matching raw control bytes
 const UNSAFE_SEGMENT_CHARS = /[\x00-\x1f\x7f\\]/g;
 
@@ -76,16 +91,30 @@ function isLoneSurrogate(char) {
 
 // Splits into Unicode characters (code points) rather than UTF-16 code units, so a length cap
 // applied against the result can never land inside a surrogate pair the way `str.slice(0, n)`
-// can.
+// can. Shared by both the segment cap and the path cap below so the two always count the same
+// unit (finding m2 — a regression two rounds ago was exactly the two disagreeing).
 function toCharacters(value) {
   return Array.from(value);
 }
 
 function sanitizeSlugSegment(segment) {
-  const characters = toCharacters(segment.replace(UNSAFE_SEGMENT_CHARS, '')).filter(
+  const cleaned = toCharacters(segment.replace(UNSAFE_SEGMENT_CHARS, '')).filter(
     (char) => !isLoneSurrogate(char),
   );
-  return characters.slice(0, MAX_SLUG_SEGMENT_LENGTH).join('');
+  const characters = cleaned.slice(0, MAX_SLUG_SEGMENT_LENGTH);
+
+  // A filesystem byte cap can't just `.slice()` the joined string — that counts UTF-16 units and
+  // can split a multi-byte character in half. Instead, whole characters are dropped from the end
+  // one at a time until the UTF-8 encoding fits, which can never produce a partial character.
+  while (characters.length > 0 && byteLength(characters) > MAX_SLUG_SEGMENT_BYTES) {
+    characters.pop();
+  }
+
+  return characters.join('');
+}
+
+function byteLength(characters) {
+  return Buffer.byteLength(characters.join(''), 'utf8');
 }
 
 // Keeps whole segments — never slices inside one, since each was already capped individually —
@@ -96,7 +125,11 @@ function limitPathLength(segments) {
   const kept = [];
   let length = 0;
   for (const segment of segments) {
-    const nextLength = length + segment.length + (kept.length > 0 ? 1 : 0);
+    // Counts code points via the same `toCharacters` the segment cap uses above — not
+    // `segment.length`, which counts UTF-16 code units and would overcount any segment holding
+    // an astral character relative to how that segment's own cap measured it (finding m2).
+    const segmentLength = toCharacters(segment).length;
+    const nextLength = length + segmentLength + (kept.length > 0 ? 1 : 0);
     if (nextLength > MAX_SLUG_PATH_LENGTH) break;
     kept.push(segment);
     length = nextLength;
@@ -104,26 +137,38 @@ function limitPathLength(segments) {
   return kept;
 }
 
-function isReservedSegment(segment) {
-  return segment.toLowerCase() === 'index.html';
-}
-
 // Pure: decides whether one page's raw slug value resolves to a usable slug and, if so, what it
-// is. Returns `slug: null` when nothing safe can be built from it — either there is nothing left
-// after sanitizing, or an "index.html" segment survives somewhere in the path — leaving
-// resolvePageSlugs (which sees every page, not just this one) to pick a fallback that cannot
-// collide with anything else in the file.
+// is. Returns `slug: null` when nothing safe can be built from it — the field was empty or
+// missing on a page other than the first, there is nothing left after sanitizing, or a reserved
+// name survives somewhere in the path — leaving resolvePageSlugs (which sees every page, not
+// just this one) to pick a fallback that cannot collide with anything else in the file.
+// `missing: true` marks the "nothing was actually provided" case specifically, so
+// resolvePageSlugs can skip the "invalid slug" warning for it: a page with no slug at all is not
+// a content error the way unusable slug text is.
 function buildSlugCandidate(value, index) {
-  const raw = toText(value, index === 0 ? '/' : `page-${index}`);
-  const decoded = decodeSlug(raw);
+  const provided = toText(value, '');
 
-  // A slug that genuinely IS the root — explicitly "/", or empty/missing content, which toText
-  // above already turned into "/" — keeps its natural home-page address. This is deliberately
-  // narrower than "resolves to nothing after sanitizing" below: garbage like "///" is not a
-  // spelling of the root, so it must not silently collide with the real home page.
-  if (decoded === '/' || decoded === '') {
-    return { slug: '/', raw };
+  // Nothing was provided at all (the field was absent, or blank/whitespace-only, which toText
+  // above already collapsed to ''). The first page keeps its natural home-page address; every
+  // other page needs its own "page-N" placeholder — built here from the page's own index purely
+  // as a *label*, not yet as a claimed slug: it still has to go through the exact same
+  // reservation as any other fallback below (finding M2), so it can never silently steal a slug
+  // some other page in the file genuinely asked for.
+  if (provided === '') {
+    if (index === 0) return { slug: '/', raw: provided };
+    return { slug: null, raw: provided, missing: true };
   }
+
+  // A slug that is explicitly "/" keeps its natural home-page address. This check runs on the
+  // ORIGINAL text, before any decoding or percent-stripping below, so a slug that merely reduces
+  // to "/" or "" *after* a lossy sanitizing step (e.g. "%", which decodeSlug strips down to "")
+  // can never be mistaken for a genuine spelling of the root (finding M1) — garbage like "///" or
+  // "%" is not a spelling of the root, so it must not silently collide with the real home page.
+  if (provided === '/') {
+    return { slug: '/', raw: provided };
+  }
+
+  const decoded = decodeSlug(provided);
 
   const segments = limitPathLength(
     decoded
@@ -132,11 +177,11 @@ function buildSlugCandidate(value, index) {
       .filter((segment) => segment !== '' && segment !== '.' && segment !== '..'),
   );
 
-  if (segments.length === 0 || segments.some(isReservedSegment)) {
-    return { slug: null, raw };
+  if (segments.length === 0 || segments.some(isReservedOutputName)) {
+    return { slug: null, raw: provided };
   }
 
-  return { slug: `/${segments.join('/')}`, raw };
+  return { slug: `/${segments.join('/')}`, raw: provided };
 }
 
 // A fallback slug must not collide with any real slug in the file — not just the ones already
@@ -170,7 +215,11 @@ function resolvePageSlugs(pages, warnings) {
     if (candidate.slug !== null) return candidate.slug;
     const fallback = pickFallbackSlug(index, reserved);
     reserved.add(fallback);
-    warnings.push(`Слаг «${candidate.raw}» недопустим — использован «${fallback}»`);
+    // A page whose slug was simply never provided is not reporting a content error — only a
+    // slug that was provided but turned out unusable gets the "invalid slug" warning.
+    if (!candidate.missing) {
+      warnings.push(`Слаг «${candidate.raw}» недопустим — использован «${fallback}»`);
+    }
     return fallback;
   });
 }
@@ -220,16 +269,22 @@ export function normalizeSite(raw, options = {}) {
   }
 
   const slugs = resolvePageSlugs(pages, warnings);
+  // Keyed by lower-cased slug: a case-insensitive filesystem (macOS's default APFS) collapses
+  // "/about", "/About" and "/ABOUT" into the exact same directory regardless of what
+  // normalizeSite thinks they are, so duplicate detection has to agree with the filesystem
+  // (finding M3). Each surviving page still keeps its own slug's original casing below — only
+  // the comparison is case-folded, not the stored value.
   const seenSlugs = new Set();
   const normalizedPages = [];
 
   pages.forEach((page, index) => {
     const slug = slugs[index];
-    if (seenSlugs.has(slug)) {
+    const dedupeKey = slug.toLowerCase();
+    if (seenSlugs.has(dedupeKey)) {
       warnings.push(`${slug}: дубликат слага — страница пропущена`);
       return;
     }
-    seenSlugs.add(slug);
+    seenSlugs.add(dedupeKey);
 
     const meta = isPlainObject(page.meta) ? page.meta : {};
     const blocks = [];

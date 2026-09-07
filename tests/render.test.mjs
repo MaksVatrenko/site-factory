@@ -355,6 +355,20 @@ describe('normalizeSlug holds as an invariant across a wide range of hostile slu
     { label: 'dot segment in the middle', slug: '/a/../b' },
     { label: 'duplicate of a later page via percent-encoding (first)', slug: '/Dup' },
     { label: 'duplicate of an earlier page via percent-encoding (second)', slug: '/%44up' },
+    // final-fix-4 (C1): sitemap.xml/robots.txt are root-level files the engine always writes,
+    // exactly like index.html — a segment matching either name collides with them the same way,
+    // in any position and regardless of case. None of these collide with each other or with
+    // anything else in this list, so they only add to the page count, they do not change the
+    // "exactly one genuine duplicate" arithmetic below.
+    { label: 'sitemap.xml first of two segments', slug: '/sitemap.xml/deep' },
+    { label: 'sitemap.xml alone, exact match', slug: '/sitemap.xml' },
+    { label: 'robots.txt in the middle, mixed case', slug: '/a/ROBOTS.TXT/b' },
+    { label: 'robots.txt alone, mixed case', slug: '/ROBOTS.TXT' },
+    // final-fix-4 (M1): each of these decodes/strips down to nothing, which must land on its
+    // own page-N fallback, never on the real home page above.
+    { label: 'percent only, reduces to nothing', slug: '%' },
+    { label: 'slash plus percent, reduces to nothing', slug: '/%' },
+    { label: 'triple percent, reduces to nothing', slug: '%%%' },
   ];
 
   function content() {
@@ -430,6 +444,90 @@ describe('normalizeSlug holds as an invariant across a wide range of hostile slu
       for (const title of droppedTitles) {
         expect(readOutput(outDir)).not.toContain(title);
       }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+// Finding M2: resolvePageSlugs reserves every real (content-given) slug before handing out
+// fallbacks, which works — but the synthesized default for a page with NO slug at all
+// ("page-${index}", built inside buildSlugCandidate) used to bypass that reservation entirely:
+// it was treated exactly like a slug a content author had typed, so it could silently steal a
+// slug some other page in the same file genuinely asked for. This drives the exact repro from
+// the finding through a real build, via a temp content file, per the prescribed method.
+describe('a missing slug\'s generated default cannot steal a slug another page really asked for (M2)', () => {
+  it('keeps the real "/page-1" page\'s own content there instead of the blank page\'s', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'site-factory-missing-slug-'));
+    const file = join(dir, 'site.json');
+    writeFileSync(
+      file,
+      JSON.stringify({
+        domain: 'example.com',
+        locale: 'en-US',
+        brand: { name: 'MissingSlug' },
+        pages: [
+          { slug: '/', meta: { title: 'Home' }, blocks: [] },
+          { meta: { title: 'Blank Slug Page' }, blocks: [] }, // slug field omitted entirely
+          { slug: '/page-1', meta: { title: 'Real Page One' }, blocks: [] },
+        ],
+      }),
+    );
+    try {
+      const { outDir } = buildSite({
+        outDir: join('output', 'test-missing-slug-default'),
+        env: { SITE_JSON: file },
+      });
+      expect(existsSync(join(outDir, 'page-1', 'index.html'))).toBe(true);
+      expect(readOutput(outDir, join('page-1', 'index.html'))).toContain('Real Page One');
+      expect(readOutput(outDir, join('page-1', 'index.html'))).not.toContain('Blank Slug Page');
+      // The blank page is still built — reserved fallback numbering bumps it to the next free
+      // "page-N" (page-2) instead of dropping it, exactly like any other fallback collision.
+      expect(existsSync(join(outDir, 'page-2', 'index.html'))).toBe(true);
+      expect(readOutput(outDir, join('page-2', 'index.html'))).toContain('Blank Slug Page');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+// Finding M3: normalizeSite's duplicate-slug detection used to compare slugs case-sensitively,
+// so "/about", "/About" and "/ABOUT" all survived as three distinct pages — right up until
+// Astro tried to write all three to the same directory on a case-insensitive filesystem (APFS,
+// macOS's default), which is exactly what this test runs on. Without normalizeSite's own
+// case-insensitive dedup, the three pages would race to write "about/index.html", and whichever
+// one Astro happens to generate last would silently overwrite the others with no warning at
+// all — so this checks not just that the build survives, but specifically that the *first*
+// page's content is what ends up on disk, proving the collision never reached Astro to begin
+// with.
+describe('case-insensitive slug duplicates are collapsed before Astro ever writes them (M3)', () => {
+  it('keeps only the first of /about, /About and /ABOUT, with its own content intact', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'site-factory-case-dup-'));
+    const file = join(dir, 'site.json');
+    writeFileSync(
+      file,
+      JSON.stringify({
+        domain: 'example.com',
+        locale: 'en-US',
+        brand: { name: 'CaseDup' },
+        pages: [
+          { slug: '/', meta: { title: 'Home' }, blocks: [] },
+          { slug: '/about', meta: { title: 'First About' }, blocks: [] },
+          { slug: '/About', meta: { title: 'Second About' }, blocks: [] },
+          { slug: '/ABOUT', meta: { title: 'Third About' }, blocks: [] },
+        ],
+      }),
+    );
+    try {
+      const { outDir } = buildSite({
+        outDir: join('output', 'test-case-insensitive-duplicate'),
+        env: { SITE_JSON: file },
+      });
+      expect(existsSync(join(outDir, 'about', 'index.html'))).toBe(true);
+      const html = readOutput(outDir, join('about', 'index.html'));
+      expect(html).toContain('First About');
+      expect(html).not.toContain('Second About');
+      expect(html).not.toContain('Third About');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

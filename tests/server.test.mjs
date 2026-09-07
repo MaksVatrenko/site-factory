@@ -232,6 +232,72 @@ describe('factory API', () => {
     await readUntilDone(start.buildId);
   });
 
+  // Finding C2: the zip route used to check only "no build currently running" and "index.html
+  // exists" — neither of which tells "finished cleanly" apart from "crashed partway through,
+  // after already writing some pages (including a home page)". A crash like the one in C1 can
+  // leave a fully-present index.html and Astro's own leftover .prerender/ server bundle sitting
+  // right next to it, and the old checks would happily zip that up and serve it as if it were a
+  // finished site. These drive startBuild directly with a fake child process (the same pattern
+  // the "still running" test above uses) so the "failed" state is reached deterministically,
+  // with no need for a real crashing build.
+  it('refuses to zip a domain whose most recent recorded build failed', async () => {
+    const domain = 'zip-after-failed-build.com';
+    rmSync(join('output', domain), { recursive: true, force: true });
+    const fakeChild = new EventEmitter();
+    fakeChild.stdout = new EventEmitter();
+    fakeChild.stderr = new EventEmitter();
+    startBuild({ domain, outDir: join('output', domain), env: {} }, () => fakeChild);
+    fakeChild.emit('close', 1); // a non-zero exit marks this build 'failed'
+
+    const response = await fetch(`${base}/api/output/${domain}/zip`);
+    expect(response.status).toBe(409);
+    const data = await response.json();
+    expect(data.error).toContain(domain);
+  });
+
+  it('refuses to zip a domain whose most recent build failed even though an index.html already exists', async () => {
+    // Reproduces the exact C1-crash scenario: a home page (and, in a real crash, a stray
+    // .prerender/ directory) already made it to disk before the build died partway through —
+    // the plain "does index.html exist" check alone would say this is fine to ship.
+    const domain = 'zip-after-failed-build-with-partial-output.com';
+    const dir = join('output', domain);
+    rmSync(dir, { recursive: true, force: true });
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'index.html'), '<html>partial</html>');
+
+    const fakeChild = new EventEmitter();
+    fakeChild.stdout = new EventEmitter();
+    fakeChild.stderr = new EventEmitter();
+    startBuild({ domain, outDir: dir, env: {} }, () => fakeChild);
+    fakeChild.emit('close', 1);
+
+    const response = await fetch(`${base}/api/output/${domain}/zip`);
+    expect(response.status).toBe(409);
+    const data = await response.json();
+    expect(data.error).toContain(domain);
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('still serves a zip when no build is recorded for the domain at all', async () => {
+    // Absence of a build record (server restarted, or the folder predates this process) is not
+    // evidence that anything failed — this domain's output is written directly to disk, with no
+    // call to startBuild, so the server has no record of it whatsoever.
+    const domain = 'zip-no-build-record.com';
+    const dir = join('output', domain);
+    rmSync(dir, { recursive: true, force: true });
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'index.html'), '<html>unrecorded but real</html>');
+
+    try {
+      const response = await fetch(`${base}/api/output/${domain}/zip`);
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toContain('zip');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('refuses a second build for a domain that already has one running', async () => {
     const domain = 'concurrent-test.com';
     const headers = { 'Content-Type': 'application/json' };
