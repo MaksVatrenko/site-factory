@@ -4,6 +4,8 @@ import { existsSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { StringDecoder } from 'node:string_decoder';
 import { fileURLToPath } from 'node:url';
+// archiver 8 ships as native ESM with no default export — only the format classes below.
+import { ZipArchive } from 'archiver';
 import express from 'express';
 import { listTemplates } from '../src/lib/templates.mjs';
 import { listSchemes } from '../src/lib/schemes.mjs';
@@ -13,6 +15,7 @@ const ROOT = join(HERE, '..');
 const EXAMPLES_DIR = join(ROOT, 'data', 'examples');
 const OUTPUT_DIR = join(ROOT, 'output');
 const ASTRO_BIN = join(ROOT, 'node_modules', '.bin', 'astro');
+const PUBLIC_UI_DIR = join(HERE, 'public');
 const PORT = Number(process.env.PORT || 3002);
 
 const builds = new Map();
@@ -213,6 +216,25 @@ export function createApp() {
     build.listeners.add(listener);
     req.on('close', () => build.listeners.delete(listener));
   });
+
+  app.get('/api/output/:domain/zip', (req, res) => {
+    const domain = safeName(req.params.domain, '');
+    const dir = join(OUTPUT_DIR, domain);
+    if (domain === '' || !existsSync(join(dir, 'index.html'))) {
+      res.status(404).json({ error: 'Собранного сайта с таким именем нет' });
+      return;
+    }
+
+    res.attachment(`${domain}.zip`);
+    const archive = new ZipArchive({ zlib: { level: 9 } });
+    archive.on('error', () => res.destroy());
+    archive.pipe(res);
+    archive.directory(dir, false);
+    archive.finalize();
+  });
+
+  app.use('/preview', express.static(OUTPUT_DIR, { index: 'index.html' }));
+  app.use(express.static(PUBLIC_UI_DIR, { index: 'index.html' }));
 
   return app;
 }

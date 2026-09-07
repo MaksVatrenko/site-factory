@@ -76,6 +76,26 @@ describe('factory API', () => {
     expect(existsSync(join('output', 'api-test.com', 'index.html'))).toBe(true);
   });
 
+  it('serves a built site for preview', async () => {
+    const response = await fetch(`${base}/preview/api-test.com/`);
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain('Find what actually works');
+  });
+
+  it('returns a zip of a built site', async () => {
+    const response = await fetch(`${base}/api/output/api-test.com/zip`);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('zip');
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    expect(bytes.length).toBeGreaterThan(100);
+    expect(String.fromCharCode(bytes[0], bytes[1])).toBe('PK');
+  });
+
+  it('answers 404 when there is nothing to zip', async () => {
+    const response = await fetch(`${base}/api/output/never-built.com/zip`);
+    expect(response.status).toBe(404);
+  });
+
   it('falls back to the example name when no domain is given', async () => {
     const start = await fetch(`${base}/api/generate`, {
       method: 'POST',
