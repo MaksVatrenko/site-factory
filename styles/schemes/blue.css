@@ -1,0 +1,10 @@
+:root {
+  --c-bg: #ffffff;
+  --c-fg: #16202f;
+  --c-surface: #f1f5f9;
+  --c-border: #dbe3ec;
+  --c-muted: #5b6b80;
+  --c-primary: #2563eb;
+  --c-primary-fg: #ffffff;
+  --c-accent: #1d4ed8;
+}
