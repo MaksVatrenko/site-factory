@@ -1,0 +1,48 @@
+---
+const { site } = Astro.props;
+const year = new Date().getFullYear();
+const disclaimer =
+  'Информация предоставлена в ознакомительных целях и может быть изменена без уведомления.';
+---
+
+<footer class="footer">
+  <div class="container footer__grid">
+    <div>
+      <p class="footer__brand">{site?.brand?.name}</p>
+      <p class="footer__copy">© {year} {site?.domain}</p>
+    </div>
+    <p class="footer__disclaimer">{disclaimer}</p>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    padding-block: 2.5rem;
+    background: var(--c-fg);
+    color: var(--c-bg);
+  }
+
+  .footer__grid {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 2rem;
+    align-items: center;
+  }
+
+  .footer__brand {
+    font-weight: 700;
+  }
+
+  .footer__copy,
+  .footer__disclaimer {
+    font-size: 0.9rem;
+    opacity: 0.75;
+  }
+
+  @media (max-width: 760px) {
+    .footer__grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+  }
+</style>

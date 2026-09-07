@@ -95,3 +95,14 @@ describe('engine build', () => {
     }
   });
 });
+
+describe('templates are interchangeable', () => {
+  it('renders the same content with t2', () => {
+    const { outDir } = buildSite({ template: 't2', scheme: 'green' });
+    const html = readOutput(outDir);
+    expect(html).toContain('Find what actually works');
+    expect(html).toContain('Questions we get a lot');
+    expect(html).toContain('#10794a');
+    expect(html).not.toMatch(/<script[^>]*\ssrc=/i);
+  });
+});
