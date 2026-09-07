@@ -1,0 +1,25 @@
+---
+import baseCss from '../../styles/base.css?raw';
+import { resolveOrigin, pageUrl } from '../lib/urls.mjs';
+
+const { site, page, scheme } = Astro.props;
+const canonical = pageUrl(resolveOrigin(Astro.site, site.domain), page.slug);
+---
+
+<html lang={site.lang} dir={site.dir}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{page.meta.title}</title>
+    {page.meta.description && <meta name="description" content={page.meta.description} />}
+    <link rel="canonical" href={canonical} />
+    {site.geo && <meta name="geo.region" content={site.geo} />}
+    <meta property="og:title" content={page.meta.title} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <style set:html={`${baseCss}\n${scheme.css}`}></style>
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

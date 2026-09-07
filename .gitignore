@@ -7,3 +7,5 @@ handoff.md
 *.log
 .env
 .env.*
+.superpowers/
+.idea/

@@ -1,0 +1,81 @@
+---
+import { asText } from '../../_shared/props.mjs';
+
+const { site, cta } = Astro.props;
+const year = new Date().getFullYear();
+const disclaimer =
+  'Информация предоставлена в ознакомительных целях и может быть изменена без уведомления.';
+const buttonLabel = asText(cta, 'Подробнее');
+const logoSrc = asText(site?.brand?.logo);
+---
+
+<footer class="footer">
+  <div class="container footer__grid">
+    <div class="footer__col">
+      <div class="footer__identity">
+        {logoSrc && <img class="footer__logo" src={logoSrc} alt="" />}
+        <p class="footer__brand">{site?.brand?.name}</p>
+      </div>
+      <p class="footer__copy">© {year} {site?.domain}</p>
+      {site?.partnerUrl && (
+        <a class="button footer__cta" href={site.partnerUrl} rel="nofollow sponsored">{buttonLabel}</a>
+      )}
+    </div>
+    <p class="footer__disclaimer">{disclaimer}</p>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    padding-block: 2.5rem;
+    background: var(--c-fg);
+    color: var(--c-bg);
+  }
+
+  .footer__grid {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 2rem;
+    align-items: center;
+  }
+
+  .footer__col {
+    display: grid;
+    gap: 0.6rem;
+    justify-items: start;
+  }
+
+  .footer__identity {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .footer__logo {
+    max-height: 2rem;
+    max-width: 8rem;
+    width: auto;
+    height: auto;
+  }
+
+  .footer__brand {
+    font-weight: 700;
+  }
+
+  .footer__copy,
+  .footer__disclaimer {
+    font-size: 0.9rem;
+    opacity: 0.75;
+  }
+
+  .footer__cta {
+    margin-top: 0.4rem;
+  }
+
+  @media (max-width: 760px) {
+    .footer__grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+  }
+</style>

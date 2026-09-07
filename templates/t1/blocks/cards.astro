@@ -1,0 +1,65 @@
+---
+import { asRecords, asText } from '../../_shared/props.mjs';
+
+const { heading, items, cta, site } = Astro.props;
+const title = asText(heading);
+const cards = asRecords(items)
+  .map((item) => ({ title: asText(item.title), text: asText(item.text) }))
+  .filter((card) => card.title !== '' || card.text !== '');
+const buttonLabel = asText(cta, 'Подробнее');
+const partnerUrl = site?.partnerUrl;
+---
+
+{cards.length > 0 && (
+  <section class="cards section section--surface">
+    <div class="container">
+      {title && <h2 class="cards__heading">{title}</h2>}
+      <div class="cards__grid">
+        {cards.map((card) => (
+          <article class="card">
+            <h3>{card.title}</h3>
+            {card.text && <p>{card.text}</p>}
+          </article>
+        ))}
+      </div>
+      {partnerUrl && (
+        <p class="cards__cta">
+          <a class="button" href={partnerUrl} rel="nofollow sponsored">{buttonLabel}</a>
+        </p>
+      )}
+    </div>
+  </section>
+)}
+
+<style>
+  .cards__heading {
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+
+  .cards__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: 1.25rem;
+  }
+
+  .card {
+    padding: 1.75rem;
+    border: 1px solid var(--c-border);
+    border-radius: var(--radius);
+    background: var(--c-bg);
+  }
+
+  .card h3 {
+    margin-bottom: 0.5rem;
+  }
+
+  .card p {
+    color: var(--c-muted);
+  }
+
+  .cards__cta {
+    margin-top: 2rem;
+    text-align: center;
+  }
+</style>

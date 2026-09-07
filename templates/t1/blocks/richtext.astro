@@ -1,0 +1,26 @@
+---
+import { asList, asText } from '../../_shared/props.mjs';
+
+const { heading, paragraphs } = Astro.props;
+const title = asText(heading);
+const items = asList(paragraphs)
+  .map((text) => asText(text))
+  .filter((text) => text !== '');
+---
+
+{items.length > 0 && (
+  <section class="richtext section">
+    <div class="container richtext__inner">
+      {title && <h2>{title}</h2>}
+      {items.map((text) => <p>{text}</p>)}
+    </div>
+  </section>
+)}
+
+<style>
+  .richtext__inner {
+    display: grid;
+    gap: 1.1rem;
+    max-width: 44rem;
+  }
+</style>

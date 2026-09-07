@@ -1,0 +1,43 @@
+---
+import { asRecords, asText } from '../../_shared/props.mjs';
+
+const { heading, items } = Astro.props;
+const title = asText(heading);
+const questions = asRecords(items)
+  .map((item) => ({ q: asText(item.q), a: asText(item.a) }))
+  .filter((entry) => entry.q !== '' || entry.a !== '');
+---
+
+{questions.length > 0 && (
+  <section class="faq section">
+    <div class="container">
+      {title && <h2>{title}</h2>}
+      <div class="faq__grid">
+        {questions.map((item) => (
+          <div class="faq__item">
+            <p class="faq__q">{item.q}</p>
+            {item.a && <p class="faq__a">{item.a}</p>}
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+)}
+
+<style>
+  .faq__grid {
+    margin-top: 2rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+    gap: 1.75rem 2.5rem;
+  }
+
+  .faq__q {
+    font-weight: 650;
+    margin-bottom: 0.4rem;
+  }
+
+  .faq__a {
+    color: var(--c-muted);
+  }
+</style>

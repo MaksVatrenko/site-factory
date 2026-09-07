@@ -1,0 +1,7 @@
+{
+  "id": "t2",
+  "name": "Разделённый",
+  "description": "Hero в две колонки, нумерованные карточки, плотная сетка",
+  "blocks": ["hero", "richtext", "cards", "columns", "faq", "footer"],
+  "defaultScheme": "green"
+}

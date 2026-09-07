@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Фабрика сайтов</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="header">
+      <h1>Фабрика сайтов</h1>
+    </header>
+
+    <nav class="tabs" id="tabs">
+      <button class="tab is-active" type="button" data-tab="generate">Генерация</button>
+      <button class="tab" type="button" data-tab="bulk">Массовая генерация</button>
+      <button class="tab" type="button" data-tab="download">Скачать с сервера</button>
+      <button class="tab" type="button" data-tab="projects">Проекты</button>
+    </nav>
+
+    <main>
+      <section class="panel is-active" data-panel="generate">
+        <p class="hint">Бренд, шаблон, цветовая схема и папка с контентом → готовый сайт в output/</p>
+
+        <form id="generate-form" class="grid">
+          <fieldset class="card">
+            <legend>Основное</legend>
+            <label>Бренд<input name="brand" type="text" placeholder="Example Guide" /></label>
+            <label>Гео<input name="geo" type="text" placeholder="ID" /></label>
+            <label>Язык<input name="locale" type="text" placeholder="en-US" /></label>
+          </fieldset>
+
+          <fieldset class="card">
+            <legend>Шаблон и контент</legend>
+            <label>Шаблон<select name="template" id="field-template"></select></label>
+            <p class="note" id="template-note"></p>
+            <label>Цветовая схема<select name="scheme" id="field-scheme"></select></label>
+            <label>Папка с примерами<select name="example" id="field-example"></select></label>
+            <p class="note">data/examples/[папка]/site.json</p>
+          </fieldset>
+
+          <fieldset class="card">
+            <legend>Сайт и партнёрка</legend>
+            <label>Адрес сайта<input name="domain" type="text" placeholder="example.com" /></label>
+            <p class="note">Пустое поле — имя папки берётся от папки с примерами</p>
+            <label>Ссылка партнёрки<input name="partnerUrl" type="url" placeholder="https://партнёрка.com/..." /></label>
+          </fieldset>
+
+          <fieldset class="card">
+            <legend>Результат</legend>
+            <p class="status" id="status" aria-live="polite">Готово к генерации</p>
+            <div class="result" id="result" hidden>
+              <a class="link" id="result-open" href="#" target="_blank" rel="noopener">Открыть сайт</a>
+              <a class="link" id="result-zip" href="#">Скачать zip</a>
+            </div>
+          </fieldset>
+        </form>
+
+        <button class="primary" id="submit" type="submit" form="generate-form">Сгенерировать</button>
+        <pre class="log" id="log" aria-live="polite"></pre>
+      </section>
+
+      <section class="panel" data-panel="bulk">
+        <p class="placeholder">Массовая генерация — в разработке.</p>
+      </section>
+
+      <section class="panel" data-panel="download">
+        <p class="placeholder">Скачивание с сервера — в разработке.</p>
+      </section>
+
+      <section class="panel" data-panel="projects">
+        <p class="placeholder">Список проектов — в разработке.</p>
+      </section>
+    </main>
+
+    <script src="app.js" type="module"></script>
+  </body>
+</html>

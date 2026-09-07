@@ -1,0 +1,51 @@
+---
+import { asText } from '../../_shared/props.mjs';
+
+const { title, subtitle, cta, image, site } = Astro.props;
+const heading = asText(title, asText(site?.brand?.name, 'Заголовок'));
+const lead = asText(subtitle);
+const buttonLabel = asText(cta, 'Подробнее');
+const imageSrc = asText(image);
+---
+
+<section class="hero">
+  <div class="shell">
+    <div class="hero__badge">{site?.brand?.name}</div>
+    <h1>{heading}</h1>
+    {lead && <p class="hero__subtitle">{lead}</p>}
+    {site?.partnerUrl && (
+      <a class="button" href={site.partnerUrl} rel="nofollow sponsored">{buttonLabel}</a>
+    )}
+    {imageSrc && <img class="hero__image" src={imageSrc} alt="" loading="eager" />}
+  </div>
+</section>
+
+<style>
+  .hero {
+    padding-block: clamp(3rem, 9vw, 6rem);
+  }
+
+  .hero__badge {
+    display: inline-block;
+    margin-bottom: 1.5rem;
+    padding: 0.35rem 0.85rem;
+    border: 1px solid var(--c-border);
+    border-radius: 999px;
+    color: var(--c-muted);
+    font-size: 0.8rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .hero__subtitle {
+    margin-block: 1.25rem 1.75rem;
+    color: var(--c-muted);
+    font-size: 1.25rem;
+  }
+
+  .hero__image {
+    margin-top: 2rem;
+    width: 100%;
+    border-radius: var(--radius-sm);
+  }
+</style>
