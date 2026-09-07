@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { StringDecoder } from 'node:string_decoder';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { listTemplates } from '../src/lib/templates.mjs';
@@ -16,12 +17,15 @@ const PORT = Number(process.env.PORT || 3002);
 
 const builds = new Map();
 
+const MAX_NAME_LENGTH = 100;
+
 function safeName(value, fallback = '') {
   const cleaned = String(value ?? '')
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9._-]+/g, '-')
     .replace(/\.{2,}/g, '.')
+    .slice(0, MAX_NAME_LENGTH)
     .replace(/^[-.]+|[-.]+$/g, '');
   return cleaned || fallback;
 }
@@ -44,7 +48,30 @@ function finishBuild(build, status) {
   build.listeners.clear();
 }
 
-function startBuild(options) {
+// Strip a trailing '\r' so CRLF output doesn't leave a stray carriage return glued to the line.
+const stripTrailingCR = (line) => line.replace(/\r$/, '');
+
+export function createLineSplitter(onLine) {
+  // A dedicated decoder holds onto a trailing partial multi-byte UTF-8 sequence until the next
+  // chunk completes it, instead of decoding each chunk in isolation and corrupting split
+  // characters into replacement characters.
+  const decoder = new StringDecoder('utf8');
+  let buffer = '';
+  const write = (chunk) => {
+    buffer += decoder.write(chunk);
+    const parts = buffer.split('\n');
+    buffer = parts.pop() ?? '';
+    for (const part of parts) onLine(stripTrailingCR(part));
+  };
+  const flush = () => {
+    buffer += decoder.end();
+    if (buffer !== '') onLine(stripTrailingCR(buffer));
+    buffer = '';
+  };
+  return { write, flush };
+}
+
+export function startBuild(options, spawnFn = spawn) {
   const build = {
     id: randomUUID(),
     status: 'running',
@@ -55,21 +82,19 @@ function startBuild(options) {
   };
   builds.set(build.id, build);
 
-  const child = spawn(ASTRO_BIN, ['build'], {
+  const child = spawnFn(ASTRO_BIN, ['build'], {
     cwd: ROOT,
     env: { ...process.env, ...options.env },
   });
 
-  let buffer = '';
-  const consume = (chunk) => {
-    buffer += chunk.toString();
-    const parts = buffer.split('\n');
-    buffer = parts.pop() ?? '';
-    for (const part of parts) pushLine(build, part);
-  };
+  // stdout and stderr are independent byte streams, so each needs its own splitter/decoder —
+  // sharing one would let a partial multi-byte character from one stream get "completed" with
+  // bytes from the other.
+  const stdoutSplitter = createLineSplitter((line) => pushLine(build, line));
+  const stderrSplitter = createLineSplitter((line) => pushLine(build, line));
 
-  child.stdout.on('data', consume);
-  child.stderr.on('data', consume);
+  child.stdout.on('data', stdoutSplitter.write);
+  child.stderr.on('data', stderrSplitter.write);
 
   child.on('error', (error) => {
     pushLine(build, `Не удалось запустить сборку: ${error.message}`);
@@ -77,7 +102,12 @@ function startBuild(options) {
   });
 
   child.on('close', (code) => {
-    if (buffer !== '') pushLine(build, buffer);
+    // A failed spawn fires both 'error' and 'close'; the 'error' handler above already
+    // finished and reported the build, so skip the redundant, confusing second report.
+    if (build.status !== 'running') return;
+
+    stdoutSplitter.flush();
+    stderrSplitter.flush();
     pushLine(build, code === 0 ? 'Готово' : `Сборка завершилась с кодом ${code}`);
     finishBuild(build, code === 0 ? 'ok' : 'failed');
   });
@@ -111,6 +141,14 @@ export function createApp() {
     }
 
     const domain = safeName(body.domain, example);
+    const hasRunningBuild = [...builds.values()].some(
+      (build) => build.domain === domain && build.status === 'running',
+    );
+    if (hasRunningBuild) {
+      res.status(409).json({ error: `Сборка для домена «${domain}» уже выполняется` });
+      return;
+    }
+
     const outDir = join(OUTPUT_DIR, domain);
     const examplePublic = join(exampleDir, 'public');
 
@@ -185,7 +223,7 @@ function openBrowser(url) {
   try {
     spawn(command, [url], { detached: true, stdio: 'ignore' }).unref();
   } catch {
-    // Открытие браузера — удобство, а не условие работы сервера.
+    // Opening the browser is a convenience, not a precondition for the server to work.
   }
 }
 
