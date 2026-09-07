@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -15,9 +15,8 @@ export function buildSite({
   rmSync(target, { recursive: true, force: true });
 
   const examplePublic = join('data', 'examples', example, 'public');
-  const log = execFileSync(ASTRO_BIN, ['build'], {
+  const result = spawnSync(ASTRO_BIN, ['build'], {
     encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
     env: {
       ...process.env,
       SITE_JSON: join('data', 'examples', example, 'site.json'),
@@ -30,7 +29,15 @@ export function buildSite({
     },
   });
 
-  return { outDir: target, log };
+  if (result.error) {
+    throw new Error(`Failed to start Astro build: ${result.error.message}`);
+  }
+
+  if (result.status !== 0) {
+    throw new Error(`Astro build exited with status ${result.status}\n${result.stdout}\n${result.stderr}`);
+  }
+
+  return { outDir: target, log: result.stdout + result.stderr };
 }
 
 export function readOutput(outDir, file = 'index.html') {
