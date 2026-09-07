@@ -2,11 +2,20 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { listTemplates } from '../src/lib/templates.mjs';
-import { listSchemes } from '../src/lib/schemes.mjs';
+import { listSchemes, readScheme } from '../src/lib/schemes.mjs';
 
 const ASTRO_BIN = join('node_modules', '.bin', 'astro');
 const EXAMPLE = process.argv[2] || 'default';
 const EXAMPLE_DIR = join('data', 'examples', EXAMPLE);
+
+// Extracts the literal value a scheme file assigns to --c-primary, so the build check below can
+// confirm that exact value made it into the HTML — not just the variable *name*, which also shows
+// up in every template's component CSS as `var(--c-primary)` regardless of whether any scheme
+// ever defined it.
+function primaryValueOf(css) {
+  const match = css.match(/--c-primary\s*:\s*([^;]+);/);
+  return match ? match[1].trim() : null;
+}
 
 if (!existsSync(join(EXAMPLE_DIR, 'site.json'))) {
   console.error(`Нет примера «${EXAMPLE}» в data/examples/`);
@@ -42,7 +51,8 @@ for (const template of templates) {
 
       const html = readFileSync(join(outDir, 'index.html'), 'utf8');
       const problems = [];
-      if (!html.includes('--c-primary')) problems.push('нет переменных схемы');
+      const primaryValue = primaryValueOf(readScheme(scheme).css);
+      if (!primaryValue || !html.includes(primaryValue)) problems.push('нет переменных схемы');
       if (/<script[^>]*\ssrc=/i.test(html)) problems.push('в выходе есть JS');
       if (/<link[^>]*\brel=["']?stylesheet["']?/i.test(html)) problems.push('есть внешний стиль');
       if (!html.includes('Find what actually works') && EXAMPLE === 'default') {

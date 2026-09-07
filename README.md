@@ -35,7 +35,7 @@ npm run build:site
 
 ```bash
 npm test              # весь набор
-npm run check:matrix  # все шаблоны × все схемы, несколько минут
+npm run check:matrix  # все шаблоны × все схемы, около 6 секунд
 ```
 
 ## Как это устроено

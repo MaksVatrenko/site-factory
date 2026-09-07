@@ -91,16 +91,34 @@ function countFsEntriesRecursively(dir) {
   return count;
 }
 
+// Both helpers below walk the source directories directly instead of calling listTemplates()/
+// listSchemes() to build the expectation — otherwise the assertions below would just be checking
+// those functions against themselves. Reading the filesystem independently means the tests still
+// catch a template or scheme the API fails to report, or one it invents, while surviving a fourth
+// template or scheme being added later.
+function templateIdsOnDisk() {
+  return readdirSync('templates')
+    .filter((name) => existsSync(join('templates', name, 'manifest.json')))
+    .sort();
+}
+
+function schemeIdsOnDisk() {
+  return readdirSync(join('styles', 'schemes'))
+    .filter((name) => name.endsWith('.css'))
+    .map((name) => name.slice(0, -'.css'.length))
+    .sort();
+}
+
 describe('factory API', () => {
   it('lists templates read from disk', async () => {
     const data = await fetch(`${base}/api/templates`).then((r) => r.json());
-    expect(data.templates.map((t) => t.id)).toEqual(['t1', 't2', 't3']);
+    expect(data.templates.map((t) => t.id)).toEqual(templateIdsOnDisk());
     expect(data.templates[0].name).toBeTruthy();
   });
 
   it('lists colour schemes read from disk', async () => {
     const data = await fetch(`${base}/api/schemes`).then((r) => r.json());
-    expect(data.schemes).toEqual(['blue', 'dark', 'green']);
+    expect(data.schemes).toEqual(schemeIdsOnDisk());
   });
 
   it('lists example folders that actually hold content', async () => {
