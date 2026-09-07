@@ -1,23 +1,28 @@
 ---
-import { asList, asText } from '../../_shared/props.mjs';
+import { asRecords, asText } from '../../_shared/props.mjs';
 
 const { heading, items } = Astro.props;
-const cards = asList(items).filter((item) => item && typeof item === 'object');
+const title = asText(heading);
+const cards = asRecords(items)
+  .map((item) => ({ title: asText(item.title), text: asText(item.text) }))
+  .filter((card) => card.title !== '' || card.text !== '');
 ---
 
-<section class="cards section section--surface">
-  <div class="container">
-    {heading && <h2 class="cards__heading">{heading}</h2>}
-    <div class="cards__grid">
-      {cards.map((card) => (
-        <article class="card">
-          <h3>{asText(card.title)}</h3>
-          <p>{asText(card.text)}</p>
-        </article>
-      ))}
+{cards.length > 0 && (
+  <section class="cards section section--surface">
+    <div class="container">
+      {title && <h2 class="cards__heading">{title}</h2>}
+      <div class="cards__grid">
+        {cards.map((card) => (
+          <article class="card">
+            <h3>{card.title}</h3>
+            <p>{card.text}</p>
+          </article>
+        ))}
+      </div>
     </div>
-  </div>
-</section>
+  </section>
+)}
 
 <style>
   .cards__heading {

@@ -6,3 +6,7 @@ export function asList(value) {
 export function asText(value, fallback = '') {
   return typeof value === 'string' && value.trim() !== '' ? value : fallback;
 }
+
+export function asRecords(value) {
+  return asList(value).filter((item) => typeof item === 'object' && !Array.isArray(item));
+}

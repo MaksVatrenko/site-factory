@@ -10,7 +10,11 @@
         { "type": "carousel", "props": { "items": [] } },
         { "type": "cards", "props": { "items": "not an array" } },
         { "type": "faq", "props": { "items": [null, { "q": "only a question" }] } },
-        { "type": "richtext", "props": { "paragraphs": "a single string" } }
+        { "type": "richtext", "props": { "paragraphs": "a single string" } },
+        { "type": "cards", "props": { "heading": "Still nothing to show", "items": "nope" } },
+        { "type": "columns", "props": { "heading": "Also empty", "items": [{ "title": "Broken links", "links": null }] } },
+        { "type": "faq", "props": { "heading": { "note": "x" }, "items": [{ "q": 1, "a": [] }] } },
+        { "type": "richtext", "props": { "heading": ["a", "b"], "paragraphs": [42, {}, ["nested"], "   "] } }
       ]
     }
   ]

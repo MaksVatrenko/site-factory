@@ -1,23 +1,28 @@
 ---
-import { asList, asText } from '../../_shared/props.mjs';
+import { asRecords, asText } from '../../_shared/props.mjs';
 
 const { heading, items } = Astro.props;
-const questions = asList(items).filter((item) => item && typeof item === 'object');
+const title = asText(heading);
+const questions = asRecords(items)
+  .map((item) => ({ q: asText(item.q), a: asText(item.a) }))
+  .filter((entry) => entry.q !== '' || entry.a !== '');
 ---
 
-<section class="faq section section--surface">
-  <div class="container faq__inner">
-    {heading && <h2>{heading}</h2>}
-    <dl class="faq__list">
-      {questions.map((item) => (
-        <div class="faq__item">
-          <dt>{asText(item.q)}</dt>
-          <dd>{asText(item.a)}</dd>
-        </div>
-      ))}
-    </dl>
-  </div>
-</section>
+{questions.length > 0 && (
+  <section class="faq section section--surface">
+    <div class="container faq__inner">
+      {title && <h2>{title}</h2>}
+      <dl class="faq__list">
+        {questions.map((item) => (
+          <div class="faq__item">
+            <dt>{item.q}</dt>
+            <dd>{item.a}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  </section>
+)}
 
 <style>
   .faq__inner {

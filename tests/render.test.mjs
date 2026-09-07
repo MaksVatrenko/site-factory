@@ -61,6 +61,20 @@ describe('engine build', () => {
     expect(broken.log).toContain('carousel');
   });
 
+  it('drops orphaned markup for empty collections and bad headings', () => {
+    const broken = buildSite({ example: 'broken', outDir: join('output', 'test-broken') });
+    const html = readOutput(broken.outDir, join('sloppy', 'index.html'));
+    expect(html).not.toContain('[object Object]');
+    expect(html).not.toContain('<h2>ab</h2>');
+    expect(html).not.toContain('Still nothing to show');
+    expect(html).not.toMatch(/<div class="cards__grid">\s*<\/div>/);
+    expect(html).not.toMatch(/<ul>\s*<\/ul>/);
+    expect(html).not.toMatch(/<p>\s*<\/p>/);
+    expect(html).not.toMatch(/<dt>\s*<\/dt>\s*<dd>\s*<\/dd>/);
+    expect(html).toContain('Also empty');
+    expect(html).toContain('Broken links');
+  });
+
   it('fails the build when the content file does not exist', () => {
     const missing = join('data', 'examples', 'default', 'does-not-exist.json');
     expect(() =>

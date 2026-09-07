@@ -1,27 +1,39 @@
 ---
-import { asList, asText } from '../../_shared/props.mjs';
+import { asRecords, asList, asText } from '../../_shared/props.mjs';
 
 const { heading, items } = Astro.props;
-const columns = asList(items).filter((item) => item && typeof item === 'object');
+const title = asText(heading);
+const columns = asRecords(items)
+  .map((item) => ({
+    title: asText(item.title),
+    links: asList(item.links)
+      .map((link) => asText(link))
+      .filter((link) => link !== ''),
+  }))
+  .filter((column) => column.title !== '' || column.links.length > 0);
 ---
 
-<section class="columns section">
-  <div class="container">
-    {heading && <h2 class="columns__heading">{heading}</h2>}
-    <div class="columns__grid">
-      {columns.map((column) => (
-        <div class="columns__item">
-          <h3>{asText(column.title)}</h3>
-          <ul>
-            {asList(column.links).map((link) => (
-              <li>{asText(link)}</li>
-            ))}
-          </ul>
-        </div>
-      ))}
+{columns.length > 0 && (
+  <section class="columns section">
+    <div class="container">
+      {title && <h2 class="columns__heading">{title}</h2>}
+      <div class="columns__grid">
+        {columns.map((column) => (
+          <div class="columns__item">
+            <h3>{column.title}</h3>
+            {column.links.length > 0 && (
+              <ul>
+                {column.links.map((link) => (
+                  <li>{link}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
-  </div>
-</section>
+  </section>
+)}
 
 <style>
   .columns__heading {
