@@ -1,0 +1,14 @@
+{
+  "brand": { "name": "Broken Example" },
+  "pages": [
+    {
+      "slug": "sloppy//",
+      "blocks": [
+        { "type": "hero" },
+        { "props": { "title": "no type at all" } },
+        "just a string",
+        { "type": "carousel", "props": { "items": [] } }
+      ]
+    }
+  ]
+}

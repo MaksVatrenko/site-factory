@@ -1,0 +1,21 @@
+---
+import Base from '../layouts/Base.astro';
+import BlockRenderer from '../components/BlockRenderer.astro';
+import { loadContext } from '../lib/site-context.mjs';
+
+export function getStaticPaths() {
+  const { site, template, scheme } = loadContext();
+  return site.pages.map((page) => ({
+    params: { slug: page.slug === '/' ? undefined : page.slug.slice(1) },
+    props: { site, page, template, scheme },
+  }));
+}
+
+const { site, page, template, scheme } = Astro.props;
+---
+
+<Base site={site} page={page} scheme={scheme}>
+  {page.blocks.map((block) => (
+    <BlockRenderer block={block} site={site} templateId={template.id} />
+  ))}
+</Base>

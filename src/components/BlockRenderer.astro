@@ -1,0 +1,9 @@
+---
+const blockModules = import.meta.glob('../../templates/*/blocks/*.astro', { eager: true });
+
+const { block, site, templateId } = Astro.props;
+const key = `../../templates/${templateId}/blocks/${block.type}.astro`;
+const Component = blockModules[key]?.default;
+---
+
+{Component && <Component {...block.props} site={site} />}

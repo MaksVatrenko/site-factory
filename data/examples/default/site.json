@@ -1,0 +1,83 @@
+{
+  "domain": "example.com",
+  "locale": "en-US",
+  "brand": { "name": "Example Guide", "logo": "images/logo.svg" },
+  "pages": [
+    {
+      "slug": "/",
+      "meta": {
+        "title": "Example Guide — honest reviews",
+        "description": "Independent reviews, comparisons and answers to common questions."
+      },
+      "blocks": [
+        {
+          "type": "hero",
+          "props": {
+            "title": "Find what actually works",
+            "subtitle": "We test, compare and explain — so you do not have to guess.",
+            "cta": "Start reading"
+          }
+        },
+        {
+          "type": "richtext",
+          "props": {
+            "heading": "Why this guide exists",
+            "paragraphs": [
+              "Most comparison pages repeat the same marketing copy. We do the opposite: every claim here comes from a test we ran ourselves.",
+              "Nothing on this page is sponsored. When something is bad, we say so plainly."
+            ]
+          }
+        },
+        {
+          "type": "cards",
+          "props": {
+            "heading": "What we check",
+            "items": [
+              { "title": "Speed", "text": "How long a first result takes on a cold start." },
+              { "title": "Price", "text": "Total cost after the trial ends, not the headline number." },
+              { "title": "Support", "text": "Response time measured over two weeks of real tickets." }
+            ]
+          }
+        },
+        {
+          "type": "columns",
+          "props": {
+            "heading": "Browse by topic",
+            "items": [
+              { "title": "Getting started", "links": ["First steps", "Common mistakes", "Checklist"] },
+              { "title": "Comparisons", "links": ["Head to head", "By budget", "By use case"] },
+              { "title": "Advanced", "links": ["Automation", "Integrations", "Migration"] }
+            ]
+          }
+        },
+        {
+          "type": "faq",
+          "props": {
+            "heading": "Questions we get a lot",
+            "items": [
+              { "q": "How often is this updated?", "a": "Every claim is re-tested at least once a quarter." },
+              { "q": "Do you accept paid placements?", "a": "No. Rankings cannot be bought." },
+              { "q": "Can I suggest a product?", "a": "Yes — send it over and it joins the testing queue." }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "slug": "/about",
+      "meta": { "title": "About Example Guide", "description": "Who runs this site and how it is funded." },
+      "blocks": [
+        {
+          "type": "richtext",
+          "props": {
+            "heading": "About us",
+            "paragraphs": [
+              "A small team that got tired of comparison sites that never compare anything.",
+              "The site is funded by affiliate links, which never affect the order of results."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
