@@ -27,196 +27,341 @@
     },
     {
       "type": "section",
-      "heading": "How to Download the 899OK App",
-      "paragraphs": [
-        "The 899OK app isn't on Google Play — that's not a bug, that's just how Bangladesh gambling apps work. Google's policy blocks real-money betting apps here, so every legit casino distributes via APK direct from their site.",
-        "Go to the official 899OK site. The download link is usually pinned to the top navigation or in the footer under \"Mobile App\". One tap gets you the file.",
-        "One rule: only download from the real 899OK site. There are copycat APKs floating around on Telegram and file-sharing groups — some of them are just fake login screens that grab your password."
-      ],
-      "table": {
-        "columns": [
-          "Spec",
-          "Value"
-        ],
-        "rows": [
-          [
-            "File size",
-            "22 MB"
-          ],
-          [
-            "Format",
-            "APK"
-          ],
-          [
-            "Requires Android",
-            "6.0 or newer"
-          ],
-          [
-            "Latest version",
-            "4.1.0"
-          ],
-          [
-            "Update cycle",
-            "Every 4–6 weeks"
-          ],
-          [
-            "Signature",
-            "Verified by 899OK development team"
-          ]
-        ]
-      }
-    },
-    {
-      "type": "section",
-      "heading": "899OK APK Installation Guide for Android",
-      "paragraphs": [
-        "Most players in Bangladesh are on Android, so this bit will feel familiar. The whole install takes under two minutes.",
-        "1. Tap the Android download button on the 899OK site — the .apk file saves to Downloads",
-        "2. Allow \"install from unknown sources\" — first time only (Android 6–7: Settings → Security → toggle \"Unknown sources\"; Android 8+: popup will ask \"Allow this browser to install apps?\")",
-        "3. Open the .apk from your notification bar or file manager",
-        "4. Tap Install — takes about 20 seconds",
-        "5. Open the app, log in or register, and start playing",
-        "The real 899OK app never asks for SMS or contact access. If any APK asks for those, cancel the install — it's fake."
-      ],
-      "table": {
-        "columns": [
-          "Permission",
-          "Purpose",
-          "Allow?"
-        ],
-        "rows": [
-          [
-            "Storage",
-            "Save APK, cache game files",
-            "Yes"
-          ],
-          [
-            "Notifications",
-            "Bonus alerts, match starts",
-            "Optional"
-          ],
-          [
-            "Camera",
-            "KYC selfie for withdrawals",
-            "Only during KYC"
-          ],
-          [
-            "Location",
-            "Country verification",
-            "Optional"
-          ],
-          [
-            "Contacts / SMS",
-            "Never requested",
-            "Reject if asked"
-          ]
-        ]
-      },
-      "subsections": [
+      "content": [
         {
-          "heading": "Step 1 — Grab the APK",
-          "paragraphs": [
-            "Only from the official site. Mirror sites often ship modified builds with hidden trackers."
+          "type": "title",
+          "tag": "h2",
+          "text": "How to Download the 899OK App"
+        },
+        {
+          "type": "text",
+          "text": "The 899OK app isn't on Google Play — that's not a bug, that's just how Bangladesh gambling apps work. Google's policy blocks real-money betting apps here, so every legit casino distributes via APK direct from their site."
+        },
+        {
+          "type": "text",
+          "text": "Go to the official 899OK site. The download link is usually pinned to the top navigation or in the footer under \"Mobile App\". One tap gets you the file."
+        },
+        {
+          "type": "table",
+          "columns": [
+            "Spec",
+            "Value"
+          ],
+          "rows": [
+            [
+              "File size",
+              "22 MB"
+            ],
+            [
+              "Format",
+              "APK"
+            ],
+            [
+              "Requires Android",
+              "6.0 or newer"
+            ],
+            [
+              "Latest version",
+              "4.1.0"
+            ],
+            [
+              "Update cycle",
+              "Every 4–6 weeks"
+            ],
+            [
+              "Signature",
+              "Verified by 899OK development team"
+            ]
           ]
         },
         {
-          "heading": "Step 2 — Enable Unknown Sources",
-          "paragraphs": [
-            "Android blocks the first install by default. Turn it on for your browser, then switch it back off after."
-          ]
-        },
-        {
-          "heading": "Step 3 — Install and Log In",
-          "paragraphs": [
-            "Same login as the website. No separate account needed for the app."
-          ]
+          "type": "text",
+          "text": "One rule: only download from the real 899OK site. There are copycat APKs floating around on Telegram and file-sharing groups — some of them are just fake login screens that grab your password."
         }
       ]
     },
     {
       "type": "section",
-      "heading": "899OK on iPhone — What iOS Users Actually Do",
-      "paragraphs": [
-        "Straight up: there's no iOS app for 899OK. Apple's App Store doesn't approve real-money gambling apps for Bangladesh, and no Bangladeshi casino can publish one.",
-        "The mobile Safari version does everything the app does except the app-exclusive bonus: full slot library, live dealer tables, cricket/football/kabaddi betting, bKash/Nagad/Rocket deposits, live chat support in Bangla.",
-        "Add 899OK to your iPhone home screen: Open Safari, go to the 899OK site, tap the Share icon, scroll and tap \"Add to Home Screen\", name it \"899OK\" and tap Add.",
-        "Streams and Aviator perform almost identically to the Android app. You just miss the one-time install bonus."
-      ]
-    },
-    {
-      "type": "section",
-      "heading": "899OK App Features & Real Performance",
-      "paragraphs": [
-        "Speed improvements: section switching in ~2 seconds (browser was 4–6s), live stream buffering cut nearly in half, bet slip updates instantly, Aviator round entry never times out.",
-        "Quality-of-life: fingerprint/face unlock login, push notifications for reload bonuses and match starts, offline bet history, one-tap Quick Bet, dealer chat stays connected on unstable networks.",
-        "Data usage per hour: Slots ~8–12 MB, Live casino tables 20–30 MB, Live cricket streams 80–120 MB (SD) / 250+ MB (HD)."
-      ],
-      "subsections": [
+      "content": [
         {
-          "heading": "899OK App vs Mobile Browser Speed",
-          "paragraphs": [
-            "Cold launch 2 seconds vs 7 in browser. Live tables render twice as fast, especially on mid-range phones."
+          "type": "title",
+          "tag": "h2",
+          "text": "899OK APK Installation Guide for Android"
+        },
+        {
+          "type": "text",
+          "text": "Most players in Bangladesh are on Android, so this bit will feel familiar. The whole install takes under two minutes."
+        },
+        {
+          "type": "text",
+          "text": "1. Tap the Android download button on the 899OK site — the .apk file saves to Downloads"
+        },
+        {
+          "type": "text",
+          "text": "2. Allow \"install from unknown sources\" — first time only (Android 6–7: Settings → Security → toggle \"Unknown sources\"; Android 8+: popup will ask \"Allow this browser to install apps?\")"
+        },
+        {
+          "type": "text",
+          "text": "3. Open the .apk from your notification bar or file manager"
+        },
+        {
+          "type": "text",
+          "text": "4. Tap Install — takes about 20 seconds"
+        },
+        {
+          "type": "text",
+          "text": "5. Open the app, log in or register, and start playing"
+        },
+        {
+          "type": "table",
+          "columns": [
+            "Permission",
+            "Purpose",
+            "Allow?"
+          ],
+          "rows": [
+            [
+              "Storage",
+              "Save APK, cache game files",
+              "Yes"
+            ],
+            [
+              "Notifications",
+              "Bonus alerts, match starts",
+              "Optional"
+            ],
+            [
+              "Camera",
+              "KYC selfie for withdrawals",
+              "Only during KYC"
+            ],
+            [
+              "Location",
+              "Country verification",
+              "Optional"
+            ],
+            [
+              "Contacts / SMS",
+              "Never requested",
+              "Reject if asked"
+            ]
           ]
         },
         {
-          "heading": "Battery and Storage Impact",
-          "paragraphs": [
-            "About 3–5% battery per hour of live play. App itself uses 40–60 MB storage after caching common games."
-          ]
+          "type": "text",
+          "text": "The real 899OK app never asks for SMS or contact access. If any APK asks for those, cancel the install — it's fake."
+        },
+        {
+          "type": "title",
+          "tag": "h3",
+          "text": "Step 1 — Grab the APK"
+        },
+        {
+          "type": "text",
+          "text": "Only from the official site. Mirror sites often ship modified builds with hidden trackers."
+        },
+        {
+          "type": "title",
+          "tag": "h3",
+          "text": "Step 2 — Enable Unknown Sources"
+        },
+        {
+          "type": "text",
+          "text": "Android blocks the first install by default. Turn it on for your browser, then switch it back off after."
+        },
+        {
+          "type": "title",
+          "tag": "h3",
+          "text": "Step 3 — Install and Log In"
+        },
+        {
+          "type": "text",
+          "text": "Same login as the website. No separate account needed for the app."
         }
       ]
     },
     {
       "type": "section",
-      "heading": "Exclusive 899OK App-Only Bonuses",
-      "paragraphs": [
-        "1. First-install free credit: ৳150 — auto-credited to any account that opens the app for the first time, no deposit needed, 5x wagering, no maximum cashout cap, credits land within an hour.",
-        "2. Weekly app notification bonus: 5 free spins — keep push notifications on and log in at least once during the week, every Sunday 5 free spins land, winnings paid as cash, no wagering.",
-        "Neither offer is available through the mobile browser or on iOS."
-      ],
-      "subsections": [
+      "content": [
         {
-          "heading": "First Install Free Credit",
-          "paragraphs": [
-            "৳150 no-deposit credit, 5x wagering, valid across all products including Aviator."
-          ]
+          "type": "title",
+          "tag": "h2",
+          "text": "899OK on iPhone — What iOS Users Actually Do"
         },
         {
-          "heading": "Push Notification Reload Offers",
-          "paragraphs": [
-            "Personal reload bonuses (20–35%) drop as notifications a few hours before appearing on the site."
-          ]
+          "type": "text",
+          "text": "Straight up: there's no iOS app for 899OK. Apple's App Store doesn't approve real-money gambling apps for Bangladesh, and no Bangladeshi casino can publish one."
+        },
+        {
+          "type": "text",
+          "text": "The mobile Safari version does everything the app does except the app-exclusive bonus: full slot library, live dealer tables, cricket/football/kabaddi betting, bKash/Nagad/Rocket deposits, live chat support in Bangla."
+        },
+        {
+          "type": "text",
+          "text": "Add 899OK to your iPhone home screen: Open Safari, go to the 899OK site, tap the Share icon, scroll and tap \"Add to Home Screen\", name it \"899OK\" and tap Add."
+        },
+        {
+          "type": "text",
+          "text": "Streams and Aviator perform almost identically to the Android app. You just miss the one-time install bonus."
         }
       ]
     },
     {
       "type": "section",
-      "heading": "How to Install the 899OK App in 5 Steps",
-      "paragraphs": [
-        "Open the 899OK site in Chrome and tap the Android download icon",
-        "Allow the browser to install unknown apps when the popup appears",
-        "Tap the downloaded APK from your notification tray",
-        "Hit Install and wait about 20 seconds",
-        "Log in or register — your ৳150 install bonus lands within the hour"
+      "content": [
+        {
+          "type": "title",
+          "tag": "h2",
+          "text": "899OK App Features & Real Performance"
+        },
+        {
+          "type": "text",
+          "text": "Speed improvements: section switching in ~2 seconds (browser was 4–6s), live stream buffering cut nearly in half, bet slip updates instantly, Aviator round entry never times out."
+        },
+        {
+          "type": "text",
+          "text": "Quality-of-life: fingerprint/face unlock login, push notifications for reload bonuses and match starts, offline bet history, one-tap Quick Bet, dealer chat stays connected on unstable networks."
+        },
+        {
+          "type": "text",
+          "text": "Data usage per hour: Slots ~8–12 MB, Live casino tables 20–30 MB, Live cricket streams 80–120 MB (SD) / 250+ MB (HD)."
+        },
+        {
+          "type": "title",
+          "tag": "h3",
+          "text": "899OK App vs Mobile Browser Speed"
+        },
+        {
+          "type": "text",
+          "text": "Cold launch 2 seconds vs 7 in browser. Live tables render twice as fast, especially on mid-range phones."
+        },
+        {
+          "type": "title",
+          "tag": "h3",
+          "text": "Battery and Storage Impact"
+        },
+        {
+          "type": "text",
+          "text": "About 3–5% battery per hour of live play. App itself uses 40–60 MB storage after caching common games."
+        }
       ]
     },
     {
       "type": "section",
-      "heading": "899OK App Troubleshooting & Update Guide",
-      "paragraphs": [
-        "App won't install: confirm \"install unknown apps\" is enabled, check 100 MB free storage, uninstall old versions first, clear Downloads folder and re-download if \"app not installed\" error shows.",
-        "App crashes on launch: force stop and reopen, restart phone, clear app cache (not data), reinstall as last resort.",
-        "Live stream lag or freeze: switch between wifi and 4G, close background apps, drop stream quality to SD, HD may struggle on Android 6–7 hardware.",
-        "Updates: app auto-checks on launch, red badge = new version available, tap to download and install over the top — login stays intact. Roughly every 4–6 weeks there's a small update."
+      "content": [
+        {
+          "type": "title",
+          "tag": "h2",
+          "text": "Exclusive 899OK App-Only Bonuses"
+        },
+        {
+          "type": "text",
+          "text": "1. First-install free credit: ৳150 — auto-credited to any account that opens the app for the first time, no deposit needed, 5x wagering, no maximum cashout cap, credits land within an hour."
+        },
+        {
+          "type": "text",
+          "text": "2. Weekly app notification bonus: 5 free spins — keep push notifications on and log in at least once during the week, every Sunday 5 free spins land, winnings paid as cash, no wagering."
+        },
+        {
+          "type": "text",
+          "text": "Neither offer is available through the mobile browser or on iOS."
+        },
+        {
+          "type": "title",
+          "tag": "h3",
+          "text": "First Install Free Credit"
+        },
+        {
+          "type": "text",
+          "text": "৳150 no-deposit credit, 5x wagering, valid across all products including Aviator."
+        },
+        {
+          "type": "title",
+          "tag": "h3",
+          "text": "Push Notification Reload Offers"
+        },
+        {
+          "type": "text",
+          "text": "Personal reload bonuses (20–35%) drop as notifications a few hours before appearing on the site."
+        }
       ]
     },
     {
       "type": "section",
-      "heading": "Is the 899OK App Worth 22 MB?",
-      "paragraphs": [
-        "If you play more than once or twice a week, absolutely yes. The speed jump alone justifies the install — Aviator rounds don't time out, live streams stay stable on 4G, and cricket bet slips update instantly.",
-        "Add the ৳150 first-install free credit and the weekly free-spin drops, and the 2-minute install pays you back on day one.",
-        "One rule I keep repeating: only download from the official site. Anything else is a security gamble you don't need to take."
+      "content": [
+        {
+          "type": "title",
+          "tag": "h2",
+          "text": "How to Install the 899OK App in 5 Steps"
+        },
+        {
+          "type": "text",
+          "text": "Open the 899OK site in Chrome and tap the Android download icon"
+        },
+        {
+          "type": "text",
+          "text": "Allow the browser to install unknown apps when the popup appears"
+        },
+        {
+          "type": "text",
+          "text": "Tap the downloaded APK from your notification tray"
+        },
+        {
+          "type": "text",
+          "text": "Hit Install and wait about 20 seconds"
+        },
+        {
+          "type": "text",
+          "text": "Log in or register — your ৳150 install bonus lands within the hour"
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "tag": "h2",
+          "text": "899OK App Troubleshooting & Update Guide"
+        },
+        {
+          "type": "text",
+          "text": "App won't install: confirm \"install unknown apps\" is enabled, check 100 MB free storage, uninstall old versions first, clear Downloads folder and re-download if \"app not installed\" error shows."
+        },
+        {
+          "type": "text",
+          "text": "App crashes on launch: force stop and reopen, restart phone, clear app cache (not data), reinstall as last resort."
+        },
+        {
+          "type": "text",
+          "text": "Live stream lag or freeze: switch between wifi and 4G, close background apps, drop stream quality to SD, HD may struggle on Android 6–7 hardware."
+        },
+        {
+          "type": "text",
+          "text": "Updates: app auto-checks on launch, red badge = new version available, tap to download and install over the top — login stays intact. Roughly every 4–6 weeks there's a small update."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "tag": "h2",
+          "text": "Is the 899OK App Worth 22 MB?"
+        },
+        {
+          "type": "text",
+          "text": "If you play more than once or twice a week, absolutely yes. The speed jump alone justifies the install — Aviator rounds don't time out, live streams stay stable on 4G, and cricket bet slips update instantly."
+        },
+        {
+          "type": "text",
+          "text": "Add the ৳150 first-install free credit and the weekly free-spin drops, and the 2-minute install pays you back on day one."
+        },
+        {
+          "type": "text",
+          "text": "One rule I keep repeating: only download from the official site. Anything else is a security gamble you don't need to take."
+        }
       ]
     },
     {

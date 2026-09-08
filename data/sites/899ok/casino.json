@@ -28,209 +28,340 @@
     },
     {
       "type": "section",
-      "heading": "The 899OK Live Dealer Experience",
-      "paragraphs": [
-        "Why do people around Bangladesh keep coming back to 899OK live tables? A few plain reasons, not fancy ones:"
-      ],
-      "list": [
-        "Tables stay busy at odd hours — even at 2am I've found other players at Andar Bahar",
-        "Support replies in Bangla, most times inside 2–4 minutes",
-        "bKash top-ups landing in under a minute — I've done this so many times it's routine",
-        "Genuine winner screenshots floating around Telegram, not staged ones"
-      ],
-      "subsections": [
+      "content": [
         {
-          "heading": "Dealer Languages at 899OK",
-          "paragraphs": [
-            "Bangla dealers cover Andar Bahar and Teen Patti most nights after 8 PM. Baccarat and Blackjack usually run in English and Hindi."
+          "type": "title",
+          "tag": "h2",
+          "text": "The 899OK Live Dealer Experience"
+        },
+        {
+          "type": "text",
+          "text": "Why do people around Bangladesh keep coming back to 899OK live tables? A few plain reasons, not fancy ones:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Tables stay busy at odd hours — even at 2am I've found other players at Andar Bahar",
+            "Support replies in Bangla, most times inside 2–4 minutes",
+            "bKash top-ups landing in under a minute — I've done this so many times it's routine",
+            "Genuine winner screenshots floating around Telegram, not staged ones"
           ]
         },
         {
-          "heading": "899OK Stream Quality on Mobile Data",
-          "paragraphs": [
-            "Roughly 70–100 MB per hour. Audio cuts before video when the signal drops, so you'll know when to switch to wifi."
-          ]
+          "type": "title",
+          "tag": "h3",
+          "text": "Dealer Languages at 899OK"
+        },
+        {
+          "type": "text",
+          "text": "Bangla dealers cover Andar Bahar and Teen Patti most nights after 8 PM. Baccarat and Blackjack usually run in English and Hindi."
+        },
+        {
+          "type": "title",
+          "tag": "h3",
+          "text": "899OK Stream Quality on Mobile Data"
+        },
+        {
+          "type": "text",
+          "text": "Roughly 70–100 MB per hour. Audio cuts before video when the signal drops, so you'll know when to switch to wifi."
         }
       ]
     },
     {
       "type": "section",
-      "heading": "Providers Running the 899OK Tables",
-      "paragraphs": [
-        "The lobby is grouped by provider so you can jump straight to what you like. If you'd rather spin reels than sit at a table, the slots library has hundreds of titles from Pragmatic and PG Soft."
-      ],
-      "table": {
-        "columns": [
-          "Provider",
-          "What they run",
-          "Why it matters"
-        ],
-        "rows": [
-          [
-            "Evolution",
-            "Blackjack, Roulette, Crazy Time, Baccarat",
-            "Industry gold standard, cleanest streams"
-          ],
-          [
-            "Ezugi",
-            "Andar Bahar, Teen Patti, Bengali tables",
-            "Focused on South Asian players"
-          ],
-          [
-            "Pragmatic Live",
-            "Speed Baccarat, Mega Wheel",
-            "Fastest rounds, growing regional presence"
-          ],
-          [
-            "Sexy Gaming",
-            "Interactive Baccarat, Roulette",
-            "Playful, casual format"
-          ]
-        ]
-      },
-      "subsections": [
+      "content": [
         {
-          "heading": "Blackjack at 899OK",
-          "paragraphs": [
-            "Classic rules, 3:2 payout, minimum ৳100 on standard tables. Side bets like Perfect Pairs are entertaining but bleed your bankroll faster than you expect."
+          "type": "title",
+          "tag": "h2",
+          "text": "Providers Running the 899OK Tables"
+        },
+        {
+          "type": "text",
+          "text": "The lobby is grouped by provider so you can jump straight to what you like. If you'd rather spin reels than sit at a table, the slots library has hundreds of titles from Pragmatic and PG Soft."
+        },
+        {
+          "type": "table",
+          "columns": [
+            "Provider",
+            "What they run",
+            "Why it matters"
+          ],
+          "rows": [
+            [
+              "Evolution",
+              "Blackjack, Roulette, Crazy Time, Baccarat",
+              "Industry gold standard, cleanest streams"
+            ],
+            [
+              "Ezugi",
+              "Andar Bahar, Teen Patti, Bengali tables",
+              "Focused on South Asian players"
+            ],
+            [
+              "Pragmatic Live",
+              "Speed Baccarat, Mega Wheel",
+              "Fastest rounds, growing regional presence"
+            ],
+            [
+              "Sexy Gaming",
+              "Interactive Baccarat, Roulette",
+              "Playful, casual format"
+            ]
           ]
         },
         {
-          "heading": "Baccarat Tables",
-          "paragraphs": [
-            "Six to eight tables running most evenings. Banker edge sits at 1.06%, Player at 1.24%, Tie at 14.36% — skip the Tie unless you're feeling reckless."
-          ]
+          "type": "title",
+          "tag": "h3",
+          "text": "Blackjack at 899OK"
+        },
+        {
+          "type": "text",
+          "text": "Classic rules, 3:2 payout, minimum ৳100 on standard tables. Side bets like Perfect Pairs are entertaining but bleed your bankroll faster than you expect."
+        },
+        {
+          "type": "title",
+          "tag": "h3",
+          "text": "Baccarat Tables"
+        },
+        {
+          "type": "text",
+          "text": "Six to eight tables running most evenings. Banker edge sits at 1.06%, Player at 1.24%, Tie at 14.36% — skip the Tie unless you're feeling reckless."
         }
       ]
     },
     {
       "type": "section",
-      "heading": "Blackjack & Baccarat Tables",
-      "paragraphs": [
-        "Blackjack is where I burn most of my evenings. Standard tables kick off at ৳50 per hand, which fits a small bankroll fine. VIP rooms climb sharply — I've spotted ৳10,000 minimums during Friday nights.",
-        "Side bets like 21+3 and Perfect Pairs are fun. Also cost me more than I care to admit. Read the paytable first. Want faster action than cards? Try Aviator and crash games instead.",
-        "Baccarat pulls the biggest crowds, especially:",
-        "Tap Player, tap Banker, done. The scoreboards help pattern-chasers, but honestly it's a coin flip with a house edge. Before you deposit anything, glance at the bonus wagering rules — live tables only count 10% toward wagering, so plan for that."
-      ],
-      "list": [
-        "Speed Baccarat — for people who can't wait 30 seconds between hands",
-        "No Commission Baccarat — pays 1:1 on Banker (except when Banker wins with a 6, then it's 0.5:1)",
-        "Squeeze Baccarat — the slow dramatic reveal, for purists"
-      ]
-    },
-    {
-      "type": "section",
-      "heading": "How to Register at 899OK in 5 Steps",
-      "paragraphs": [
-        "Takes about two minutes if your phone is nearby:",
-        "That's it. You can browse the casino lobby before depositing a single taka. Full KYC only kicks in before your first withdrawal, not at signup."
-      ],
-      "list": [
-        "Tap Register — top-right button on the site or app",
-        "Enter your Bangladesh mobile number — use the one linked to your bKash or Nagad wallet, it saves headaches at withdrawal",
-        "Set a strong password — mix letters, a number, and one symbol",
-        "Verify the OTP that lands on your phone",
-        "Drop a promo code if you have one — that's how the welcome bonus activates"
-      ]
-    },
-    {
-      "type": "section",
-      "heading": "899OK Roulette Variations",
-      "paragraphs": [
-        "Good spread of wheels to pick from:",
-        "Stakes go from ৳50 minimum on the standard wheel to ৳100,000 max on VIP rooms."
-      ],
-      "list": [
-        "European Roulette — single zero, 2.7% house edge. Start here",
-        "French Roulette — with La Partage, drops the edge to 1.35% on even-money bets",
-        "American Roulette — double zero, 5.26% house edge. Skip it",
-        "Lightning Roulette — Evolution's flagship, random multipliers up to 500x",
-        "Immersive Roulette — slow-motion camera on the ball, cinematic feel"
-      ]
-    },
-    {
-      "type": "section",
-      "heading": "Andar Bahar & Teen Patti at 899OK",
-      "paragraphs": [
-        "This is where 899OK quietly out-performs the Europe-only casinos aimed at Bangladesh — they actually carry the games we grew up watching at family gatherings.",
-        "Andar Bahar — Ezugi runs multiple live tables plus quick RNG versions",
-        "Teen Patti — live 3-card poker, same rhythm as home games",
-        "Dragon Tiger — the fastest game in the lobby, single-card showdown",
-        "Sic Bo — three-dice game, big in East Asia, catching on here",
-        "Stakes usually sit between ৳50 and ৳25,000 per hand on live tables. Bengali-speaking dealers show up most evenings BD time on Ezugi's South Asia rotation."
-      ]
-    },
-    {
-      "type": "section",
-      "heading": "Deposits with bKash & Nagad",
-      "paragraphs": [
-        "For casino play, deposit speed matters — nobody wants to wait 20 minutes while a hot table cools off. Here's how 899OK actually handles it:",
-        "Withdrawals return to the same wallet you deposited from. Have your NID and a selfie ready before your first cash-out to skip the 24-hour verification queue."
-      ],
-      "table": {
-        "columns": [
-          "Method",
-          "Deposit speed",
-          "Withdraw speed",
-          "Fee"
-        ],
-        "rows": [
-          [
-            "bKash",
-            "Under 60s",
-            "10–20 min typical",
-            "0% platform"
-          ],
-          [
-            "Nagad",
-            "Under 60s",
-            "12–25 min typical",
-            "0% platform"
-          ],
-          [
-            "Rocket",
-            "Under 90s",
-            "15–30 min typical",
-            "0% platform"
-          ]
-        ]
-      },
-      "subsections": [
+      "content": [
         {
-          "heading": "Deposit Times",
-          "paragraphs": [
-            "bKash and Nagad clear instantly from ৳100 upward. Bank transfer takes 5–10 minutes in normal hours."
+          "type": "title",
+          "tag": "h2",
+          "text": "Blackjack & Baccarat Tables"
+        },
+        {
+          "type": "text",
+          "text": "Blackjack is where I burn most of my evenings. Standard tables kick off at ৳50 per hand, which fits a small bankroll fine. VIP rooms climb sharply — I've spotted ৳10,000 minimums during Friday nights."
+        },
+        {
+          "type": "text",
+          "text": "Side bets like 21+3 and Perfect Pairs are fun. Also cost me more than I care to admit. Read the paytable first. Want faster action than cards? Try Aviator and crash games instead."
+        },
+        {
+          "type": "text",
+          "text": "Baccarat pulls the biggest crowds, especially:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Speed Baccarat — for people who can't wait 30 seconds between hands",
+            "No Commission Baccarat — pays 1:1 on Banker (except when Banker wins with a 6, then it's 0.5:1)",
+            "Squeeze Baccarat — the slow dramatic reveal, for purists"
           ]
         },
         {
-          "heading": "Withdrawal Speed",
-          "paragraphs": [
-            "10–20 minutes back to bKash for standard amounts. Above ৳25,000 goes to manual review, usually cleared same day."
-          ]
+          "type": "text",
+          "text": "Tap Player, tap Banker, done. The scoreboards help pattern-chasers, but honestly it's a coin flip with a house edge. Before you deposit anything, glance at the bonus wagering rules — live tables only count 10% toward wagering, so plan for that."
         }
       ]
     },
     {
       "type": "section",
-      "heading": "899OK VIP Casino Rewards",
-      "paragraphs": [
-        "I'm not deep in the VIP tiers yet, but here's what a couple of higher-stake mates have told me:",
-        "VIP isn't advertised loudly — you get invited based on play volume rather than applying. Once you're in, you stay in unless you go dark for 3 months straight."
-      ],
-      "list": [
-        "Personal account manager who replies in Bangla",
-        "Weekly cashback tied to net play (5–15% depending on tier)",
-        "Faster withdrawal processing (2–4 hours instead of standard 24)",
-        "Birthday, Eid, and Pohela Boishakh bonuses",
-        "Invite-only tournaments with real prize pools"
+      "content": [
+        {
+          "type": "title",
+          "tag": "h2",
+          "text": "How to Register at 899OK in 5 Steps"
+        },
+        {
+          "type": "text",
+          "text": "Takes about two minutes if your phone is nearby:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Tap Register — top-right button on the site or app",
+            "Enter your Bangladesh mobile number — use the one linked to your bKash or Nagad wallet, it saves headaches at withdrawal",
+            "Set a strong password — mix letters, a number, and one symbol",
+            "Verify the OTP that lands on your phone",
+            "Drop a promo code if you have one — that's how the welcome bonus activates"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "That's it. You can browse the casino lobby before depositing a single taka. Full KYC only kicks in before your first withdrawal, not at signup."
+        }
       ]
     },
     {
       "type": "section",
-      "heading": "899OK Live Casino — Worth Your Seat?",
-      "paragraphs": [
-        "Live casino is personal. Some players chase the atmosphere, others just want to place a bet and move on. 899OK handles both — busy tables when you want a crowd, snappy RNG rounds when you don't have the patience for a live dealer.",
-        "If you're new, park yourself at a ৳50 European Roulette or Blackjack table for twenty minutes. That's cheaper than a rickshaw ride across Dhaka and gives you a real sense of the platform before you commit."
+      "content": [
+        {
+          "type": "title",
+          "tag": "h2",
+          "text": "899OK Roulette Variations"
+        },
+        {
+          "type": "text",
+          "text": "Good spread of wheels to pick from:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "European Roulette — single zero, 2.7% house edge. Start here",
+            "French Roulette — with La Partage, drops the edge to 1.35% on even-money bets",
+            "American Roulette — double zero, 5.26% house edge. Skip it",
+            "Lightning Roulette — Evolution's flagship, random multipliers up to 500x",
+            "Immersive Roulette — slow-motion camera on the ball, cinematic feel"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Stakes go from ৳50 minimum on the standard wheel to ৳100,000 max on VIP rooms."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "tag": "h2",
+          "text": "Andar Bahar & Teen Patti at 899OK"
+        },
+        {
+          "type": "text",
+          "text": "This is where 899OK quietly out-performs the Europe-only casinos aimed at Bangladesh — they actually carry the games we grew up watching at family gatherings."
+        },
+        {
+          "type": "text",
+          "text": "Andar Bahar — Ezugi runs multiple live tables plus quick RNG versions"
+        },
+        {
+          "type": "text",
+          "text": "Teen Patti — live 3-card poker, same rhythm as home games"
+        },
+        {
+          "type": "text",
+          "text": "Dragon Tiger — the fastest game in the lobby, single-card showdown"
+        },
+        {
+          "type": "text",
+          "text": "Sic Bo — three-dice game, big in East Asia, catching on here"
+        },
+        {
+          "type": "text",
+          "text": "Stakes usually sit between ৳50 and ৳25,000 per hand on live tables. Bengali-speaking dealers show up most evenings BD time on Ezugi's South Asia rotation."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "tag": "h2",
+          "text": "Deposits with bKash & Nagad"
+        },
+        {
+          "type": "text",
+          "text": "For casino play, deposit speed matters — nobody wants to wait 20 minutes while a hot table cools off. Here's how 899OK actually handles it:"
+        },
+        {
+          "type": "table",
+          "columns": [
+            "Method",
+            "Deposit speed",
+            "Withdraw speed",
+            "Fee"
+          ],
+          "rows": [
+            [
+              "bKash",
+              "Under 60s",
+              "10–20 min typical",
+              "0% platform"
+            ],
+            [
+              "Nagad",
+              "Under 60s",
+              "12–25 min typical",
+              "0% platform"
+            ],
+            [
+              "Rocket",
+              "Under 90s",
+              "15–30 min typical",
+              "0% platform"
+            ]
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Withdrawals return to the same wallet you deposited from. Have your NID and a selfie ready before your first cash-out to skip the 24-hour verification queue."
+        },
+        {
+          "type": "title",
+          "tag": "h3",
+          "text": "Deposit Times"
+        },
+        {
+          "type": "text",
+          "text": "bKash and Nagad clear instantly from ৳100 upward. Bank transfer takes 5–10 minutes in normal hours."
+        },
+        {
+          "type": "title",
+          "tag": "h3",
+          "text": "Withdrawal Speed"
+        },
+        {
+          "type": "text",
+          "text": "10–20 minutes back to bKash for standard amounts. Above ৳25,000 goes to manual review, usually cleared same day."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "tag": "h2",
+          "text": "899OK VIP Casino Rewards"
+        },
+        {
+          "type": "text",
+          "text": "I'm not deep in the VIP tiers yet, but here's what a couple of higher-stake mates have told me:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Personal account manager who replies in Bangla",
+            "Weekly cashback tied to net play (5–15% depending on tier)",
+            "Faster withdrawal processing (2–4 hours instead of standard 24)",
+            "Birthday, Eid, and Pohela Boishakh bonuses",
+            "Invite-only tournaments with real prize pools"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "VIP isn't advertised loudly — you get invited based on play volume rather than applying. Once you're in, you stay in unless you go dark for 3 months straight."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "tag": "h2",
+          "text": "899OK Live Casino — Worth Your Seat?"
+        },
+        {
+          "type": "text",
+          "text": "Live casino is personal. Some players chase the atmosphere, others just want to place a bet and move on. 899OK handles both — busy tables when you want a crowd, snappy RNG rounds when you don't have the patience for a live dealer."
+        },
+        {
+          "type": "text",
+          "text": "If you're new, park yourself at a ৳50 European Roulette or Blackjack table for twenty minutes. That's cheaper than a rickshaw ride across Dhaka and gives you a real sense of the platform before you commit."
+        }
       ]
     },
     {

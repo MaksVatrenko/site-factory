@@ -6,4 +6,4 @@ const key = `../../templates/${templateId}/blocks/${block.type}.astro`;
 const Component = blockModules[key]?.default;
 ---
 
-{Component && <Component {...block.props} site={site} />}
+{Component && <Component {...block.props} site={site} templateId={templateId} />}

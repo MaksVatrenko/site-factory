@@ -3,5 +3,6 @@
   "name": "Обзорный",
   "description": "Тёмная тема с золотым акцентом: лонгриды с оглавлением, таблицами и раскрывающимся FAQ",
   "blocks": ["hero", "toc", "section", "links", "faq"],
+  "elements": ["title", "text", "list", "table"],
   "defaultScheme": "night"
 }

@@ -711,7 +711,7 @@ describe('final-fix-5: a successful build with no page at "/" still has a workin
       // UI hands out (see factory/public/app.js) — this must land on the real page, not a 404.
       const response = await fetch(`${base}/preview/${domain}/`);
       expect(response.status).toBe(200);
-      expect(await response.text()).toContain('a single string');
+      expect(await response.text()).toContain('Text still renders after every broken entry above it');
     } finally {
       rmSync(join('output', domain), { recursive: true, force: true });
     }

@@ -1,0 +1,8 @@
+---
+import { asText } from '../../_shared/props.mjs';
+
+const { text } = Astro.props;
+const value = asText(text);
+---
+
+{value && <p>{value}</p>}

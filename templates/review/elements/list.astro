@@ -1,0 +1,26 @@
+---
+import { asList, asText } from '../../_shared/props.mjs';
+
+const { items } = Astro.props;
+// `items` being a single string rather than an array is a real, expected malformed shape (see
+// data/sites/broken) -- asList wraps it into a one-item list instead of iterating its characters.
+const values = asList(items)
+  .map((item) => asText(item))
+  .filter((item) => item !== '');
+---
+
+{values.length > 0 && (
+  <ul class="rsection__list">
+    {values.map((item) => (
+      <li>{item}</li>
+    ))}
+  </ul>
+)}
+
+<style>
+  .rsection__list {
+    display: grid;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+  }
+</style>

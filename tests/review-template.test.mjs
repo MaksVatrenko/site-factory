@@ -78,34 +78,38 @@ describe('review template: the real client site (data/sites/899ok)', () => {
   });
 });
 
-describe('review template: resilience to unusual content shapes', () => {
-  // `blocks` uses the nested `{ type, props }` shape for readability here; this writes it out as
-  // a real SITE_DIR folder — a site.json plus one home page file — flattening each block's props
-  // alongside its "type" the way a real page file on disk does (see src/lib/site-dir.mjs).
-  function buildSingleBlockPage(blocks, { nav } = {}) {
-    const dir = mkdtempSync(join(tmpdir(), 'site-factory-review-'));
-    writeFileSync(
-      join(dir, 'site.json'),
-      JSON.stringify({
-        domain: 'example.com',
-        brand: { name: 'Review Fixture' },
-        ...(nav ? { nav } : {}),
-      }),
-    );
-    writeFileSync(
-      join(dir, 'home.json'),
-      JSON.stringify({
-        slug: '/',
-        title: 'Fixture',
-        blocks: blocks.map(({ type, props }) => ({ type, ...props })),
-      }),
-    );
-    return dir;
-  }
+// `blocks` uses the nested `{ type, props }` shape for readability here; this writes it out as a
+// real SITE_DIR folder — a site.json plus one home page file — flattening each block's props
+// alongside its "type" the way a real page file on disk does (see src/lib/site-dir.mjs). Shared
+// by every describe block below that needs a single-purpose fixture site.
+function buildSingleBlockPage(blocks, { nav } = {}) {
+  const dir = mkdtempSync(join(tmpdir(), 'site-factory-review-'));
+  writeFileSync(
+    join(dir, 'site.json'),
+    JSON.stringify({
+      domain: 'example.com',
+      brand: { name: 'Review Fixture' },
+      ...(nav ? { nav } : {}),
+    }),
+  );
+  writeFileSync(
+    join(dir, 'home.json'),
+    JSON.stringify({
+      slug: '/',
+      title: 'Fixture',
+      blocks: blocks.map(({ type, props }) => ({ type, ...props })),
+    }),
+  );
+  return dir;
+}
 
+describe('review template: resilience to unusual content shapes', () => {
   it('still builds a section stripped down to just a heading', () => {
     const dir = buildSingleBlockPage([
-      { type: 'section', props: { heading: 'Just a heading, nothing else' } },
+      {
+        type: 'section',
+        props: { content: [{ type: 'title', tag: 'h2', text: 'Just a heading, nothing else' }] },
+      },
     ]);
     try {
       const { outDir } = buildSite({
@@ -130,7 +134,12 @@ describe('review template: resilience to unusual content shapes', () => {
         { type: 'links', props: { heading: 'Links second' } },
         {
           type: 'section',
-          props: { heading: 'Section third', paragraphs: ['Body text for section third.'] },
+          props: {
+            content: [
+              { type: 'title', tag: 'h2', text: 'Section third' },
+              { type: 'text', text: 'Body text for section third.' },
+            ],
+          },
         },
         { type: 'toc', props: { heading: 'TOC fourth', items: ['Section third'] } },
         { type: 'hero', props: { heading: 'Hero last', paragraphs: ['Lead text.'] } },
@@ -166,6 +175,75 @@ describe('review template: resilience to unusual content shapes', () => {
       const href = html.match(/class="toc__link" href="#([^"]+)"/);
       expect(href).not.toBeNull();
       expect(html).toContain(`id="${href[1]}"`);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('review template: a section renders its content array in exactly the given order', () => {
+  it('allows a paragraph after a table, two headings in a row, and a chosen heading level', () => {
+    // This is the headline capability the content/element refactor exists for: the old fixed
+    // field order (heading, paragraphs, list, table, subsections) could never produce this shape
+    // at all. See templates/review/blocks/section.astro and src/components/ElementRenderer.astro.
+    const dir = buildSingleBlockPage([
+      {
+        type: 'section',
+        props: {
+          content: [
+            { type: 'title', tag: 'h2', text: 'First Heading' },
+            { type: 'text', text: 'Paragraph before the table.' },
+            { type: 'table', columns: ['A', 'B'], rows: [['1', '2']] },
+            { type: 'text', text: 'Paragraph after the table.' },
+            { type: 'title', tag: 'h2', text: 'Second Heading Right After' },
+            { type: 'title', tag: 'h4', text: 'A Chosen Heading Level' },
+            { type: 'list', items: ['Item one', 'Item two'] },
+          ],
+        },
+      },
+    ]);
+    try {
+      const { outDir } = buildSite({
+        outDir: join('output', 'test-review-content-order'),
+        env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'night' },
+      });
+      const html = readOutput(outDir);
+
+      // The tag each title asked for is the tag it got -- including h4, and including a second
+      // h2 with nothing but another element between it and the first.
+      expect(html).toContain('<h2>First Heading</h2>');
+      expect(html).toContain('<h2>Second Heading Right After</h2>');
+      expect(html).toContain('<h4>A Chosen Heading Level</h4>');
+
+      const order = [
+        'First Heading',
+        'Paragraph before the table.',
+        '<table',
+        'Paragraph after the table.',
+        'Second Heading Right After',
+        'A Chosen Heading Level',
+        'Item one',
+      ].map((needle) => html.indexOf(needle));
+      for (let i = 1; i < order.length; i += 1) {
+        expect(order[i]).toBeGreaterThan(order[i - 1]);
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('falls back to h2 for a tag outside h2-h6, and never emits a second h1', () => {
+    const dir = buildSingleBlockPage([
+      { type: 'section', props: { content: [{ type: 'title', tag: 'h1', text: 'Not A Real H1' }] } },
+    ]);
+    try {
+      const { outDir } = buildSite({
+        outDir: join('output', 'test-review-title-h1-guard'),
+        env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'night' },
+      });
+      const html = readOutput(outDir);
+      expect(html).toContain('<h2>Not A Real H1</h2>');
+      expect(html).not.toContain('<h1>Not A Real H1</h1>');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

@@ -6,6 +6,12 @@
 // construction — this is where that ambiguity gets resolved once and written down explicitly,
 // so nothing downstream has to guess again.
 //
+// Every `h2`/`h3` row becomes a `title` entry (tag h2/h3) in that section's ordered `content`
+// array, in exactly the position it was found — unmarked rows become `text` or `list` entries the
+// same way, and a `table` row becomes a `table` entry. classify() below then looks at the whole
+// `content` array to recognise the handful of shapes the reference site renders differently (an
+// FAQ, a table of contents, an "other pages" links grid) — see its own comment.
+//
 // Usage: node scripts/sheet-to-json.mjs <input.csv> <slug> [output.json]
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -74,7 +80,9 @@ function classifyRow(text, previous, inList) {
 }
 
 // Body rows arrive as a flat run. Split it into paragraphs and list items using the same rule
-// the source site uses, then keep the two apart in the output so the renderer never re-derives it.
+// the source site uses, keeping the two in the exact order they were found in — a `text`/`list`
+// entry per run, so a section's `content` array can reproduce "paragraph, then list, then another
+// paragraph" instead of collapsing every paragraph together and every list together.
 function splitBody(lines) {
   const parts = [];
   let list = null;
@@ -95,12 +103,15 @@ function splitBody(lines) {
   return parts;
 }
 
+// Only `hero` still collects body text into separate paragraphs/list fields (see
+// templates/review/blocks/hero.astro, untouched by the content-array refactor) — the two are
+// concatenated across every run the same way this always worked, order between them not kept,
+// because hero has never needed it.
 function toParagraphsAndLists(lines) {
   const parts = splitBody(lines);
   return {
     paragraphs: parts.filter((p) => p.type === 'text').map((p) => p.text),
     lists: parts.filter((p) => p.type === 'list').map((p) => p.items),
-    order: parts.map((p) => (p.type === 'text' ? 'text' : 'list')),
   };
 }
 
@@ -112,14 +123,26 @@ export function sheetToPage(csvText, slug) {
   let body = [];
   let table = null;
 
+  const flushHeroBody = () => {
+    const { paragraphs, lists } = toParagraphsAndLists(body);
+    if (paragraphs.length) current.paragraphs = [...(current.paragraphs || []), ...paragraphs];
+    for (const items of lists) current.list = [...(current.list || []), ...items];
+  };
+
+  const flushSectionBody = () => {
+    for (const part of splitBody(body)) {
+      current.content.push(
+        part.type === 'text'
+          ? { type: 'text', text: part.text }
+          : { type: 'list', items: part.items },
+      );
+    }
+  };
+
   const flushBody = () => {
     if (!current || body.length === 0) return;
-    const { paragraphs, lists } = toParagraphsAndLists(body);
-    const target = current.subsections?.length
-      ? current.subsections[current.subsections.length - 1]
-      : current;
-    if (paragraphs.length) target.paragraphs = [...(target.paragraphs || []), ...paragraphs];
-    for (const items of lists) target.list = [...(target.list || []), ...items];
+    if (current.type === 'hero') flushHeroBody();
+    else flushSectionBody();
     body = [];
   };
 
@@ -128,6 +151,17 @@ export function sheetToPage(csvText, slug) {
     if (current) page.blocks.push(current);
     current = null;
     table = null;
+  };
+
+  // An h3/table marker needs a `section` (its `content` array) to land in. If the current block is
+  // already one, it lands there; otherwise whatever is in progress (a hero, or nothing at all) is
+  // flushed first and a fresh, possibly heading-less section is opened for it — the same thing a
+  // stray h3 before the first h2 has always fallen back to, just now on a shape that can actually
+  // hold it (a hero has no `content` array to push into).
+  const ensureSection = () => {
+    if (current?.type === 'section') return;
+    if (current) page.blocks.push(current);
+    current = { type: 'section', content: [] };
   };
 
   for (const cells of rows) {
@@ -152,18 +186,21 @@ export function sheetToPage(csvText, slug) {
         break;
       case 'h2':
         flushSection();
-        current = { type: 'section', heading: stripEmoji(rest[0] || '') };
+        current = {
+          type: 'section',
+          content: [{ type: 'title', tag: 'h2', text: stripEmoji(rest[0] || '') }],
+        };
         break;
       case 'h3':
         flushBody();
-        if (!current) current = { type: 'section', heading: '' };
-        current.subsections = [...(current.subsections || []), { heading: stripEmoji(rest[0] || '') }];
+        ensureSection();
+        current.content.push({ type: 'title', tag: 'h3', text: stripEmoji(rest[0] || '') });
         break;
       case 'table':
         flushBody();
-        if (!current) current = { type: 'section', heading: '' };
-        table = { columns: rest.map(stripEmoji), rows: [] };
-        current.table = table;
+        ensureSection();
+        table = { type: 'table', columns: rest.map(stripEmoji), rows: [] };
+        current.content.push(table);
         break;
       default:
         if (table && rest.length > 1) {
@@ -179,33 +216,78 @@ export function sheetToPage(csvText, slug) {
   return classify(page);
 }
 
-// The spreadsheet has no notion of block types — every section is just an h2. These are the
-// shapes the reference site renders differently, recognised here once so the template does not
-// have to pattern-match on headings.
+// Regroups a section's flat `content` array back into "everything before the first h3" (`head` —
+// the h2 title itself plus any paragraphs/lists/tables directly under it) and one group per h3
+// title (that title plus everything up to the next one) — close enough to the old
+// heading+subsections shape that the same pattern-recognition below still applies to it.
+function splitSubsections(content) {
+  const head = [];
+  const subs = [];
+  for (const entry of content) {
+    if (entry.type === 'title' && entry.tag === 'h3') {
+      subs.push({ heading: entry.text, items: [] });
+    } else if (subs.length > 0) {
+      subs[subs.length - 1].items.push(entry);
+    } else {
+      head.push(entry);
+    }
+  }
+  return { head, subs };
+}
+
+// The spreadsheet has no notion of block types — every section is just an h2, optionally followed
+// by h3s. These are the shapes the reference site renders differently, recognised here once so the
+// template does not have to pattern-match on headings:
+//   - 3+ h3 subsections, every one of them a question, and no list or table anywhere in the
+//     section -> `faq`, one item per subsection.
+//   - nothing but a single run of list items under the h2 (no text, no table, no subsections)
+//     -> `toc`, the page's own table of contents.
+//   - nothing at all under the h2 -> `links`, the reference site's "other pages" grid (its own
+//     links come from the site's nav, not the spreadsheet — see templates/review/blocks/links.astro).
+// Anything else stays an ordinary `section`, content array untouched.
 function classify(page) {
   page.blocks = page.blocks.map((block) => {
-    if (block.type === 'hero') return block;
+    if (block.type !== 'section') return block;
 
-    const subs = block.subsections || [];
+    const content = Array.isArray(block.content) ? block.content : [];
+    const h2 = content.find((entry) => entry.type === 'title' && entry.tag === 'h2');
+    const heading = h2 ? h2.text : '';
+    const { head, subs } = splitSubsections(content);
+    const headBody = head.filter((entry) => entry !== h2);
+    const hasTable = content.some((entry) => entry.type === 'table');
+    const hasTopLevelList = headBody.some((entry) => entry.type === 'list');
+
     const isFaq =
-      subs.length >= 3 && subs.every((s) => s.heading?.includes('?')) && !block.list && !block.table;
+      subs.length >= 3 && subs.every((s) => s.heading.includes('?')) && !hasTopLevelList && !hasTable;
     if (isFaq) {
       return {
         type: 'faq',
-        heading: block.heading,
-        items: subs.map((s) => ({ q: s.heading, a: (s.paragraphs || []).join(' ') })),
+        heading,
+        items: subs.map((s) => ({
+          q: s.heading,
+          a: s.items
+            .filter((entry) => entry.type === 'text')
+            .map((entry) => entry.text)
+            .join(' '),
+        })),
       };
     }
 
-    if (!block.table && !subs.length && block.list && !block.paragraphs) {
-      return { type: 'toc', heading: block.heading, items: block.list };
+    const isToc =
+      !hasTable && subs.length === 0 && headBody.length > 0 && headBody.every((e) => e.type === 'list');
+    if (isToc) {
+      return {
+        type: 'toc',
+        heading,
+        items: headBody.filter((e) => e.type === 'list').flatMap((e) => e.items),
+      };
     }
 
     // A section with a heading and nothing else is the reference site's "other pages" grid: the
     // spreadsheet holds only its title because the links come from the site's own page list.
     // Naming it here keeps the template from having to infer intent from emptiness.
-    if (!block.table && !subs.length && !block.list && !block.paragraphs) {
-      return { type: 'links', heading: block.heading };
+    if (!hasTable && subs.length === 0 && headBody.length === 0) {
+      return { type: 'links', heading };
     }
 
     return block;

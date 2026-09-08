@@ -155,7 +155,10 @@ describe('a page whose blocks are reordered or partially stripped still builds',
             ],
           },
           { type: 'cards', heading: 'Not a block review declares', items: [] },
-          { type: 'section', heading: 'A stripped section with nothing else' },
+          {
+            type: 'section',
+            content: [{ type: 'title', tag: 'h2', text: 'A stripped section with nothing else' }],
+          },
           { type: 'hero', heading: 'Reordered hero' },
         ],
       });

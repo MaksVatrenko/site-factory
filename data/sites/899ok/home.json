@@ -26,223 +26,361 @@
     },
     {
       "type": "section",
-      "heading": "Why 899OK Actually Works for Me",
-      "paragraphs": [
-        "There are maybe two dozen casino sites targeting Bangladesh right now. Most either lag when your internet dips, or their payments break on a Friday when you actually want to play. 899OK is one of the handful that just keeps running. Here's what I keep noticing:",
-        "You can open the full casino lobby and browse without depositing. I did that for two evenings before putting any money in — nothing wrong with being cautious."
-      ],
-      "list": [
-        "Live dealer tables stay busy from about 6pm till 4am — I've never seen an empty Andar Bahar table during BPL season",
-        "Support chat replies in Bangla within roughly 90 seconds even at 2am",
-        "My biggest bKash withdrawal (৳18,400) landed in 11 minutes last month — screenshots on my phone if anyone doubts it",
-        "Slots from Pragmatic, PG Soft, JILI and Habanero — the real studios, not clones with slightly different names",
-        "Cricket odds actually move with the match, not stuck 30 seconds behind like some cheaper books"
-      ]
-    },
-    {
-      "type": "section",
-      "heading": "Cricket Betting & Live Casino at 899OK",
-      "paragraphs": [
-        "Cricket is basically what makes or breaks a Bangladeshi betting site. BPL evenings, India series, T20 World Cup nights — 899OK opens deep markets on all of it. Not just who wins. Top batter of the innings, method of next dismissal, runs in the powerplay, whether the next ball is a boundary. If you actually watch cricket seriously, the markets reward it.",
-        "Football's covered too — Premier League every weekend, Champions League midweek, and Argentina/Brazil friendlies attract huge Bangladeshi volume so the lines shift fast.",
-        "Other sports I've placed the odd bet on:",
-        "The sportsbook section has everything laid out by sport and league.",
-        "When cricket's done for the night, I usually drift into the live casino. Evolution and Ezugi run most tables, and the dealers actually chat with the table — not just spin and stare."
-      ],
-      "list": [
-        "Tennis Grand Slams and most ATP 500 events",
-        "eSports — mostly Valorant and Mobile Legends here",
-        "NBA regular season and playoffs"
-      ],
-      "subsections": [
+      "content": [
         {
-          "heading": "BPL and India Series Markets",
-          "paragraphs": [
-            "Expect 35–50 markets per international match at 899OK — full breakdown by session, batter, and over bands."
+          "type": "title",
+          "tag": "h2",
+          "text": "Why 899OK Actually Works for Me"
+        },
+        {
+          "type": "text",
+          "text": "There are maybe two dozen casino sites targeting Bangladesh right now. Most either lag when your internet dips, or their payments break on a Friday when you actually want to play. 899OK is one of the handful that just keeps running. Here's what I keep noticing:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Live dealer tables stay busy from about 6pm till 4am — I've never seen an empty Andar Bahar table during BPL season",
+            "Support chat replies in Bangla within roughly 90 seconds even at 2am",
+            "My biggest bKash withdrawal (৳18,400) landed in 11 minutes last month — screenshots on my phone if anyone doubts it",
+            "Slots from Pragmatic, PG Soft, JILI and Habanero — the real studios, not clones with slightly different names",
+            "Cricket odds actually move with the match, not stuck 30 seconds behind like some cheaper books"
           ]
         },
         {
-          "heading": "899OK Live Casino Floor",
-          "paragraphs": [
-            "Teen Patti, Andar Bahar, Baccarat and Roulette from ৳50 minimum, with Bangla and Hindi speaking dealers on most tables."
-          ]
+          "type": "text",
+          "text": "You can open the full casino lobby and browse without depositing. I did that for two evenings before putting any money in — nothing wrong with being cautious."
         }
       ]
     },
     {
       "type": "section",
-      "heading": "899OK Welcome Bonus — The Real Terms",
-      "paragraphs": [
-        "Bonuses always look juicier in the banner than on the terms page. Here's what 899OK's welcome deal actually looks like when you read the fine print:",
-        "18x wagering is reasonable for this market — I've seen sites push 40x for the same match. On a ৳2,000 bonus that's ৳36,000 in slot spins to clear, which is one focused Friday session if you're playing at ৳20–40 stakes.",
-        "Weekly reloads, cashback and free spin drops sit on the bonus page. The Sunday reload is the one I use most."
-      ],
-      "table": {
-        "columns": [
-          "What",
-          "Amount",
-          "Terms"
-        ],
-        "rows": [
-          [
-            "First deposit match",
-            "100% up to ৳12,000",
-            "Min deposit ৳500"
-          ],
-          [
-            "Free spins",
-            "80 spins",
-            "On Gates of Olympus"
-          ],
-          [
-            "Wagering",
-            "18x bonus",
-            "Slots 100%, live 10%, sports 5%"
-          ],
-          [
-            "Time limit",
-            "21 days",
-            "From bonus credit"
-          ],
-          [
-            "Max bet while wagering",
-            "৳250",
-            "Higher bets void the bonus"
-          ]
-        ]
-      }
-    },
-    {
-      "type": "section",
-      "heading": "Payments — bKash, Nagad, Rocket",
-      "paragraphs": [
-        "This is where a lot of \"international\" sites for Bangladesh quietly break down. 899OK gets the local wallets right.",
-        "Deposits:",
-        "No platform fees from 899OK on either side. Your wallet's usual charges apply, nothing extra.",
-        "Withdrawals: Same wallet as the deposit, up to 24 hours official, but most bKash cashouts hit in under 20 minutes for me. Max ৳50,000 per request, up to 8 requests per day.",
-        "If a deposit doesn't credit within 5 minutes, copy the TRX ID from your wallet SMS and paste it in live chat. They'll trace and credit manually — mine has happened twice, both resolved inside 25 minutes."
-      ],
-      "table": {
-        "columns": [
-          "Method",
-          "Min",
-          "Max",
-          "Speed"
-        ],
-        "rows": [
-          [
-            "bKash",
-            "৳100",
-            "৳100,000",
-            "Instant"
-          ],
-          [
-            "Nagad",
-            "৳100",
-            "৳50,000",
-            "Instant"
-          ],
-          [
-            "Rocket",
-            "৳200",
-            "৳80,000",
-            "Under 2 minutes"
-          ],
-          [
-            "USDT (TRC20)",
-            "৳500 eq.",
-            "No limit",
-            "3–10 minutes"
-          ]
-        ]
-      },
-      "subsections": [
+      "content": [
         {
-          "heading": "bKash — Fastest for Most Players",
-          "paragraphs": [
-            "bKash is what I use for both deposits and withdrawals. Deposits are instant, cashouts land in 8–20 minutes most days."
+          "type": "title",
+          "tag": "h2",
+          "text": "Cricket Betting & Live Casino at 899OK"
+        },
+        {
+          "type": "text",
+          "text": "Cricket is basically what makes or breaks a Bangladeshi betting site. BPL evenings, India series, T20 World Cup nights — 899OK opens deep markets on all of it. Not just who wins. Top batter of the innings, method of next dismissal, runs in the powerplay, whether the next ball is a boundary. If you actually watch cricket seriously, the markets reward it."
+        },
+        {
+          "type": "text",
+          "text": "Football's covered too — Premier League every weekend, Champions League midweek, and Argentina/Brazil friendlies attract huge Bangladeshi volume so the lines shift fast."
+        },
+        {
+          "type": "text",
+          "text": "Other sports I've placed the odd bet on:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Tennis Grand Slams and most ATP 500 events",
+            "eSports — mostly Valorant and Mobile Legends here",
+            "NBA regular season and playoffs"
           ]
         },
         {
-          "heading": "Nagad, Rocket and USDT",
-          "paragraphs": [
-            "Nagad clears withdrawals in 10–30 minutes. Rocket is slower, usually 20–45. USDT is the pick if you're moving bigger sums."
-          ]
+          "type": "text",
+          "text": "The sportsbook section has everything laid out by sport and league."
+        },
+        {
+          "type": "text",
+          "text": "When cricket's done for the night, I usually drift into the live casino. Evolution and Ezugi run most tables, and the dealers actually chat with the table — not just spin and stare."
+        },
+        {
+          "type": "title",
+          "tag": "h3",
+          "text": "BPL and India Series Markets"
+        },
+        {
+          "type": "text",
+          "text": "Expect 35–50 markets per international match at 899OK — full breakdown by session, batter, and over bands."
+        },
+        {
+          "type": "title",
+          "tag": "h3",
+          "text": "899OK Live Casino Floor"
+        },
+        {
+          "type": "text",
+          "text": "Teen Patti, Andar Bahar, Baccarat and Roulette from ৳50 minimum, with Bangla and Hindi speaking dealers on most tables."
         }
       ]
     },
     {
       "type": "section",
-      "heading": "The 899OK Mobile Experience",
-      "paragraphs": [
-        "Basically nobody in Bangladesh is playing casino on a laptop. It's all phones. The 899OK site loads fine in any mobile browser, but the Android app (grab it here) noticeably improves live dealer stream quality and gives you push notifications for bonus drops and free spin promos.",
-        "I'm on a Realme Narzo, nothing fancy, and even the live blackjack streams don't stutter on my Grameenphone 4G."
-      ],
-      "list": [
-        "APK size: around 28 MB",
-        "Android 7.0 or newer required",
-        "No iOS app — Apple doesn't approve gambling apps for Bangladesh, so iPhone users just use Safari (works fine, add to home screen)"
-      ]
-    },
-    {
-      "type": "section",
-      "heading": "Signing Up at 899OK in Under 3 Minutes",
-      "paragraphs": [
-        "Honestly the whole thing is quick if your phone's next to you:",
-        "That's it. You can browse the games lobby before depositing anything. KYC is only triggered when you request your first withdrawal, not at signup."
-      ],
-      "list": [
-        "Tap Register — top-right green button on both site and app",
-        "Enter your Bangladesh mobile number (use the one linked to your bKash or Nagad — the names have to match at withdrawal time)",
-        "Set a password with letters, a number and a symbol",
-        "Punch in the OTP sent by SMS",
-        "Add a promo code if you have one — that's how the welcome match activates"
-      ]
-    },
-    {
-      "type": "section",
-      "heading": "Is 899OK Safe to Play?",
-      "paragraphs": [
-        "Reasonable question, especially given how many shady clones exist. Here's what actually matters:",
-        "For the KYC document list and verification steps, see the login and account guide."
-      ],
-      "list": [
-        "SSL encryption across the whole site — check the padlock in your browser",
-        "Real game providers — Evolution, Pragmatic, PG Soft, JILI, Habanero, NetEnt (not obscure white-label junk)",
-        "Provably fair mechanics on Aviator and other crash games — every round hash is verifiable",
-        "KYC required before larger withdrawals — mildly annoying, but it's what stops someone else emptying your account",
-        "2FA available in account settings for login protection"
-      ],
-      "subsections": [
+      "content": [
         {
-          "heading": "What 899OK can't do for you:",
-          "list": [
+          "type": "title",
+          "tag": "h2",
+          "text": "899OK Welcome Bonus — The Real Terms"
+        },
+        {
+          "type": "text",
+          "text": "Bonuses always look juicier in the banner than on the terms page. Here's what 899OK's welcome deal actually looks like when you read the fine print:"
+        },
+        {
+          "type": "table",
+          "columns": [
+            "What",
+            "Amount",
+            "Terms"
+          ],
+          "rows": [
+            [
+              "First deposit match",
+              "100% up to ৳12,000",
+              "Min deposit ৳500"
+            ],
+            [
+              "Free spins",
+              "80 spins",
+              "On Gates of Olympus"
+            ],
+            [
+              "Wagering",
+              "18x bonus",
+              "Slots 100%, live 10%, sports 5%"
+            ],
+            [
+              "Time limit",
+              "21 days",
+              "From bonus credit"
+            ],
+            [
+              "Max bet while wagering",
+              "৳250",
+              "Higher bets void the bonus"
+            ]
+          ]
+        },
+        {
+          "type": "text",
+          "text": "18x wagering is reasonable for this market — I've seen sites push 40x for the same match. On a ৳2,000 bonus that's ৳36,000 in slot spins to clear, which is one focused Friday session if you're playing at ৳20–40 stakes."
+        },
+        {
+          "type": "text",
+          "text": "Weekly reloads, cashback and free spin drops sit on the bonus page. The Sunday reload is the one I use most."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "tag": "h2",
+          "text": "Payments — bKash, Nagad, Rocket"
+        },
+        {
+          "type": "text",
+          "text": "This is where a lot of \"international\" sites for Bangladesh quietly break down. 899OK gets the local wallets right."
+        },
+        {
+          "type": "text",
+          "text": "Deposits:"
+        },
+        {
+          "type": "table",
+          "columns": [
+            "Method",
+            "Min",
+            "Max",
+            "Speed"
+          ],
+          "rows": [
+            [
+              "bKash",
+              "৳100",
+              "৳100,000",
+              "Instant"
+            ],
+            [
+              "Nagad",
+              "৳100",
+              "৳50,000",
+              "Instant"
+            ],
+            [
+              "Rocket",
+              "৳200",
+              "৳80,000",
+              "Under 2 minutes"
+            ],
+            [
+              "USDT (TRC20)",
+              "৳500 eq.",
+              "No limit",
+              "3–10 minutes"
+            ]
+          ]
+        },
+        {
+          "type": "text",
+          "text": "No platform fees from 899OK on either side. Your wallet's usual charges apply, nothing extra."
+        },
+        {
+          "type": "text",
+          "text": "Withdrawals: Same wallet as the deposit, up to 24 hours official, but most bKash cashouts hit in under 20 minutes for me. Max ৳50,000 per request, up to 8 requests per day."
+        },
+        {
+          "type": "text",
+          "text": "If a deposit doesn't credit within 5 minutes, copy the TRX ID from your wallet SMS and paste it in live chat. They'll trace and credit manually — mine has happened twice, both resolved inside 25 minutes."
+        },
+        {
+          "type": "title",
+          "tag": "h3",
+          "text": "bKash — Fastest for Most Players"
+        },
+        {
+          "type": "text",
+          "text": "bKash is what I use for both deposits and withdrawals. Deposits are instant, cashouts land in 8–20 minutes most days."
+        },
+        {
+          "type": "title",
+          "tag": "h3",
+          "text": "Nagad, Rocket and USDT"
+        },
+        {
+          "type": "text",
+          "text": "Nagad clears withdrawals in 10–30 minutes. Rocket is slower, usually 20–45. USDT is the pick if you're moving bigger sums."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "tag": "h2",
+          "text": "The 899OK Mobile Experience"
+        },
+        {
+          "type": "text",
+          "text": "Basically nobody in Bangladesh is playing casino on a laptop. It's all phones. The 899OK site loads fine in any mobile browser, but the Android app (grab it here) noticeably improves live dealer stream quality and gives you push notifications for bonus drops and free spin promos."
+        },
+        {
+          "type": "list",
+          "items": [
+            "APK size: around 28 MB",
+            "Android 7.0 or newer required",
+            "No iOS app — Apple doesn't approve gambling apps for Bangladesh, so iPhone users just use Safari (works fine, add to home screen)"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "I'm on a Realme Narzo, nothing fancy, and even the live blackjack streams don't stutter on my Grameenphone 4G."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "tag": "h2",
+          "text": "Signing Up at 899OK in Under 3 Minutes"
+        },
+        {
+          "type": "text",
+          "text": "Honestly the whole thing is quick if your phone's next to you:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Tap Register — top-right green button on both site and app",
+            "Enter your Bangladesh mobile number (use the one linked to your bKash or Nagad — the names have to match at withdrawal time)",
+            "Set a password with letters, a number and a symbol",
+            "Punch in the OTP sent by SMS",
+            "Add a promo code if you have one — that's how the welcome match activates"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "That's it. You can browse the games lobby before depositing anything. KYC is only triggered when you request your first withdrawal, not at signup."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "tag": "h2",
+          "text": "Is 899OK Safe to Play?"
+        },
+        {
+          "type": "text",
+          "text": "Reasonable question, especially given how many shady clones exist. Here's what actually matters:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "SSL encryption across the whole site — check the padlock in your browser",
+            "Real game providers — Evolution, Pragmatic, PG Soft, JILI, Habanero, NetEnt (not obscure white-label junk)",
+            "Provably fair mechanics on Aviator and other crash games — every round hash is verifiable",
+            "KYC required before larger withdrawals — mildly annoying, but it's what stops someone else emptying your account",
+            "2FA available in account settings for login protection"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "For the KYC document list and verification steps, see the login and account guide."
+        },
+        {
+          "type": "title",
+          "tag": "h3",
+          "text": "What 899OK can't do for you:"
+        },
+        {
+          "type": "list",
+          "items": [
             "Guarantee wins — it's still a casino, house edge exists",
             "Rewrite Bangladesh gambling law (it's grey area, but using a wallet in your own name keeps things simple)",
             "Undo losses — set a limit and stick to it"
           ]
         },
         {
-          "heading": "Licensing and RNG Testing",
-          "paragraphs": [
-            "Curacao gaming licence with independent RNG testing on slot titles. No Bangladesh domestic licence exists — no offshore site has one."
-          ]
+          "type": "title",
+          "tag": "h3",
+          "text": "Licensing and RNG Testing"
         },
         {
-          "heading": "What Offshore Status Means",
-          "paragraphs": [
-            "Dispute recourse is limited to the licensing body. Worth knowing before you deposit anything meaningful."
-          ]
+          "type": "text",
+          "text": "Curacao gaming licence with independent RNG testing on slot titles. No Bangladesh domestic licence exists — no offshore site has one."
+        },
+        {
+          "type": "title",
+          "tag": "h3",
+          "text": "What Offshore Status Means"
+        },
+        {
+          "type": "text",
+          "text": "Dispute recourse is limited to the licensing body. Worth knowing before you deposit anything meaningful."
         }
       ]
     },
     {
       "type": "section",
-      "heading": "My Honest Take on 899OK",
-      "paragraphs": [
-        "After seven months, here's the summary: 899OK isn't the flashiest site targeting Bangladesh, but it's one of the very few I trust with actual money on a Friday night. bKash cashouts are consistently fast, the cricket book is deep enough to reward you knowing the game, and support answers in Bangla without making you feel stupid.",
-        "The welcome bonus wagering is fair by local standards, but the ৳250 max-bet-during-wagering rule is the trap most players trip on — read it before you claim.",
-        "Set a session budget, keep spins at 1/100th of your balance, cash out to bKash the same night. That's how you keep this fun instead of expensive."
+      "content": [
+        {
+          "type": "title",
+          "tag": "h2",
+          "text": "My Honest Take on 899OK"
+        },
+        {
+          "type": "text",
+          "text": "After seven months, here's the summary: 899OK isn't the flashiest site targeting Bangladesh, but it's one of the very few I trust with actual money on a Friday night. bKash cashouts are consistently fast, the cricket book is deep enough to reward you knowing the game, and support answers in Bangla without making you feel stupid."
+        },
+        {
+          "type": "text",
+          "text": "The welcome bonus wagering is fair by local standards, but the ৳250 max-bet-during-wagering rule is the trap most players trip on — read it before you claim."
+        },
+        {
+          "type": "text",
+          "text": "Set a session budget, keep spins at 1/100th of your balance, cash out to bKash the same night. That's how you keep this fun instead of expensive."
+        }
       ]
     },
     {

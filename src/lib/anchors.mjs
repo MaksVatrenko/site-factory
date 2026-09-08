@@ -21,6 +21,24 @@ function slugify(text) {
     .replace(/-+$/g, '');
 }
 
+// A `section` block names its heading through its own ordered `content` array now -- the first
+// `title` element in it, wherever it sits -- rather than a dedicated `heading` field: content
+// decides what a section contains and in what order, so the heading is no longer guaranteed to be
+// entry zero. Every other block type (hero, faq, links) is untouched by that change and keeps
+// naming its heading directly through `props.heading`.
+function firstTitleText(content) {
+  const list = Array.isArray(content) ? content : [];
+  const title = list.find(
+    (entry) => entry && typeof entry === 'object' && !Array.isArray(entry) && entry.type === 'title',
+  );
+  return title && typeof title.text === 'string' ? title.text : '';
+}
+
+function headingOf(block) {
+  if (block.type === 'section') return firstTitleText(block.props.content);
+  return typeof block.props.heading === 'string' ? block.props.heading : '';
+}
+
 function uniqueAnchor(base, taken, index) {
   // An id may legally start with a digit in HTML, but the same string is then not a valid CSS
   // selector: `document.querySelector('#899ok-bonus')` throws. Headings here routinely start with
@@ -42,7 +60,7 @@ export function linkAnchors(page) {
   // section can also be linked to from another page or from outside the site.
   blocks.forEach((block, index) => {
     if (!block || typeof block !== 'object' || !block.props) return;
-    const heading = typeof block.props.heading === 'string' ? block.props.heading : '';
+    const heading = headingOf(block);
     if (block.type === 'toc' || heading.trim() === '') return;
     const anchor = uniqueAnchor(slugify(heading), taken, index);
     taken.add(anchor);

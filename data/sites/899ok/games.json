@@ -26,220 +26,346 @@
     },
     {
       "type": "section",
-      "heading": "Aviator & Crash Games on 899OK",
-      "paragraphs": [
-        "Aviator from Spribe is the backbone of the crash section for most Bangladesh players. The plane takes off, your multiplier ticks up, and you have to bail before it vanishes.",
-        "My usual rhythm: lock auto-cashout at 1.6x on my first bet, play a manual second bet when feeling brave aiming 2.5x–5x, never double up after a bad round to \"win it back\".",
-        "Outside Aviator, 899OK carries a wide crash lineup:",
-        "Minimum bet is ৳10. Real talk — auto-cashout keeps you honest. Watching the plane and \"feeling it out\" is how sessions die."
-      ],
-      "table": {
-        "columns": [
-          "Game",
-          "Provider",
-          "Style",
-          "Max multiplier"
-        ],
-        "rows": [
-          [
-            "Aviator",
-            "Spribe",
-            "Classic plane graphic",
-            "1000x"
-          ],
-          [
-            "JetX",
-            "SmartSoft",
-            "Jet with weapons theme",
-            "200x"
-          ],
-          [
-            "Crash",
-            "BGaming",
-            "Minimal, fast rounds",
-            "1000x"
-          ],
-          [
-            "Rocketon",
-            "Evoplay",
-            "Space vibe, chill audio",
-            "100x"
-          ],
-          [
-            "Spaceman",
-            "Pragmatic Play",
-            "Astronaut theme, cash-half feature",
-            "5000x"
-          ]
-        ]
-      },
-      "subsections": [
+      "content": [
         {
-          "heading": "Aviator on 899OK",
-          "paragraphs": [
-            "Provably fair — every round hash can be checked afterwards. RTP sits at 97%, min bet ৳10."
+          "type": "title",
+          "tag": "h2",
+          "text": "Aviator & Crash Games on 899OK"
+        },
+        {
+          "type": "text",
+          "text": "Aviator from Spribe is the backbone of the crash section for most Bangladesh players. The plane takes off, your multiplier ticks up, and you have to bail before it vanishes."
+        },
+        {
+          "type": "text",
+          "text": "My usual rhythm: lock auto-cashout at 1.6x on my first bet, play a manual second bet when feeling brave aiming 2.5x–5x, never double up after a bad round to \"win it back\"."
+        },
+        {
+          "type": "text",
+          "text": "Outside Aviator, 899OK carries a wide crash lineup:"
+        },
+        {
+          "type": "table",
+          "columns": [
+            "Game",
+            "Provider",
+            "Style",
+            "Max multiplier"
+          ],
+          "rows": [
+            [
+              "Aviator",
+              "Spribe",
+              "Classic plane graphic",
+              "1000x"
+            ],
+            [
+              "JetX",
+              "SmartSoft",
+              "Jet with weapons theme",
+              "200x"
+            ],
+            [
+              "Crash",
+              "BGaming",
+              "Minimal, fast rounds",
+              "1000x"
+            ],
+            [
+              "Rocketon",
+              "Evoplay",
+              "Space vibe, chill audio",
+              "100x"
+            ],
+            [
+              "Spaceman",
+              "Pragmatic Play",
+              "Astronaut theme, cash-half feature",
+              "5000x"
+            ]
           ]
         },
         {
-          "heading": "Other Crash Titles",
-          "paragraphs": [
-            "JetX and Spaceman use the same core mechanic with different pacing. Auto-cashout at 1.8x is the closest thing to a discipline system."
+          "type": "text",
+          "text": "Minimum bet is ৳10. Real talk — auto-cashout keeps you honest. Watching the plane and \"feeling it out\" is how sessions die."
+        },
+        {
+          "type": "title",
+          "tag": "h3",
+          "text": "Aviator on 899OK"
+        },
+        {
+          "type": "text",
+          "text": "Provably fair — every round hash can be checked afterwards. RTP sits at 97%, min bet ৳10."
+        },
+        {
+          "type": "title",
+          "tag": "h3",
+          "text": "Other Crash Titles"
+        },
+        {
+          "type": "text",
+          "text": "JetX and Spaceman use the same core mechanic with different pacing. Auto-cashout at 1.8x is the closest thing to a discipline system."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "tag": "h2",
+          "text": "899OK Fishing Games"
+        },
+        {
+          "type": "text",
+          "text": "Don't overlook these. Fishing shooters are arcade-style gunning with real money — you blast sea creatures, bigger targets pay bigger multipliers, and boss rounds can drop chunky prizes."
+        },
+        {
+          "type": "text",
+          "text": "Feels more skill-based than slots, which I like. Aim, watch your ammo cost, don't burn shots on tiny fish."
+        },
+        {
+          "type": "list",
+          "items": [
+            "Fishing War (JILI) — Bangladesh player favourite, meaty boss rounds",
+            "Dragon Fortune Fishing (JILI) — dragon boss with high multiplier ceiling",
+            "Jackpot Fishing (JILI) — progressive jackpot pool",
+            "Ocean King (Playtech) — genre original, still solid"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Per-shot range: ৳0.1 to ৳100. You control ammo cost, so a modest deposit can last hours if you play with discipline."
+        },
+        {
+          "type": "title",
+          "tag": "h3",
+          "text": "How Fishing Rooms Pay"
+        },
+        {
+          "type": "text",
+          "text": "Every shot costs your chosen stake. Small fish return 2–10x, bosses 100–500x."
+        },
+        {
+          "type": "title",
+          "tag": "h3",
+          "text": "Room Traffic and Timing"
+        },
+        {
+          "type": "text",
+          "text": "Four-player rooms fill up after 8 PM. Daytime rooms often sit at one player, which stretches boss timers."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "tag": "h2",
+          "text": "899OK Arcade & Instant Games"
+        },
+        {
+          "type": "text",
+          "text": "For when you've got a five-minute window and zero patience: Mines (click tiles, avoid bombs, cash out before greed wrecks you), Plinko (drop the ball, watch it bounce), Dice (pick over/under, roll, done), Wheel (spin, land on a multiplier, cash out), Coin Flip (heads or tails, double or nothing)."
+        },
+        {
+          "type": "text",
+          "text": "Why they work: rounds finish in seconds, you decide when to stop on most of them, low stakes often from ৳10, runs smooth on any budget phone."
+        },
+        {
+          "type": "title",
+          "tag": "h3",
+          "text": "Mines and Plinko"
+        },
+        {
+          "type": "text",
+          "text": "Mines lets you keep clicking tiles until you either cash out or hit a bomb. Plinko drops a ball through pegs, min bet ৳10."
+        },
+        {
+          "type": "title",
+          "tag": "h3",
+          "text": "Dice and Wheel"
+        },
+        {
+          "type": "text",
+          "text": "Round times under 10 seconds. RTP sits at 96–97%, listed inside each game info panel."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "tag": "h2",
+          "text": "How 899OK Game Types Actually Work"
+        },
+        {
+          "type": "table",
+          "columns": [
+            "Game type",
+            "What you do",
+            "Best for",
+            "Skill vs luck"
+          ],
+          "rows": [
+            [
+              "Crash / Aviator",
+              "Cash out before crash",
+              "Quick nerves",
+              "30 / 70"
+            ],
+            [
+              "Fishing",
+              "Shoot for multipliers",
+              "Focus and patience",
+              "50 / 50"
+            ],
+            [
+              "Mines",
+              "Pick safe tiles",
+              "Strategy heads",
+              "40 / 60"
+            ],
+            [
+              "Plinko",
+              "Drop and watch",
+              "Casual sessions",
+              "5 / 95"
+            ],
+            [
+              "Dice",
+              "Bet over/under",
+              "Probability players",
+              "0 / 100"
+            ],
+            [
+              "Slots",
+              "Spin and hope",
+              "Chill background play",
+              "0 / 100"
+            ]
           ]
         }
       ]
     },
     {
       "type": "section",
-      "heading": "899OK Fishing Games",
-      "paragraphs": [
-        "Don't overlook these. Fishing shooters are arcade-style gunning with real money — you blast sea creatures, bigger targets pay bigger multipliers, and boss rounds can drop chunky prizes.",
-        "Feels more skill-based than slots, which I like. Aim, watch your ammo cost, don't burn shots on tiny fish.",
-        "Per-shot range: ৳0.1 to ৳100. You control ammo cost, so a modest deposit can last hours if you play with discipline."
-      ],
-      "list": [
-        "Fishing War (JILI) — Bangladesh player favourite, meaty boss rounds",
-        "Dragon Fortune Fishing (JILI) — dragon boss with high multiplier ceiling",
-        "Jackpot Fishing (JILI) — progressive jackpot pool",
-        "Ocean King (Playtech) — genre original, still solid"
-      ],
-      "subsections": [
+      "content": [
         {
-          "heading": "How Fishing Rooms Pay",
-          "paragraphs": [
-            "Every shot costs your chosen stake. Small fish return 2–10x, bosses 100–500x."
+          "type": "title",
+          "tag": "h2",
+          "text": "How to Start Playing on 899OK"
+        },
+        {
+          "type": "text",
+          "text": "Takes about two minutes if your phone is handy:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Tap Register — top-right on the site or app",
+            "Enter your Bangladesh mobile number (the one linked to your bKash or Nagad)",
+            "Choose a strong password — mix letters, a number, a symbol",
+            "Verify the OTP sent to your phone",
+            "Add a promo code if you have one to trigger the welcome offer"
           ]
         },
         {
-          "heading": "Room Traffic and Timing",
-          "paragraphs": [
-            "Four-player rooms fill up after 8 PM. Daytime rooms often sit at one player, which stretches boss timers."
-          ]
+          "type": "text",
+          "text": "That's it. Browse the lobby before depositing a single taka."
         }
       ]
     },
     {
       "type": "section",
-      "heading": "899OK Arcade & Instant Games",
-      "paragraphs": [
-        "For when you've got a five-minute window and zero patience: Mines (click tiles, avoid bombs, cash out before greed wrecks you), Plinko (drop the ball, watch it bounce), Dice (pick over/under, roll, done), Wheel (spin, land on a multiplier, cash out), Coin Flip (heads or tails, double or nothing).",
-        "Why they work: rounds finish in seconds, you decide when to stop on most of them, low stakes often from ৳10, runs smooth on any budget phone."
-      ],
-      "subsections": [
+      "content": [
         {
-          "heading": "Mines and Plinko",
-          "paragraphs": [
-            "Mines lets you keep clicking tiles until you either cash out or hit a bomb. Plinko drops a ball through pegs, min bet ৳10."
+          "type": "title",
+          "tag": "h2",
+          "text": "Tips for Better Play on 899OK"
+        },
+        {
+          "type": "text",
+          "text": "Not financial advice. Just what actually keeps my balance breathing:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "1. Set a session budget: ৳500 for the night. When it's gone, walk. No top-ups."
           ]
         },
         {
-          "heading": "Dice and Wheel",
-          "paragraphs": [
-            "Round times under 10 seconds. RTP sits at 96–97%, listed inside each game info panel."
-          ]
+          "type": "text",
+          "text": "2. Auto-cashout on crash: 1.6x–2x is boring but pays rent. Manual = greed = zero."
+        },
+        {
+          "type": "text",
+          "text": "3. Fishing is a long game: steady shots at medium fish. Skip the minnows, wait for boss windows."
+        },
+        {
+          "type": "text",
+          "text": "4. Mines: 3 tiles max: beyond that you're feeding the house. Three tiles with cash-out at 1.35x–1.6x is the sweet spot."
+        },
+        {
+          "type": "text",
+          "text": "5. Don't play tilted: after a bad round, close the tab. Ten minutes off resets your judgement."
+        },
+        {
+          "type": "text",
+          "text": "6. Cash out profits: ৳500 becomes ৳2,000, pull ৳1,500. Play the rest as house money."
         }
       ]
     },
     {
       "type": "section",
-      "heading": "How 899OK Game Types Actually Work",
-      "table": {
-        "columns": [
-          "Game type",
-          "What you do",
-          "Best for",
-          "Skill vs luck"
-        ],
-        "rows": [
-          [
-            "Crash / Aviator",
-            "Cash out before crash",
-            "Quick nerves",
-            "30 / 70"
-          ],
-          [
-            "Fishing",
-            "Shoot for multipliers",
-            "Focus and patience",
-            "50 / 50"
-          ],
-          [
-            "Mines",
-            "Pick safe tiles",
-            "Strategy heads",
-            "40 / 60"
-          ],
-          [
-            "Plinko",
-            "Drop and watch",
-            "Casual sessions",
-            "5 / 95"
-          ],
-          [
-            "Dice",
-            "Bet over/under",
-            "Probability players",
-            "0 / 100"
-          ],
-          [
-            "Slots",
-            "Spin and hope",
-            "Chill background play",
-            "0 / 100"
+      "content": [
+        {
+          "type": "title",
+          "tag": "h2",
+          "text": "New Game Releases on 899OK"
+        },
+        {
+          "type": "text",
+          "text": "The 899OK lobby refreshes with new instant titles every 4–6 weeks. Recent additions I've been dipping into:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Sushi Party (Endorphina) — cascading sushi cluster wins",
+            "Cirque Show (Games Global) — themed volatility ride",
+            "Cricket X (Turbo Games) — cricket-flavoured crash, pairs well with BPL and IPL betting",
+            "Snake & Ladders Live (Ezugi) — the childhood board, now live-hosted"
           ]
-        ]
-      }
-    },
-    {
-      "type": "section",
-      "heading": "How to Start Playing on 899OK",
-      "paragraphs": [
-        "Takes about two minutes if your phone is handy:",
-        "That's it. Browse the lobby before depositing a single taka."
-      ],
-      "list": [
-        "Tap Register — top-right on the site or app",
-        "Enter your Bangladesh mobile number (the one linked to your bKash or Nagad)",
-        "Choose a strong password — mix letters, a number, a symbol",
-        "Verify the OTP sent to your phone",
-        "Add a promo code if you have one to trigger the welcome offer"
+        },
+        {
+          "type": "text",
+          "text": "Filter by \"new\" inside the lobby to see the current wave."
+        }
       ]
     },
     {
       "type": "section",
-      "heading": "Tips for Better Play on 899OK",
-      "paragraphs": [
-        "Not financial advice. Just what actually keeps my balance breathing:",
-        "2. Auto-cashout on crash: 1.6x–2x is boring but pays rent. Manual = greed = zero.",
-        "3. Fishing is a long game: steady shots at medium fish. Skip the minnows, wait for boss windows.",
-        "4. Mines: 3 tiles max: beyond that you're feeding the house. Three tiles with cash-out at 1.35x–1.6x is the sweet spot.",
-        "5. Don't play tilted: after a bad round, close the tab. Ten minutes off resets your judgement.",
-        "6. Cash out profits: ৳500 becomes ৳2,000, pull ৳1,500. Play the rest as house money."
-      ],
-      "list": [
-        "1. Set a session budget: ৳500 for the night. When it's gone, walk. No top-ups."
-      ]
-    },
-    {
-      "type": "section",
-      "heading": "New Game Releases on 899OK",
-      "paragraphs": [
-        "The 899OK lobby refreshes with new instant titles every 4–6 weeks. Recent additions I've been dipping into:",
-        "Filter by \"new\" inside the lobby to see the current wave."
-      ],
-      "list": [
-        "Sushi Party (Endorphina) — cascading sushi cluster wins",
-        "Cirque Show (Games Global) — themed volatility ride",
-        "Cricket X (Turbo Games) — cricket-flavoured crash, pairs well with BPL and IPL betting",
-        "Snake & Ladders Live (Ezugi) — the childhood board, now live-hosted"
-      ]
-    },
-    {
-      "type": "section",
-      "heading": "Should You Play Aviator on 899OK?",
-      "paragraphs": [
-        "Instant games are the fastest way to lose money on this platform, and I say that as someone who plays them most weeks. Rounds finish in seconds, there's no natural stopping point, and pace is the product.",
-        "Aviator is provably fair and every round hash is checkable — that part is genuinely reassuring. Fishing rooms fill after 8 PM and go quiet during the day, which changes how quickly bosses drop.",
-        "If you're brand new, start with a small ৳2 slot spin before touching a crash game. Learn the rhythm before variance introduces itself."
+      "content": [
+        {
+          "type": "title",
+          "tag": "h2",
+          "text": "Should You Play Aviator on 899OK?"
+        },
+        {
+          "type": "text",
+          "text": "Instant games are the fastest way to lose money on this platform, and I say that as someone who plays them most weeks. Rounds finish in seconds, there's no natural stopping point, and pace is the product."
+        },
+        {
+          "type": "text",
+          "text": "Aviator is provably fair and every round hash is checkable — that part is genuinely reassuring. Fishing rooms fill after 8 PM and go quiet during the day, which changes how quickly bosses drop."
+        },
+        {
+          "type": "text",
+          "text": "If you're brand new, start with a small ৳2 slot spin before touching a crash game. Learn the rhythm before variance introduces itself."
+        }
       ]
     },
     {

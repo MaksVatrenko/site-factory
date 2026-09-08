@@ -7,6 +7,7 @@ import {
   readManifest,
   loadTemplate,
   missingBlockFiles,
+  missingElementFiles,
 } from '../src/lib/templates.mjs';
 
 // Each fixture root created below is a real mkdtemp'd directory under the OS temp folder, which
@@ -47,6 +48,7 @@ describe('template registry', () => {
     const manifest = readManifest('review');
     expect(manifest.id).toBe('review');
     expect(manifest.blocks).toContain('hero');
+    expect(manifest.elements).toContain('title');
     expect(manifest.defaultScheme).toBeTruthy();
   });
 
@@ -62,12 +64,25 @@ describe('template registry', () => {
   it('reports no missing files for shipped templates', () => {
     for (const template of listTemplates()) {
       expect(missingBlockFiles(template)).toEqual([]);
+      expect(missingElementFiles(template)).toEqual([]);
     }
   });
 
   it('reports a block file that does not exist', () => {
     const broken = { id: 'review', blocks: ['hero', 'imaginary'] };
     expect(missingBlockFiles(broken)).toEqual(['imaginary']);
+  });
+
+  // Mirrors the block-file checks above, one level down: an element type a manifest declares
+  // support for must have a matching templates/<id>/elements/<type>.astro file, exactly like a
+  // block type must -- see src/components/ElementRenderer.astro.
+  it('reports an element file that does not exist', () => {
+    const broken = { id: 'review', elements: ['title', 'imaginary'] };
+    expect(missingElementFiles(broken)).toEqual(['imaginary']);
+  });
+
+  it('treats a manifest with no elements field as declaring none', () => {
+    expect(missingElementFiles({ id: 'review' })).toEqual([]);
   });
 
   it('throws when a manifest id does not match its folder', () => {
@@ -89,6 +104,18 @@ describe('template registry', () => {
   it('defaults to an empty block list when blocks is absent', () => {
     const root = makeTemplateRoot('fixture', JSON.stringify({ id: 'fixture' }));
     expect(readManifest('fixture', root).blocks).toEqual([]);
+  });
+
+  // Mirrors the two `blocks`-field tests above exactly, for the `elements` field a "section"
+  // block's own content entries are checked against (see src/components/ElementRenderer.astro).
+  it('throws when elements is present but not an array', () => {
+    const root = makeTemplateRoot('fixture', JSON.stringify({ id: 'fixture', elements: 'title' }));
+    expect(() => readManifest('fixture', root)).toThrow(/elements/);
+  });
+
+  it('defaults to an empty element list when elements is absent', () => {
+    const root = makeTemplateRoot('fixture', JSON.stringify({ id: 'fixture' }));
+    expect(readManifest('fixture', root).elements).toEqual([]);
   });
 
   it('names the file when the manifest is not valid JSON', () => {

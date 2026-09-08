@@ -1,0 +1,70 @@
+---
+import { asList, asText } from '../../_shared/props.mjs';
+
+const { columns, rows } = Astro.props;
+const cols = asList(columns)
+  .map((cell) => asText(cell))
+  .filter((cell) => cell !== '');
+const tableRows = asList(rows)
+  .map((row) => asList(row).map((cell) => asText(cell)))
+  .filter((row) => row.some((cell) => cell !== ''));
+// A table with columns but no rows (or the reverse) still renders -- an empty table with nothing
+// at all in it does not. See data/sites/broken for the "table with no rows" case this covers.
+const hasTable = cols.length > 0 || tableRows.length > 0;
+---
+
+{hasTable && (
+  <div class="rsection__table-wrap">
+    <table class="rsection__table">
+      {cols.length > 0 && (
+        <thead>
+          <tr>
+            {cols.map((column) => (
+              <th scope="col">{column}</th>
+            ))}
+          </tr>
+        </thead>
+      )}
+      {tableRows.length > 0 && (
+        <tbody>
+          {tableRows.map((row) => (
+            <tr>
+              {row.map((cell) => (
+                <td>{cell}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      )}
+    </table>
+  </div>
+)}
+
+<style>
+  .rsection__table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .rsection__table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .rsection__table th,
+  .rsection__table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-default);
+  }
+
+  .rsection__table thead th {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    white-space: nowrap;
+  }
+
+  .rsection__table tbody td {
+    color: var(--text-secondary);
+  }
+</style>

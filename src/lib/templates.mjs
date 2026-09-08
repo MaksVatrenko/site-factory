@@ -25,11 +25,18 @@ export function readManifest(id, root = process.cwd()) {
   if (raw.blocks !== undefined && !Array.isArray(raw.blocks)) {
     throw new Error(`Template manifest ${file} has a "blocks" field that is not an array`);
   }
+  if (raw.elements !== undefined && !Array.isArray(raw.elements)) {
+    throw new Error(`Template manifest ${file} has an "elements" field that is not an array`);
+  }
   return {
     id,
     name: typeof raw.name === 'string' && raw.name !== '' ? raw.name : id,
     description: typeof raw.description === 'string' ? raw.description : '',
     blocks: Array.isArray(raw.blocks) ? raw.blocks.filter((b) => typeof b === 'string') : [],
+    // Element types a "section" block's own content entries may use (see
+    // src/components/ElementRenderer.astro) -- the same declare-to-support mechanism as `blocks`,
+    // one level down.
+    elements: Array.isArray(raw.elements) ? raw.elements.filter((e) => typeof e === 'string') : [],
     defaultScheme: typeof raw.defaultScheme === 'string' ? raw.defaultScheme : '',
   };
 }
@@ -54,4 +61,13 @@ export function loadTemplate(id, root = process.cwd()) {
 export function missingBlockFiles(manifest, root = process.cwd()) {
   const dir = join(root, TEMPLATES_DIR, manifest.id, 'blocks');
   return manifest.blocks.filter((type) => !existsSync(join(dir, `${type}.astro`)));
+}
+
+// Mirrors missingBlockFiles exactly, one level down: a template declaring support for an element
+// type with no matching file at templates/<id>/elements/<type>.astro is a template-authoring
+// mistake, not a content problem, so it is caught the same way -- named and thrown at load time
+// instead of silently rendering nothing for every section that uses it.
+export function missingElementFiles(manifest, root = process.cwd()) {
+  const dir = join(root, TEMPLATES_DIR, manifest.id, 'elements');
+  return (manifest.elements || []).filter((type) => !existsSync(join(dir, `${type}.astro`)));
 }

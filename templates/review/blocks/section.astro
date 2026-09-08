@@ -1,46 +1,23 @@
 ---
-import { asList, asRecords, asText } from '../../_shared/props.mjs';
+import { asRecords, asText } from '../../_shared/props.mjs';
+import ElementRenderer from '../../../src/components/ElementRenderer.astro';
 
-const { heading, paragraphs, list, table, subsections, anchor } = Astro.props;
+// A section carries an ordered `content` array instead of fixed named fields (heading,
+// paragraphs, list, table, subsections) -- the content decides what a section contains and in
+// what order, not this template. This file's job shrinks to the section shell: spacing, the
+// anchor id, the container. Each entry's own look (a heading tag, list bullets, a table's scroll
+// wrapper) lives in that entry's own element component -- see templates/review/elements/ and
+// src/components/ElementRenderer.astro, which resolves and renders one entry at a time, in order.
+const { content, anchor, templateId } = Astro.props;
 
-const title = asText(heading);
-const paras = asList(paragraphs)
-  .map((text) => asText(text))
-  .filter((text) => text !== '');
-const items = asList(list)
-  .map((text) => asText(text))
-  .filter((text) => text !== '');
+// An entry that is not a plain object cannot carry a `type` and is dropped by asRecords the same
+// defensive way any other collection in this codebase is coerced, never thrown. An entry with no
+// usable `type` at all identifies nothing and is dropped here too -- ElementRenderer only warns
+// about a `type` it can name but does not support, not about one that was never given.
+const entries = asRecords(content).filter((entry) => asText(entry.type) !== '');
+const hasContent = entries.length > 0;
 
-// `table` is a single { columns, rows } record, not a list — asRecords/asList are built for
-// lists of records, so a bad shape (a string, an array, null) is coerced by hand here the same
-// defensive way: anything other than a plain object becomes an empty one, and every value pulled
-// out of it still goes through asList/asText.
-const tableInput =
-  typeof table === 'object' && table !== null && !Array.isArray(table) ? table : {};
-const columns = asList(tableInput.columns)
-  .map((cell) => asText(cell))
-  .filter((cell) => cell !== '');
-const rows = asList(tableInput.rows)
-  .map((row) => asList(row).map((cell) => asText(cell)))
-  .filter((row) => row.some((cell) => cell !== ''));
-const hasTable = columns.length > 0 || rows.length > 0;
-
-const subs = asRecords(subsections)
-  .map((sub) => ({
-    heading: asText(sub.heading),
-    paragraphs: asList(sub.paragraphs)
-      .map((text) => asText(text))
-      .filter((text) => text !== ''),
-    list: asList(sub.list)
-      .map((text) => asText(text))
-      .filter((text) => text !== ''),
-  }))
-  .filter((sub) => sub.heading !== '' || sub.paragraphs.length > 0 || sub.list.length > 0);
-
-const hasContent =
-  title !== '' || paras.length > 0 || items.length > 0 || hasTable || subs.length > 0;
-
-// A heading is what a `toc` block's items link to (see toc.astro) — omitted only when there is
+// A heading is what a `toc` block's items link to (see toc.astro) -- omitted only when there is
 // no heading, or nothing sensible survives slugifying it, rather than emitting a useless id="".
 const anchorId = asText(anchor);
 const idAttrs = anchorId ? { id: anchorId } : {};
@@ -49,62 +26,9 @@ const idAttrs = anchorId ? { id: anchorId } : {};
 {hasContent && (
   <section class="rsection section" {...idAttrs}>
     <div class="container rsection__inner">
-      {title && <h2>{title}</h2>}
-      {paras.map((paragraph) => (
-        <p>{paragraph}</p>
+      {entries.map((entry) => (
+        <ElementRenderer entry={entry} templateId={templateId} />
       ))}
-      {items.length > 0 && (
-        <ul class="rsection__list">
-          {items.map((item) => (
-            <li>{item}</li>
-          ))}
-        </ul>
-      )}
-      {hasTable && (
-        <div class="rsection__table-wrap">
-          <table class="rsection__table">
-            {columns.length > 0 && (
-              <thead>
-                <tr>
-                  {columns.map((column) => (
-                    <th scope="col">{column}</th>
-                  ))}
-                </tr>
-              </thead>
-            )}
-            {rows.length > 0 && (
-              <tbody>
-                {rows.map((row) => (
-                  <tr>
-                    {row.map((cell) => (
-                      <td>{cell}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            )}
-          </table>
-        </div>
-      )}
-      {subs.length > 0 && (
-        <div class="rsection__subgrid">
-          {subs.map((sub) => (
-            <div class="rsection__subcard">
-              {sub.heading && <h3>{sub.heading}</h3>}
-              {sub.paragraphs.map((paragraph) => (
-                <p>{paragraph}</p>
-              ))}
-              {sub.list.length > 0 && (
-                <ul>
-                  {sub.list.map((item) => (
-                    <li>{item}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   </section>
 )}
@@ -119,66 +43,7 @@ const idAttrs = anchorId ? { id: anchorId } : {};
     gap: 1.1rem;
   }
 
-  .rsection__inner:has(.rsection__table-wrap, .rsection__subgrid) {
+  .rsection__inner:has(.rsection__table-wrap) {
     max-width: none;
-  }
-
-  .rsection__list {
-    display: grid;
-    gap: 0.5rem;
-    color: var(--text-secondary);
-  }
-
-  .rsection__table-wrap {
-    max-width: 100%;
-    overflow-x: auto;
-  }
-
-  .rsection__table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  .rsection__table th,
-  .rsection__table td {
-    padding: 0.75rem 1rem;
-    text-align: left;
-    border-bottom: 1px solid var(--border-default);
-  }
-
-  .rsection__table thead th {
-    background: var(--bg-elevated);
-    color: var(--text-primary);
-    white-space: nowrap;
-  }
-
-  .rsection__table tbody td {
-    color: var(--text-secondary);
-  }
-
-  .rsection__subgrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-    gap: 1.25rem;
-    /* Without this, the browser sizes this grid item's automatic minimum from its OWN
-       min-content — which for a nested auto-fit/minmax grid is (pessimistically) wide enough
-       for every column at once — so it refuses to shrink below that and overflows its parent
-       instead of collapsing to fewer columns. min-width: 0 is the standard escape hatch: it lets
-       auto-fit actually respond to the real available width, which is the point of using it. */
-    min-width: 0;
-  }
-
-  .rsection__subcard {
-    padding: 1.5rem;
-    display: grid;
-    gap: 0.75rem;
-    align-content: start;
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius);
-  }
-
-  .rsection__subcard p {
-    color: var(--text-secondary);
   }
 </style>

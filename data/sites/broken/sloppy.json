@@ -12,13 +12,19 @@
     { "type": "carousel", "items": [] },
     { "type": "faq", "heading": "Still nothing to show", "items": "nope" },
     { "type": "faq", "items": [null, { "q": "only a question" }] },
-    { "type": "section", "paragraphs": "a single string" },
     {
       "type": "section",
-      "heading": "Also empty",
-      "subsections": [{ "heading": "Broken links", "list": null }]
+      "content": [
+        "just a string",
+        { "note": "entry with no type field" },
+        { "type": "quote", "text": "Unknown element type, dropped with a warning" },
+        { "type": "title", "tag": "h1", "text": "A content file cannot fake an h1" },
+        { "type": "list", "items": "Coerced into a single list item" },
+        { "type": "table", "columns": ["A", "B"], "rows": [] },
+        { "type": "text", "text": "Text still renders after every broken entry above it" }
+      ]
     },
-    { "type": "faq", "heading": { "note": "x" }, "items": [{ "q": 1, "a": [] }] },
-    { "type": "section", "heading": ["a", "b"], "paragraphs": [42, {}, ["nested"], "   "] }
+    { "type": "section", "content": "not an array at all" },
+    { "type": "faq", "heading": { "note": "x" }, "items": [{ "q": 1, "a": [] }] }
   ]
 }

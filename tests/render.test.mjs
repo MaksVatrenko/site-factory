@@ -86,9 +86,13 @@ describe('engine build', () => {
   it('survives a broken content folder', () => {
     const broken = buildSite({ site: 'broken', outDir: join('output', 'test-broken') });
     const html = readOutput(broken.outDir, join('sloppy', 'index.html'));
-    expect(html).toContain('a single string');
+    expect(html).toContain('Text still renders after every broken entry above it');
     expect(html).toContain('only a question');
     expect(broken.log).toContain('carousel');
+    // The element mechanism drops a content type the template does not declare support for
+    // exactly like an unsupported block type -- named in the log, never thrown (see
+    // src/components/ElementRenderer.astro).
+    expect(broken.log).toContain('quote');
   });
 
   it('drops orphaned markup for empty collections and bad headings', () => {
@@ -99,8 +103,12 @@ describe('engine build', () => {
     expect(html).not.toMatch(/<ul[^>]*>\s*<\/ul>/);
     expect(html).not.toMatch(/<table[^>]*>\s*<\/table>/);
     expect(html).not.toMatch(/<p>\s*<\/p>/);
-    expect(html).toContain('Also empty');
-    expect(html).toContain('Broken links');
+    // A `title` element whose tag is not one of h2-h6 falls back to h2 instead of faking the
+    // page's own h1 (see templates/review/elements/title.astro).
+    expect(html).toContain('<h2>A content file cannot fake an h1</h2>');
+    expect(html).not.toContain('<h1>A content file cannot fake an h1</h1>');
+    // A `list` whose `items` is a single string is coerced into a one-item list, not dropped.
+    expect(html).toContain('Coerced into a single list item');
   });
 });
 

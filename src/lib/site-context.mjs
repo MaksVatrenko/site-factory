@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { normalizeSite } from './normalize.mjs';
 import { linkAnchors } from './anchors.mjs';
-import { loadTemplate, missingBlockFiles } from './templates.mjs';
+import { loadTemplate, missingBlockFiles, missingElementFiles } from './templates.mjs';
 import { readScheme } from './schemes.mjs';
 import { createOutputProber } from './slug-prober.mjs';
 import { loadSiteDirInput } from './site-dir.mjs';
@@ -65,6 +65,12 @@ export function loadContext(root = process.cwd()) {
   if (missing.length > 0) {
     throw new Error(
       `Template "${template.id}" declares blocks with no file: ${missing.join(', ')}`,
+    );
+  }
+  const missingElements = missingElementFiles(template, root);
+  if (missingElements.length > 0) {
+    throw new Error(
+      `Template "${template.id}" declares elements with no file: ${missingElements.join(', ')}`,
     );
   }
 

@@ -1,0 +1,38 @@
+---
+import { readManifest } from '../lib/templates.mjs';
+
+// Mirrors BlockRenderer.astro exactly, one level down: a block (e.g. "section") carries an
+// ordered `content` array instead of a fixed set of named fields, and each entry names its own
+// element type ("title", "text", "list", "table", ...). Adding a new element type later is meant
+// to be exactly as cheap as adding a new block type -- one new file at
+// templates/<id>/elements/<type>.astro, discovered here the same way blockModules discovers a
+// block's file, plus one entry in that template's manifest.json.
+const elementModules = import.meta.glob('../../templates/*/elements/*.astro', { eager: true });
+
+const { entry, templateId } = Astro.props;
+
+// `entry` has already been through asRecords in section.astro, so it is always a plain object by
+// the time it gets here -- but this file has no way to enforce that a future caller keeps that
+// guarantee, so the same defensive check every other renderer in this codebase applies to input
+// it did not produce itself is applied again rather than trusted blindly.
+const type =
+  entry && typeof entry === 'object' && !Array.isArray(entry) && typeof entry.type === 'string'
+    ? entry.type
+    : '';
+
+const supportedElements = templateId ? readManifest(templateId).elements : [];
+const isSupported = type !== '' && supportedElements.includes(type);
+
+// An element type the template does not declare support for is dropped exactly like an
+// unsupported block type (see src/lib/normalize.mjs's own "шаблон не поддерживает блок" warning)
+// -- reported once, by name, never thrown. A missing `type` is not reported: it identifies
+// nothing, so there is no name worth warning about.
+if (type !== '' && !isSupported) {
+  console.warn(`[factory] шаблон не поддерживает элемент «${type}» — пропущен`);
+}
+
+const key = `../../templates/${templateId}/elements/${type}.astro`;
+const Component = isSupported ? elementModules[key]?.default : undefined;
+---
+
+{Component && <Component {...entry} />}
