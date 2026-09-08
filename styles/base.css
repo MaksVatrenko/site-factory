@@ -84,3 +84,19 @@ ul {
   font-weight: 600;
   text-decoration: none;
 }
+
+/* Neighbouring sections alternate their background. On a long page — and these pages run to a
+   dozen sections — a single flat background turns the whole thing into one undifferentiated
+   ribbon of text, with nothing but heading size to say where one topic ends and the next begins.
+   The rule lives here rather than in a block component because no component can know its own
+   position on the page; only the page can. */
+main > section:nth-child(even) {
+  background: var(--bg-alt);
+}
+
+/* The alternating shades are deliberately close together, so on a dark scheme the seam between two
+   sections can be almost invisible. A hairline makes the boundary read regardless of how similar
+   the two backgrounds are — the shading separates, the line states. */
+main > section + section {
+  border-top: 1px solid var(--border-default);
+}
