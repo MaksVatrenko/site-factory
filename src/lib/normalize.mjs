@@ -306,6 +306,11 @@ function resolveSlugsByProof(pages, warnings, prober) {
   // to hang a content build.
   const MAX_FALLBACK_ATTEMPTS = 100000;
 
+  // Snapshot of what the first pass actually granted, taken before the fallback pass starts
+  // filling the same array — so "was this slug already taken?" is answered about real claims,
+  // not about fallbacks assigned moments earlier.
+  const claimedSlugs = new Set(finalSlugs.filter((slug) => slug !== null));
+
   candidates.forEach((candidate, index) => {
     if (finalSlugs[index] !== null) return;
     let n = index;
@@ -324,8 +329,7 @@ function resolveSlugsByProof(pages, warnings, prober) {
       // filesystem refuses outright, and a perfectly good slug another page already took. Saying
       // "недопустим" for the second sends the reader hunting for a problem in a value that is
       // fine — the actual mistake is two pages declaring the same slug.
-      const takenByEarlierPage =
-        candidate.slug !== null && finalSlugs.some((slug, other) => other < index && slug === candidate.slug);
+      const takenByEarlierPage = candidate.slug !== null && claimedSlugs.has(candidate.slug);
       warnings.push(
         takenByEarlierPage
           ? `Слаг «${candidate.raw}» уже занят другой страницей — использован «${fallback}»`

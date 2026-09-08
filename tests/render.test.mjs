@@ -559,8 +559,8 @@ describe('normalizeSlug holds as an invariant across a wide range of hostile slu
         if (title) {
           expect(readOutput(outDir, target.slice(outDir.length + 1))).toContain(title);
         }
-        expect(log, `slug ${raw} should not have been warned about`).not.toContain(
-          `Слаг «${raw}» недопустим`,
+        expect(log, `slug ${raw} should not have been warned about`).not.toMatch(
+          new RegExp(`Слаг «${raw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}» (?:недопустим|уже занят)`),
         );
       }
 
@@ -572,11 +572,13 @@ describe('normalizeSlug holds as an invariant across a wide range of hostile slu
       expect(pageOneHtml).not.toContain('Missing Slug Page');
 
       // Every OTHER page — everything not in untouchedSlugs and not the missing-slug page —
-      // needed a fallback and so was warned about as invalid, never as a duplicate: with a
-      // prober in play, a collision is never reported using the separate "duplicate slug"
-      // warning text (see normalizeSite's own comment on this), whatever caused it.
+      // needed a fallback and so was reported. Two wordings are possible and both count as
+      // reported: "недопустим" when the slug itself is unusable, and "уже занят" when it is a
+      // fine slug an earlier page already claimed. What must never appear is the dropping path's
+      // "дубликат слага — страница пропущена", which would mean a page was lost rather than
+      // renamed.
       const unwarnedCount = untouchedSlugs.length + 1; // + the missing-slug page
-      const warnedCount = (log.match(/Слаг «[^»]*» недопустим/g) || []).length;
+      const warnedCount = (log.match(/Слаг «[^»]*» (?:недопустим|уже занят)/g) || []).length;
       expect(warnedCount).toBe(totalPages - unwarnedCount);
       expect(log).not.toContain('дубликат');
 
