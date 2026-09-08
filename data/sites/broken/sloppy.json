@@ -1,0 +1,24 @@
+{
+  "slug": "sloppy//",
+  "blocks": [
+    { "type": "hero" },
+    {
+      "type": "hero",
+      "heading": { "note": "broken heading" },
+      "paragraphs": { "note": "broken paragraphs" }
+    },
+    { "title": "no type at all" },
+    "just a string",
+    { "type": "carousel", "items": [] },
+    { "type": "faq", "heading": "Still nothing to show", "items": "nope" },
+    { "type": "faq", "items": [null, { "q": "only a question" }] },
+    { "type": "section", "paragraphs": "a single string" },
+    {
+      "type": "section",
+      "heading": "Also empty",
+      "subsections": [{ "heading": "Broken links", "list": null }]
+    },
+    { "type": "faq", "heading": { "note": "x" }, "items": [{ "q": 1, "a": [] }] },
+    { "type": "section", "heading": ["a", "b"], "paragraphs": [42, {}, ["nested"], "   "] }
+  ]
+}

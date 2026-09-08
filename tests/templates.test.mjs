@@ -44,8 +44,8 @@ describe('template registry', () => {
   });
 
   it('reads a manifest by id', () => {
-    const manifest = readManifest('t1');
-    expect(manifest.id).toBe('t1');
+    const manifest = readManifest('review');
+    expect(manifest.id).toBe('review');
     expect(manifest.blocks).toContain('hero');
     expect(manifest.defaultScheme).toBeTruthy();
   });
@@ -66,14 +66,14 @@ describe('template registry', () => {
   });
 
   it('reports a block file that does not exist', () => {
-    const broken = { id: 't1', blocks: ['hero', 'imaginary'] };
+    const broken = { id: 'review', blocks: ['hero', 'imaginary'] };
     expect(missingBlockFiles(broken)).toEqual(['imaginary']);
   });
 
   it('throws when a manifest id does not match its folder', () => {
-    const root = makeTemplateRoot('t1', JSON.stringify({ id: 'zzz', blocks: ['hero'] }));
-    expect(() => readManifest('t1', root)).toThrow(/t1/);
-    expect(() => readManifest('t1', root)).toThrow(/zzz/);
+    const root = makeTemplateRoot('sample', JSON.stringify({ id: 'zzz', blocks: ['hero'] }));
+    expect(() => readManifest('sample', root)).toThrow(/sample/);
+    expect(() => readManifest('sample', root)).toThrow(/zzz/);
   });
 
   it('keeps using the folder name when a manifest has no id field', () => {

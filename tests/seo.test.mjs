@@ -1,9 +1,8 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { writeFileSync, rmSync, existsSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { randomUUID } from 'node:crypto';
-import { buildSite, readOutput } from './helpers/build.mjs';
+import { buildSite, readOutput, writeSiteDirFromContent } from './helpers/build.mjs';
 
 function decodeXmlEntities(value) {
   return value
@@ -14,29 +13,24 @@ function decodeXmlEntities(value) {
     .replace(/&amp;/g, '&');
 }
 
-function writeTempSiteJson(content) {
-  const file = join(tmpdir(), `site-factory-${randomUUID()}.json`);
-  writeFileSync(file, JSON.stringify(content));
-  return file;
+function writeTempSiteDir(content) {
+  const dir = mkdtempSync(join(tmpdir(), 'site-factory-seo-'));
+  writeSiteDirFromContent(dir, content);
+  return dir;
 }
 
 describe('SEO artefacts', () => {
   let outDir;
 
   beforeAll(() => {
-    outDir = buildSite({
-      template: 't1',
-      scheme: 'blue',
-      outDir: 'output/test-seo',
-      env: {},
-    }).outDir;
+    outDir = buildSite({ outDir: 'output/test-seo', env: {} }).outDir;
   });
 
   it('lists every page in the sitemap', () => {
     const xml = readOutput(outDir, 'sitemap.xml');
     expect(xml).toContain('<urlset');
     expect(xml).toContain('https://example.com/');
-    expect(xml).toContain('https://example.com/about');
+    expect(xml).toContain('https://example.com/casino');
   });
 
   it('points robots.txt at the sitemap', () => {
@@ -50,8 +44,8 @@ describe('SEO artefacts', () => {
     expect(readOutput(outDir)).toContain(
       '<link rel="canonical" href="https://example.com/"',
     );
-    expect(readOutput(outDir, 'about/index.html')).toContain(
-      '<link rel="canonical" href="https://example.com/about"',
+    expect(readOutput(outDir, 'casino/index.html')).toContain(
+      '<link rel="canonical" href="https://example.com/casino"',
     );
   });
 
@@ -59,8 +53,6 @@ describe('SEO artefacts', () => {
     expect(readOutput(outDir)).not.toContain('geo.region');
 
     const withGeo = buildSite({
-      template: 't1',
-      scheme: 'blue',
       outDir: 'output/test-seo-geo',
       env: { GEO: 'ID' },
     });
@@ -78,7 +70,7 @@ describe('SEO artefacts with hostile slugs', () => {
   ];
 
   beforeAll(() => {
-    const file = writeTempSiteJson({
+    const dir = writeTempSiteDir({
       domain: 'example.com',
       locale: 'en-US',
       brand: { name: 'Hostile' },
@@ -86,13 +78,11 @@ describe('SEO artefacts with hostile slugs', () => {
     });
     try {
       outDir = buildSite({
-        template: 't1',
-        scheme: 'blue',
         outDir: 'output/test-seo-hostile',
-        env: { SITE_JSON: file },
+        env: { SITE_DIR: dir },
       }).outDir;
     } finally {
-      rmSync(file, { force: true });
+      rmSync(dir, { recursive: true, force: true });
     }
   });
 
@@ -127,7 +117,7 @@ describe('SEO artefacts with an unset SITE_URL', () => {
   const domain = 'mysite.org';
 
   beforeAll(() => {
-    const file = writeTempSiteJson({
+    const dir = writeTempSiteDir({
       domain,
       locale: 'en-US',
       brand: { name: 'Fallback' },
@@ -138,13 +128,11 @@ describe('SEO artefacts with an unset SITE_URL', () => {
     });
     try {
       outDir = buildSite({
-        template: 't1',
-        scheme: 'blue',
         outDir: 'output/test-seo-domain-fallback',
-        env: { SITE_JSON: file, SITE_URL: '' },
+        env: { SITE_DIR: dir, SITE_URL: '' },
       }).outDir;
     } finally {
-      rmSync(file, { force: true });
+      rmSync(dir, { recursive: true, force: true });
     }
   });
 
@@ -171,7 +159,7 @@ describe('SEO artefacts with a scheme-only domain and no SITE_URL', () => {
   let outDir;
 
   beforeAll(() => {
-    const file = writeTempSiteJson({
+    const dir = writeTempSiteDir({
       domain: 'https://',
       locale: 'en-US',
       brand: { name: 'SchemeOnly' },
@@ -179,13 +167,11 @@ describe('SEO artefacts with a scheme-only domain and no SITE_URL', () => {
     });
     try {
       outDir = buildSite({
-        template: 't1',
-        scheme: 'blue',
         outDir: 'output/test-seo-scheme-only-domain',
-        env: { SITE_JSON: file, SITE_URL: '' },
+        env: { SITE_DIR: dir, SITE_URL: '' },
       }).outDir;
     } finally {
-      rmSync(file, { force: true });
+      rmSync(dir, { recursive: true, force: true });
     }
   });
 

@@ -71,17 +71,8 @@ ul {
   margin-inline: auto;
 }
 
-.shell {
-  width: min(100% - 2.5rem, 44rem);
-  margin-inline: auto;
-}
-
 .section {
   padding-block: var(--space);
-}
-
-.section--surface {
-  background: var(--c-surface);
 }
 
 .button {
@@ -92,11 +83,4 @@ ul {
   color: var(--c-primary-fg);
   font-weight: 600;
   text-decoration: none;
-}
-
-.eyebrow {
-  color: var(--c-muted);
-  font-size: 0.85rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }

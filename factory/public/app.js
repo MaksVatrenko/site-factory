@@ -41,15 +41,15 @@ document.querySelector('#tabs').addEventListener('click', (event) => {
 
 async function loadLists() {
   try {
-    const [templates, schemes, examples] = await Promise.all([
+    const [templates, schemes, sites] = await Promise.all([
       fetch('/api/templates').then((r) => r.json()),
       fetch('/api/schemes').then((r) => r.json()),
-      fetch('/api/examples').then((r) => r.json()),
+      fetch('/api/sites').then((r) => r.json()),
     ]);
 
     fillSelect(document.querySelector('#field-template'), templates.templates);
     fillSelect(document.querySelector('#field-scheme'), schemes.schemes);
-    fillSelect(document.querySelector('#field-example'), examples.examples);
+    fillSelect(document.querySelector('#field-site'), sites.sites);
 
     const describe = () => {
       const chosen = templates.templates.find(

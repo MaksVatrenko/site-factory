@@ -1,7 +1,0 @@
-{
-  "id": "t3",
-  "name": "Компактный",
-  "description": "Узкая колонка, крупная типографика, FAQ раскрывающимися блоками",
-  "blocks": ["hero", "richtext", "cards", "columns", "faq", "footer"],
-  "defaultScheme": "dark"
-}

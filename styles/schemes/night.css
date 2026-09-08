@@ -1,15 +1,13 @@
 :root {
-  /* Legacy tokens: mapped from the extended palette below so templates t1-t3 can also use this
-     scheme, even though it was designed for "review" (see the extended tokens for the source of
-     truth — these values are the client's real reference-site palette). */
+  /* Legacy tokens: still read directly by styles/base.css (body background/text colour, link
+     colour, the header/CTA .button) regardless of template — mapped from the extended palette
+     below, the source of truth for this scheme (these values are the client's real
+     reference-site palette). This comment used to list four more (--c-surface, --c-border,
+     --c-muted, --c-accent), kept only for templates t1-t3; dropped along with them. */
   --c-bg: #0a0e1a;
   --c-fg: #e8ecf4;
-  --c-surface: #131829;
-  --c-border: #2a3454;
-  --c-muted: #b8c1d3;
   --c-primary: #ffb800;
   --c-primary-fg: #0a0e1a;
-  --c-accent: #ffcb47;
 
   /* Extended tokens: the reference site's actual palette (dark, gold accent), used by the
      "review" template. Same names in every scheme file (see tests/schemes.test.mjs). */

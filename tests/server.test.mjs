@@ -129,10 +129,10 @@ describe('factory API', () => {
     expect(data.schemes).toEqual(schemeIdsOnDisk());
   });
 
-  it('lists example folders that actually hold content', async () => {
-    const data = await fetch(`${base}/api/examples`).then((r) => r.json());
-    expect(data.examples).toContain('default');
-    expect(data.examples).toContain('broken');
+  it('lists site folders that actually hold content', async () => {
+    const data = await fetch(`${base}/api/sites`).then((r) => r.json());
+    expect(data.sites).toContain('899ok');
+    expect(data.sites).toContain('broken');
   });
 
   it('builds a site and reports success', async () => {
@@ -143,11 +143,9 @@ describe('factory API', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         brand: 'API Test',
-        template: 't2',
         scheme: 'green',
-        example: 'default',
+        site: '899ok',
         domain: 'api-test.com',
-        partnerUrl: 'https://partner.example/go',
       }),
     }).then((r) => r.json());
 
@@ -165,7 +163,7 @@ describe('factory API', () => {
   it('serves a built site for preview', async () => {
     const response = await fetch(`${base}/preview/api-test.com/`);
     expect(response.status).toBe(200);
-    expect(await response.text()).toContain('Find what actually works');
+    expect(await response.text()).toContain('Everyday Casino');
   });
 
   it('returns a zip of a built site', async () => {
@@ -183,8 +181,8 @@ describe('factory API', () => {
     expect(readZipEntryCount(buffer)).toBe(expectedEntries);
 
     const names = readZipEntryNames(buffer);
-    expect(names).toContain('about/index.html');
-    expect(names).toContain('images/logo.svg');
+    expect(names).toContain('casino/index.html');
+    expect(names).toContain('robots.txt');
   });
 
   it('rejects a truncated copy of the same archive as corrupt', async () => {
@@ -221,14 +219,14 @@ describe('factory API', () => {
     expect(data.error).toContain(domain);
   });
 
-  it('falls back to the example name when no domain is given', async () => {
+  it('falls back to the site name when no domain is given', async () => {
     const start = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ example: 'default', template: 't1', scheme: 'blue' }),
+      body: JSON.stringify({ site: '899ok', scheme: 'blue' }),
     }).then((r) => r.json());
 
-    expect(start.domain).toBe('default');
+    expect(start.domain).toBe('899ok');
     await readUntilDone(start.buildId);
   });
 
@@ -301,7 +299,7 @@ describe('factory API', () => {
   it('refuses a second build for a domain that already has one running', async () => {
     const domain = 'concurrent-test.com';
     const headers = { 'Content-Type': 'application/json' };
-    const payload = JSON.stringify({ example: 'default', domain });
+    const payload = JSON.stringify({ site: '899ok', domain });
 
     const first = await fetch(`${base}/api/generate`, { method: 'POST', headers, body: payload }).then(
       (r) => r.json(),
@@ -316,11 +314,11 @@ describe('factory API', () => {
     await readUntilDone(first.buildId);
   });
 
-  it('refuses an example that does not exist', async () => {
+  it('refuses a site that does not exist', async () => {
     const response = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ example: 'does-not-exist' }),
+      body: JSON.stringify({ site: 'does-not-exist' }),
     });
     expect(response.status).toBe(400);
   });
@@ -329,7 +327,7 @@ describe('factory API', () => {
     const response = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ example: 'default', domain: '../../../../etc/passwd' }),
+      body: JSON.stringify({ site: '899ok', domain: '../../../../etc/passwd' }),
     });
     expect(response.status).toBe(200);
 
@@ -344,7 +342,7 @@ describe('factory API', () => {
     const response = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ example: 'default', domain: 'a'.repeat(300) }),
+      body: JSON.stringify({ site: '899ok', domain: 'a'.repeat(300) }),
     });
     expect(response.status).toBe(200);
 
@@ -360,44 +358,42 @@ describe('factory API', () => {
   });
 });
 
-// Finding M2: example, template and scheme used to be pushed through safeName — the same
+// Finding M2: site, template and scheme used to be pushed through safeName — the same
 // lowercase-and-strip-unsafe-characters helper that is correct for `domain`, because a domain
 // names a directory this server creates. But these three values are ids the server's own list
 // endpoints already read verbatim from disk (folder names, template ids, scheme filenames), so
 // mangling them before checking makes a perfectly real, listed value fail to round-trip: it
 // stops matching the real entry and the request silently resolves to something else (or, for
-// `example`, is wrongly rejected as not found). The fixture ids below use a space/parentheses —
-// characters safeName replaces, not just re-cases — chosen to sort after every real t1/t2/t3
-// template and blue/dark/green scheme id, so a fallback-to-first-available would never
-// coincidentally land on the right file and mask the bug.
-describe('example, template and scheme are validated against the real lists, not rewritten (M2)', () => {
-  it('accepts an example folder name safeName would mangle into a 404', async () => {
-    const exampleId = 'My Example';
-    const exampleDir = join('data', 'examples', exampleId);
-    const domain = 'safename-example-test.com';
-    mkdirSync(exampleDir, { recursive: true });
+// `site`, is wrongly rejected as not found). The fixture ids below use a space/parentheses —
+// characters safeName replaces, not just re-cases — chosen to sort after every real template and
+// blue/dark/green/night scheme id, so a fallback-to-first-available would never coincidentally
+// land on the right file and mask the bug.
+describe('site, template and scheme are validated against the real lists, not rewritten (M2)', () => {
+  it('accepts a site folder name safeName would mangle into a 404', async () => {
+    const siteId = 'My Site';
+    const siteDir = join('data', 'sites', siteId);
+    const domain = 'safename-site-test.com';
+    mkdirSync(siteDir, { recursive: true });
     writeFileSync(
-      join(exampleDir, 'site.json'),
-      JSON.stringify({
-        pages: [{ slug: '/', meta: { title: 'Fixture Example Content' }, blocks: [] }],
-      }),
+      join(siteDir, 'home.json'),
+      JSON.stringify({ slug: '/', title: 'Fixture Site Content', blocks: [] }),
     );
 
     try {
       const response = await fetch(`${base}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ example: exampleId, domain }),
+        body: JSON.stringify({ site: siteId, domain }),
       });
       expect(response.status).toBe(200);
 
       const data = await response.json();
       await readUntilDone(data.buildId);
       expect(readFileSync(join('output', domain, 'index.html'), 'utf8')).toContain(
-        'Fixture Example Content',
+        'Fixture Site Content',
       );
     } finally {
-      rmSync(exampleDir, { recursive: true, force: true });
+      rmSync(siteDir, { recursive: true, force: true });
       rmSync(join('output', domain), { recursive: true, force: true });
     }
   });
@@ -415,7 +411,7 @@ describe('example, template and scheme are validated against the real lists, not
       const response = await fetch(`${base}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ example: 'default', template: 't1', scheme: schemeId, domain }),
+        body: JSON.stringify({ site: '899ok', scheme: schemeId, domain }),
       });
       expect(response.status).toBe(200);
 
@@ -444,7 +440,7 @@ describe('example, template and scheme are validated against the real lists, not
       const response = await fetch(`${base}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ example: 'default', template: templateId, domain }),
+        body: JSON.stringify({ site: '899ok', template: templateId, domain }),
       });
       expect(response.status).toBe(200);
 
@@ -462,7 +458,7 @@ describe('example, template and scheme are validated against the real lists, not
     const response = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ example: 'default', scheme: 'totally-bogus-scheme', domain }),
+      body: JSON.stringify({ site: '899ok', scheme: 'totally-bogus-scheme', domain }),
     });
     expect(response.status).toBe(400);
     const data = await response.json();
@@ -475,7 +471,7 @@ describe('example, template and scheme are validated against the real lists, not
     const response = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ example: 'default', template: 'totally-bogus-template', domain }),
+      body: JSON.stringify({ site: '899ok', template: 'totally-bogus-template', domain }),
     });
     expect(response.status).toBe(400);
     const data = await response.json();
@@ -488,7 +484,7 @@ describe('example, template and scheme are validated against the real lists, not
     const response = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ example: 'default', domain }),
+      body: JSON.stringify({ site: '899ok', domain }),
     });
     expect(response.status).toBe(200);
 
@@ -513,7 +509,7 @@ describe('example, template and scheme are validated against the real lists, not
     const response = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ example: 'default', template: 42, domain }),
+      body: JSON.stringify({ site: '899ok', template: 42, domain }),
     });
     expect(response.status).toBe(400);
     expect(existsSync(join('output', domain))).toBe(false);
@@ -525,7 +521,7 @@ describe('example, template and scheme are validated against the real lists, not
     const response = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ example: 'default', scheme: 42, domain }),
+      body: JSON.stringify({ site: '899ok', scheme: 42, domain }),
     });
     expect(response.status).toBe(400);
     expect(existsSync(join('output', domain))).toBe(false);
@@ -534,26 +530,29 @@ describe('example, template and scheme are validated against the real lists, not
 
 // Finding M3: nothing followed BRAND, LOCALE, DOMAIN or PARTNER_URL all the way from the form
 // through the server's env plumbing into the actual built HTML — tests/server.test.mjs posted
-// brand/partnerUrl but only ever checked that the build succeeded. That gap would let the two
-// ends of the factory/server.mjs <-> src/lib/site-context.mjs env-variable contract drift (e.g.
-// a rename on one side) without a single one of the 116 existing tests noticing, even though
-// every generated site would silently lose the field. This drives a real build through the
-// public HTTP API with all four fields set and reads them back out of the generated page.
+// brand/geo/locale/domain but only ever checked that the build succeeded. That gap would let the
+// two ends of the factory/server.mjs <-> src/lib/site-context.mjs env-variable contract drift
+// (e.g. a rename on one side) without a single test in this suite noticing, even though every
+// generated site would silently lose the field. This drives a real build through the public HTTP
+// API with all four fields set and reads them back out of the generated page. PARTNER_URL follows
+// the identical override pattern one line away in normalize.mjs (see pickOverride's four other
+// callers there) but has no observable effect once rendered: PARTNER_URL/site.partnerUrl was only
+// ever rendered by the now-deleted t1/t2/t3 templates' own hero/cards/footer CTA, and the review
+// template declares no such element at all — so there is nothing left in the built HTML for this
+// test to read it back out of.
 describe('form values reach the built HTML end to end (M3)', () => {
-  it('carries brand, locale, domain and the affiliate link from the form into the built HTML', async () => {
+  it('carries brand, geo, locale and domain from the form into the built HTML', async () => {
     const domain = 'seam-test.example';
     const response = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        example: 'default',
-        template: 't1',
+        site: '899ok',
         scheme: 'dark',
         domain,
         brand: 'Seam Test Brand',
         geo: 'ID',
         locale: 'fr-FR',
-        partnerUrl: 'https://partner.example/seam-test-affiliate',
       }),
     });
     expect(response.status).toBe(200);
@@ -566,7 +565,6 @@ describe('form values reach the built HTML end to end (M3)', () => {
       expect(html).toContain('Seam Test Brand');
       expect(html).toContain('lang="fr"');
       expect(html).toContain(`<link rel="canonical" href="https://${domain}/"`);
-      expect(html).toContain('href="https://partner.example/seam-test-affiliate"');
       // The one field this test posted but never checked: a rename of GEO on either side of the
       // server<->engine env-variable boundary would leave every other assertion here green while
       // silently dropping meta[name=geo.region] from every built site.
@@ -578,7 +576,7 @@ describe('form values reach the built HTML end to end (M3)', () => {
 });
 
 // final-fix-5, follow-up 1: a build can succeed with no page at "/" at all — the shipped
-// `broken` example's only page resolves to "/sloppy" — so Astro never writes a root index.html.
+// `broken` site's only page resolves to "/sloppy" — so Astro never writes a root index.html.
 // The zip route used to gate entirely on that one file existing, and the preview route is plain
 // express.static with `index: 'index.html'`, so both used to 404 even though the build finished
 // cleanly and reported success. Decision: make both links work for such a site instead of
@@ -593,7 +591,7 @@ describe('final-fix-5: a successful build with no page at "/" still has a workin
     const start = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ example: 'broken', domain }),
+      body: JSON.stringify({ site: 'broken', domain }),
     }).then((r) => r.json());
 
     try {
@@ -621,7 +619,7 @@ describe('final-fix-5: a successful build with no page at "/" still has a workin
     const start = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ example: 'broken', domain }),
+      body: JSON.stringify({ site: 'broken', domain }),
     }).then((r) => r.json());
 
     try {
@@ -642,7 +640,7 @@ describe('final-fix-5: a successful build with no page at "/" still has a workin
     const response = await fetch(`${base}/preview/api-test.com/`);
     expect(response.status).toBe(200);
     expect(response.redirected).toBe(false);
-    expect(await response.text()).toContain('Find what actually works');
+    expect(await response.text()).toContain('Everyday Casino');
   });
 });
 

@@ -72,12 +72,11 @@ function toBlockInput(raw) {
 // "/"), then the rest alphabetically by filename. Filenames are sorted with a plain string sort
 // (not locale- or filesystem-dependent) so the result is the same on every platform.
 //
-// Only two failures are this loader's own to throw, matching the single-file (SITE_JSON) path's
-// contract exactly: a file that cannot be read or parsed as JSON, and a folder with no page files
-// at all. The latter is new here, and deliberate — an empty folder (or one holding only
-// site.json) is not content shaped strangely, it is the operator pointing at the wrong path, so it
-// fails the same way an unreadable content file already does rather than silently building an
-// empty site.
+// Only two failures are this loader's own to throw — the two content-side failures the engine
+// allows at all (see src/lib/site-context.mjs): a file that cannot be read or parsed as JSON, and
+// a folder with no page files at all. The latter is deliberate — an empty folder (or one holding
+// only site.json) is not content shaped strangely, it is the operator pointing at the wrong path,
+// so it fails loudly instead of silently building an empty site.
 export function loadSiteDirInput(dir) {
   const jsonFileNames = listJsonFileNames(dir);
   const pageFileNames = jsonFileNames.filter((name) => name !== SITE_SETTINGS_FILE);

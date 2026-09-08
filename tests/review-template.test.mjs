@@ -79,29 +79,38 @@ describe('review template: the real client site (data/sites/899ok)', () => {
 });
 
 describe('review template: resilience to unusual content shapes', () => {
+  // `blocks` uses the nested `{ type, props }` shape for readability here; this writes it out as
+  // a real SITE_DIR folder — a site.json plus one home page file — flattening each block's props
+  // alongside its "type" the way a real page file on disk does (see src/lib/site-dir.mjs).
   function buildSingleBlockPage(blocks, { nav } = {}) {
     const dir = mkdtempSync(join(tmpdir(), 'site-factory-review-'));
-    const file = join(dir, 'site.json');
     writeFileSync(
-      file,
+      join(dir, 'site.json'),
       JSON.stringify({
         domain: 'example.com',
         brand: { name: 'Review Fixture' },
         ...(nav ? { nav } : {}),
-        pages: [{ slug: '/', meta: { title: 'Fixture' }, blocks }],
       }),
     );
-    return { dir, file };
+    writeFileSync(
+      join(dir, 'home.json'),
+      JSON.stringify({
+        slug: '/',
+        title: 'Fixture',
+        blocks: blocks.map(({ type, props }) => ({ type, ...props })),
+      }),
+    );
+    return dir;
   }
 
   it('still builds a section stripped down to just a heading', () => {
-    const { dir, file } = buildSingleBlockPage([
+    const dir = buildSingleBlockPage([
       { type: 'section', props: { heading: 'Just a heading, nothing else' } },
     ]);
     try {
       const { outDir } = buildSite({
         outDir: join('output', 'test-review-heading-only'),
-        env: { SITE_JSON: file, TEMPLATE: 'review', SCHEME: 'night' },
+        env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'night' },
       });
       const html = readOutput(outDir);
       expect(html).toContain('Just a heading, nothing else');
@@ -115,7 +124,7 @@ describe('review template: resilience to unusual content shapes', () => {
     // Deliberately not hero-first, toc-second: the "natural" order every real 899ok page
     // happens to use. Each component only ever sees its own props (see BlockRenderer.astro), so
     // nothing here depends on what came before or after it in the list.
-    const { dir, file } = buildSingleBlockPage(
+    const dir = buildSingleBlockPage(
       [
         { type: 'faq', props: { heading: 'FAQ first', items: [{ q: 'Q?', a: 'A.' }] } },
         { type: 'links', props: { heading: 'Links second' } },
@@ -131,7 +140,7 @@ describe('review template: resilience to unusual content shapes', () => {
     try {
       const { outDir } = buildSite({
         outDir: join('output', 'test-review-scrambled'),
-        env: { SITE_JSON: file, TEMPLATE: 'review', SCHEME: 'night' },
+        env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'night' },
       });
       const html = readOutput(outDir);
       expect(html).not.toMatch(/<script\b/i);

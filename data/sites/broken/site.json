@@ -1,0 +1,4 @@
+{
+  "brand": { "name": "Broken Example" },
+  "nav": "this should be a list of links, not a string"
+}

@@ -12,14 +12,14 @@ import { loadContext, resetContextCache } from '../src/lib/site-context.mjs';
 // (see final-fix-5's own report for the real incident this reproduces:
 // "<repo>/Users/x/site-factory/output/<domain>", a real stray directory tree created by every
 // real server build). Every OUT_DIR any other test in this suite passes is RELATIVE (see
-// tests/helpers/build.mjs and scripts/check-matrix.mjs), so that bug left all 205 pre-existing
-// tests green while silently recreating this stray tree on every real `factory/server.mjs` build,
-// where OUT_DIR is always absolute (built from that file's own absolute ROOT constant). This is
-// the one place in the suite that calls loadContext with an absolute OUT_DIR, so a future
-// regression back to `join` fails here instead of shipping unnoticed again.
+// tests/helpers/build.mjs and scripts/check-matrix.mjs), so that bug left all pre-existing tests
+// green while silently recreating this stray tree on every real `factory/server.mjs` build, where
+// OUT_DIR is always absolute (built from that file's own absolute ROOT constant). This is the one
+// place in the suite that calls loadContext with an absolute OUT_DIR, so a future regression back
+// to `join` fails here instead of shipping unnoticed again.
 describe('final-fix-6, F4: buildProber resolves an absolute OUT_DIR instead of nesting it under root', () => {
   const ENV_KEYS = [
-    'SITE_JSON',
+    'SITE_DIR',
     'OUT_DIR',
     'TEMPLATE',
     'SCHEME',
@@ -40,23 +40,21 @@ describe('final-fix-6, F4: buildProber resolves an absolute OUT_DIR instead of n
     // Deliberately ABSOLUTE — the one shape no other test in this suite exercises.
     const absoluteOutDir = join(outParent, 'output', 'somesite.com');
 
-    const contentFile = join(contentDir, 'site.json');
     writeFileSync(
-      contentFile,
-      JSON.stringify({
-        domain: 'example.com',
-        locale: 'en-US',
-        brand: { name: 'F4' },
-        pages: [{ slug: '/', meta: { title: 'F4 Home' }, blocks: [] }],
-      }),
+      join(contentDir, 'site.json'),
+      JSON.stringify({ domain: 'example.com', locale: 'en-US', brand: { name: 'F4' } }),
+    );
+    writeFileSync(
+      join(contentDir, 'home.json'),
+      JSON.stringify({ slug: '/', title: 'F4 Home', blocks: [] }),
     );
 
     const savedEnv = {};
     for (const key of ENV_KEYS) savedEnv[key] = process.env[key];
     Object.assign(process.env, {
-      SITE_JSON: contentFile,
+      SITE_DIR: contentDir,
       OUT_DIR: absoluteOutDir,
-      TEMPLATE: 't1',
+      TEMPLATE: 'review',
       SCHEME: 'blue',
       PUBLIC_DIR: '',
       BRAND: '',
@@ -96,6 +94,25 @@ describe('final-fix-6, F4: buildProber resolves an absolute OUT_DIR instead of n
       resetContextCache();
       rmSync(contentDir, { recursive: true, force: true });
       rmSync(outParent, { recursive: true, force: true });
+    }
+  });
+});
+
+// SITE_DIR is the only content input loadContext accepts (the old single-file content path was
+// removed once the whole factory moved to folder-shaped sites — see docs/content-format.md). This
+// pins the one operator-side failure that sits on top of loadSiteDirInput's own two content-side
+// failures: nothing was pointed at a folder at all.
+describe('loadContext requires SITE_DIR', () => {
+  it('throws a plain, Russian, [factory]-toned error naming the missing variable', () => {
+    const saved = process.env.SITE_DIR;
+    delete process.env.SITE_DIR;
+    resetContextCache();
+    try {
+      expect(() => loadContext()).toThrow(/^\[factory\] SITE_DIR не задан/);
+    } finally {
+      if (saved === undefined) delete process.env.SITE_DIR;
+      else process.env.SITE_DIR = saved;
+      resetContextCache();
     }
   });
 });

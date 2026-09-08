@@ -16,11 +16,10 @@ function outputPathFor(slug) {
   return slug === '/' ? 'index.html' : join(slug.slice(1), 'index.html');
 }
 
-// SITE_DIR builds a site from a folder of pages instead of one content file. These tests cover
-// the real client fixture (data/sites/899ok), the SITE_JSON path staying untouched, the two
-// folder-shaped edge cases (no site.json, no pages at all), a malformed shared setting, and —
-// the point of the whole design — a page whose blocks are reordered or partially stripped by
-// hand still building.
+// SITE_DIR builds a site from a folder of pages. These tests cover the real client fixture
+// (data/sites/899ok), SITE_DIR being required at all, the two folder-shaped edge cases (no
+// site.json, no pages at all), a malformed shared setting, and — the point of the whole design —
+// a page whose blocks are reordered or partially stripped by hand still building.
 describe('loadContext with SITE_DIR: a real client folder (data/sites/899ok)', () => {
   const SITE_DIR = join('data', 'sites', '899ok');
   let outDir;
@@ -63,10 +62,14 @@ describe('loadContext with SITE_DIR: a real client folder (data/sites/899ok)', (
   });
 });
 
-describe('SITE_JSON keeps working unchanged when SITE_DIR is not set', () => {
-  it('still builds the default single-file example', () => {
-    const { outDir } = buildSite({ outDir: join('output', 'test-site-dir-regression-site-json') });
-    expect(readOutput(outDir)).toContain('Find what actually works');
+describe('a real build fails clearly when SITE_DIR is not set', () => {
+  it('reports the missing variable instead of falling back to anything', () => {
+    expect(() =>
+      buildSite({
+        outDir: join('output', 'test-site-dir-unset'),
+        env: { SITE_DIR: undefined },
+      }),
+    ).toThrow(/SITE_DIR не задан/);
   });
 });
 
@@ -139,8 +142,9 @@ describe('a page whose blocks are reordered or partially stripped still builds',
         slug: '/mixed',
         title: 'Mixed',
         description: 'd',
-        // Deliberately out of the "natural" hero-first order, and missing fields a client
-        // rearranging this by hand would plausibly leave out.
+        // Deliberately out of the "natural" hero-first order, missing fields a client rearranging
+        // this by hand would plausibly leave out, and one block type ("cards") the review template
+        // does not declare at all.
         blocks: [
           {
             type: 'faq',
@@ -150,7 +154,7 @@ describe('a page whose blocks are reordered or partially stripped still builds',
               { q: 'What about a stripped answer?' },
             ],
           },
-          { type: 'toc', heading: 'On this page', items: ['Intro', 'Details'] },
+          { type: 'cards', heading: 'Not a block review declares', items: [] },
           { type: 'section', heading: 'A stripped section with nothing else' },
           { type: 'hero', heading: 'Reordered hero' },
         ],
@@ -163,10 +167,12 @@ describe('a page whose blocks are reordered or partially stripped still builds',
       const html = readOutput(outDir, join('mixed', 'index.html'));
       expect(html).toContain('Frequently Asked');
       expect(html).toContain('Does this survive reordering?');
-      // "section" and "toc" are not blocks any current template declares — they are dropped
-      // exactly like any other unsupported block type, not a crash.
-      expect(html).not.toContain('A stripped section with nothing else');
-      expect(log).toContain('toc');
+      // A block reduced to just a heading still renders — a stripped block is not a crash.
+      expect(html).toContain('A stripped section with nothing else');
+      // "cards" is not a block the review template declares — dropped exactly like any other
+      // unsupported block type, wherever it sits in the list, not a crash.
+      expect(html).not.toContain('Not a block review declares');
+      expect(log).toContain('cards');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

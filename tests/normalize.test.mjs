@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { normalizeSite } from '../src/lib/normalize.mjs';
 
-const BLOCKS = ['hero', 'richtext', 'cards', 'columns', 'faq', 'footer'];
+const BLOCKS = ['hero', 'toc', 'section', 'links', 'faq', 'footer'];
 
 describe('normalizeSite', () => {
   it('builds an empty home page when there are no pages', () => {
@@ -48,6 +48,21 @@ describe('normalizeSite', () => {
     );
     expect(site.pages[0].blocks.filter((b) => b.type !== 'footer')).toHaveLength(0);
     expect(warnings.length).toBeGreaterThan(0);
+  });
+
+  it('drops a page that is not a plain object, reporting its position', () => {
+    // A SITE_DIR page file can parse as valid JSON without being a JSON object at all (a bare
+    // string, a number, an array) — see data/sites/broken/not-an-object.json. Such a page has no
+    // slug, meta or blocks to work with, so it is dropped the same way an unsupported block is,
+    // identified by its position since it has no other identity yet.
+    const { site, warnings } = normalizeSite(
+      { pages: [{ slug: '/', meta: { title: 'Real' } }, 'not an object', 42] },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(site.pages).toHaveLength(1);
+    expect(site.pages[0].meta.title).toBe('Real');
+    expect(warnings.some((w) => w.includes('Страница 2'))).toBe(true);
+    expect(warnings.some((w) => w.includes('Страница 3'))).toBe(true);
   });
 
   it('falls back to the brand name for a missing title', () => {
@@ -718,11 +733,10 @@ describe('final-fix-5: normalizeSite proves a slug against a prober instead of p
   });
 });
 
-// SITE_DIR (a folder of pages plus a shared site.json) adds nav, headerButton, footer and
-// brand.tagline as new shared settings. They must reach `site` the same way everything else in
-// this module does: coerced defensively, never throwing, on any of today's SITE_JSON callers too
-// (none of them set these fields, so the defaults below are what every existing single-file site
-// gets from now on).
+// A site folder's site.json carries nav, headerButton, footer and brand.tagline as shared
+// settings alongside everything else. They must reach `site` the same way everything else in this
+// module does: coerced defensively, never throwing — a site.json that leaves these fields unset
+// (or a site with no site.json at all) gets the defaults below.
 describe('normalizeSite: shared settings for folder-based sites (nav, headerButton, footer, brand.tagline)', () => {
   it('defaults nav, headerButton, footer and brand.tagline when absent', () => {
     const { site, warnings } = normalizeSite(

@@ -331,15 +331,15 @@ function pickOverride(override, fromFile, fallback) {
   return toText(override, toText(fromFile, fallback));
 }
 
-// --- Shared settings for a folder-of-pages site (nav, headerButton, footer) -------------------
+// --- Shared settings for a site folder (nav, headerButton, footer) -----------------------------
 //
-// A SITE_DIR site.json carries these in addition to everything a single SITE_JSON file already
-// could (domain, locale, brand, ...). They reach `site` the same way everything else in this
-// function does: a wrong shape is coerced to a safe default and, where the wrong shape could only
-// come from a genuine mistake rather than the field simply being unused, reported with a warning —
-// never thrown. Every existing SITE_JSON caller leaves all three fields unset, so the defaults
-// below (an empty nav, an empty header button, an all-blank footer) are exactly what today's
-// sites already effectively have.
+// A site.json carries these alongside everything else at the top level (domain, locale, brand,
+// ...). They reach `site` the same way everything else in this function does: a wrong shape is
+// coerced to a safe default and, where the wrong shape could only come from a genuine mistake
+// rather than the field simply being unused, reported with a warning — never thrown. A site.json
+// that leaves all three fields unset (or a site with no site.json at all) gets an empty nav, an
+// empty header button and an all-blank footer, which is exactly what a template's own layout
+// treats as "nothing to show here" (see src/layouts/Base.astro).
 
 function buildNavItem(raw) {
   if (!isPlainObject(raw)) return null;
@@ -424,7 +424,20 @@ export function normalizeSite(raw, options = {}) {
     pages: [],
   };
 
-  let pages = toArray(input.pages).filter(isPlainObject);
+  // A page entry that is not a plain object (a bare string, a number, an array — for a SITE_DIR
+  // site this is a page *file* whose content parsed as valid JSON but is not a JSON object) can
+  // carry no slug, meta or blocks at all, so it is dropped the same way an unsupported block is:
+  // reported by position, since it has nothing else to identify it by yet (slugs are not resolved
+  // until every page has already been through this filter).
+  const rawPages = toArray(input.pages);
+  let pages = [];
+  rawPages.forEach((page, index) => {
+    if (isPlainObject(page)) {
+      pages.push(page);
+    } else {
+      warnings.push(`Страница ${index + 1}: пропущена — это не объект`);
+    }
+  });
   if (pages.length === 0) {
     warnings.push('В контенте нет страниц — создана пустая главная страница');
     pages = [{}];

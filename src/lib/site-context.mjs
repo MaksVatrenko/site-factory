@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { normalizeSite } from './normalize.mjs';
 import { loadTemplate, missingBlockFiles } from './templates.mjs';
@@ -49,25 +49,15 @@ function buildProber(root) {
 export function loadContext(root = process.cwd()) {
   if (cache) return cache;
 
-  // SITE_DIR (a folder of pages) wins when both are set — it is the richer source, and setting
-  // both at once only happens because a caller (a test, or the factory server building a folder
-  // site) left the other one around from a shared base configuration.
+  // SITE_DIR (a folder of pages plus a shared site.json) is the only content input the engine
+  // accepts — see docs/content-format.md. loadSiteDirInput itself throws on the two content-side
+  // failures the engine allows (an unreadable/non-JSON file, a folder with no pages); this is the
+  // one operator-side failure on top of those: nothing was pointed at a folder at all.
   const dir = process.env.SITE_DIR;
-  const file = process.env.SITE_JSON;
-
-  let raw;
-  if (dir) {
-    raw = loadSiteDirInput(dir);
-  } else {
-    if (!file) {
-      throw new Error('SITE_JSON is not set: point it at a content file');
-    }
-    try {
-      raw = JSON.parse(readFileSync(file, 'utf8'));
-    } catch (error) {
-      throw new Error(`Cannot read content from ${file}: ${error.message}`);
-    }
+  if (!dir) {
+    throw new Error('[factory] SITE_DIR не задан: укажите папку с сайтом (site.json и файлы страниц)');
   }
+  const raw = loadSiteDirInput(dir);
 
   const template = loadTemplate(process.env.TEMPLATE || '', root);
   const missing = missingBlockFiles(template, root);

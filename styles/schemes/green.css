@@ -1,13 +1,12 @@
 :root {
-  /* Legacy tokens: kept exactly as-is, templates t1-t3 read these directly. */
+  /* Legacy tokens: still read directly by styles/base.css (body background/text colour, link
+     colour, the header/CTA .button) regardless of template. This comment used to list four more
+     (--c-surface, --c-border, --c-muted, --c-accent) — dropped once templates t1-t3, the only
+     code that ever read them, were removed; nothing reads them any more. */
   --c-bg: #ffffff;
   --c-fg: #14231b;
-  --c-surface: #eef6f0;
-  --c-border: #d5e6da;
-  --c-muted: #4f6a59;
   --c-primary: #10794a;
   --c-primary-fg: #ffffff;
-  --c-accent: #0b5c37;
 
   /* Extended tokens: same names in every scheme file (see tests/schemes.test.mjs), used by the
      "review" template. Values here suit this light, eco-green palette specifically. */

@@ -5,20 +5,20 @@ import { listTemplates } from '../src/lib/templates.mjs';
 import { listSchemes, readScheme } from '../src/lib/schemes.mjs';
 
 const ASTRO_BIN = join('node_modules', '.bin', 'astro');
-const EXAMPLE = process.argv[2] || 'default';
-const EXAMPLE_DIR = join('data', 'examples', EXAMPLE);
+const SITE = process.argv[2] || '899ok';
+const SITE_DIR = join('data', 'sites', SITE);
 
 // Extracts the literal value a scheme file assigns to --c-primary, so the build check below can
 // confirm that exact value made it into the HTML — not just the variable *name*, which also shows
-// up in every template's component CSS as `var(--c-primary)` regardless of whether any scheme
-// ever defined it.
+// up in styles/base.css (inlined into every build regardless of template) as `var(--c-primary)`
+// regardless of whether any scheme ever defined it.
 function primaryValueOf(css) {
   const match = css.match(/--c-primary\s*:\s*([^;]+);/);
   return match ? match[1].trim() : null;
 }
 
-if (!existsSync(join(EXAMPLE_DIR, 'site.json'))) {
-  console.error(`Нет примера «${EXAMPLE}» в data/examples/`);
+if (!existsSync(SITE_DIR)) {
+  console.error(`Нет сайта «${SITE}» в data/sites/`);
   process.exit(1);
 }
 
@@ -26,7 +26,7 @@ const templates = listTemplates();
 const schemes = listSchemes();
 const failures = [];
 
-console.log(`Проверка ${templates.length} × ${schemes.length} на примере «${EXAMPLE}»\n`);
+console.log(`Проверка ${templates.length} × ${schemes.length} на сайте «${SITE}»\n`);
 
 for (const template of templates) {
   for (const scheme of schemes) {
@@ -35,13 +35,13 @@ for (const template of templates) {
     const label = `${template.id} × ${scheme}`;
 
     try {
-      const examplePublic = join(EXAMPLE_DIR, 'public');
+      const sitePublic = join(SITE_DIR, 'public');
       execFileSync(ASTRO_BIN, ['build'], {
         stdio: 'pipe',
         env: {
           ...process.env,
-          SITE_JSON: join(EXAMPLE_DIR, 'site.json'),
-          PUBLIC_DIR: existsSync(examplePublic) ? examplePublic : '',
+          SITE_DIR,
+          PUBLIC_DIR: existsSync(sitePublic) ? sitePublic : '',
           TEMPLATE: template.id,
           SCHEME: scheme,
           OUT_DIR: outDir,
@@ -59,7 +59,7 @@ for (const template of templates) {
       // elements (the review template accents its last words), and a substring search over raw
       // HTML would report missing content that is in fact rendered.
       const text = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-      if (!text.includes('Find what actually works') && EXAMPLE === 'default') {
+      if (!text.includes('899OK') && SITE === '899ok') {
         problems.push('нет контента hero');
       }
 

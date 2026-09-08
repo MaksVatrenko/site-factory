@@ -12,16 +12,11 @@ import { listSchemes } from '../src/lib/schemes.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
-const EXAMPLES_DIR = join(ROOT, 'data', 'examples');
+const SITES_DIR = join(ROOT, 'data', 'sites');
 const OUTPUT_DIR = join(ROOT, 'output');
 const ASTRO_BIN = join(ROOT, 'node_modules', '.bin', 'astro');
 const PUBLIC_UI_DIR = join(HERE, 'public');
 const PORT = Number(process.env.PORT || 3002);
-
-// The template a build gets when a request names none at all. Deliberately not "whichever
-// template sorts first" (see the comment where this is used) -- t1 is the original, general-
-// purpose starting point every example and this comment's own history was written against.
-const DEFAULT_TEMPLATE_ID = 't1';
 
 const builds = new Map();
 
@@ -51,10 +46,22 @@ function isPresentNonString(value) {
   return value !== undefined && typeof value !== 'string';
 }
 
-function listExamples() {
-  if (!existsSync(EXAMPLES_DIR)) return [];
-  return readdirSync(EXAMPLES_DIR)
-    .filter((name) => existsSync(join(EXAMPLES_DIR, name, 'site.json')))
+// A site folder "actually holds content" when it has at least one page file — a site.json alone
+// (or an empty folder) is not buildable, see loadSiteDirInput's own "no pages" check in
+// src/lib/site-dir.mjs. Reading that requirement here directly, rather than requiring a site.json
+// specifically, matches what a real build actually needs: a site.json is optional.
+function siteHasPages(dir) {
+  try {
+    return readdirSync(dir).some((name) => name.endsWith('.json') && name !== 'site.json');
+  } catch {
+    return false;
+  }
+}
+
+function listSites() {
+  if (!existsSync(SITES_DIR)) return [];
+  return readdirSync(SITES_DIR)
+    .filter((name) => siteHasPages(join(SITES_DIR, name)))
     .sort();
 }
 
@@ -156,7 +163,7 @@ export function startBuild(options, spawnFn = spawn) {
   return build;
 }
 
-// Content is not required to place a page at "/" — the shipped `broken` example's only page is
+// Content is not required to place a page at "/" — the shipped `broken` site's only page is
 // "/sloppy" — so a build can finish cleanly and report success while writing no root index.html
 // at all.
 //
@@ -238,28 +245,28 @@ export function createApp() {
     res.json({ schemes: listSchemes(ROOT) });
   });
 
-  app.get('/api/examples', (_req, res) => {
-    res.json({ examples: listExamples() });
+  app.get('/api/sites', (_req, res) => {
+    res.json({ sites: listSites() });
   });
 
   app.post('/api/generate', (req, res) => {
     const body = req.body ?? {};
 
-    // example, template and scheme are ids the server's own list endpoints already read
-    // verbatim from disk (folder names, template ids, scheme filenames). They must be checked
-    // against those exact lists, not rewritten with safeName — safeName is for `domain`, which
-    // is correct there because that value names a directory this server creates. Mangling a
-    // real id before checking it makes a legitimately listed value fail to round-trip: it stops
-    // matching the entry it came from (see finding M2).
-    const exampleInput = trimmedString(body.example);
-    const example = exampleInput === '' ? 'default' : exampleInput;
-    if (!listExamples().includes(example)) {
-      res.status(400).json({ error: `Папка с примерами «${example}» не найдена` });
+    // site, template and scheme are ids the server's own list endpoints already read verbatim
+    // from disk (folder names, template ids, scheme filenames). They must be checked against
+    // those exact lists, not rewritten with safeName — safeName is for `domain`, which is
+    // correct there because that value names a directory this server creates. Mangling a real id
+    // before checking it makes a legitimately listed value fail to round-trip: it stops matching
+    // the entry it came from (see finding M2).
+    const siteInput = trimmedString(body.site);
+    const site = siteInput === '' ? '899ok' : siteInput;
+    if (!listSites().includes(site)) {
+      res.status(400).json({ error: `Папка с сайтом «${site}» не найдена` });
       return;
     }
-    const exampleDir = join(EXAMPLES_DIR, example);
+    const siteDir = join(SITES_DIR, site);
 
-    const domain = safeName(body.domain, example);
+    const domain = safeName(body.domain, site);
     if (isBuildRunning(domain)) {
       res.status(409).json({ error: `Сборка для домена «${domain}» уже выполняется` });
       return;
@@ -280,17 +287,10 @@ export function createApp() {
       res.status(400).json({ error: `Шаблон «${templateInput}» не найден` });
       return;
     }
-    // An absent template resolves to DEFAULT_TEMPLATE_ID here, explicitly, rather than being
-    // handed to the engine as '' and left to loadTemplate('')'s own fallback (listTemplates()[0]
-    // — see src/lib/templates.mjs). That fallback exists for a genuinely unknown id and picking
-    // *a* template beats refusing to build one at all, but "whichever template sorts
-    // alphabetically first" is not a deliberate default — it is just also what t1 happened to be
-    // while t1/t2/t3 were the only templates. "review" sorts before "t1", so without this, every
-    // request that does not name a template would now silently build with "review" instead —
-    // a client-specific template that does not even support several block types (richtext,
-    // cards, columns) the general-purpose examples use — rather than continuing to get the
-    // general-purpose template this behavior has always meant to hand out.
-    const template = templateInput === '' ? DEFAULT_TEMPLATE_ID : templateInput;
+    // An empty template is passed straight through: the engine's own loadTemplate('') already
+    // falls back to listTemplates()[0] (see src/lib/templates.mjs), and with one template on
+    // disk that fallback is unambiguous — there is no second, general-purpose template left to
+    // prefer over it.
 
     if (isPresentNonString(body.scheme)) {
       res.status(400).json({ error: 'Поле «scheme» должно быть строкой' });
@@ -303,15 +303,15 @@ export function createApp() {
     }
 
     const outDir = join(OUTPUT_DIR, domain);
-    const examplePublic = join(exampleDir, 'public');
+    const sitePublic = join(siteDir, 'public');
 
     const build = startBuild({
       domain,
       outDir,
       env: {
-        SITE_JSON: join(exampleDir, 'site.json'),
-        PUBLIC_DIR: existsSync(examplePublic) ? examplePublic : '',
-        TEMPLATE: template,
+        SITE_DIR: siteDir,
+        PUBLIC_DIR: existsSync(sitePublic) ? sitePublic : '',
+        TEMPLATE: templateInput,
         SCHEME: scheme,
         OUT_DIR: outDir,
         SITE_URL: `https://${domain}`,
@@ -428,7 +428,7 @@ export function createApp() {
     archive.finalize();
   });
 
-  // A build with no page at "/" (the shipped `broken` example: its only page is "/sloppy") has
+  // A build with no page at "/" (the shipped `broken` site: its only page is "/sloppy") has
   // nothing for express.static below to find at the domain's own root, and it has no way to know
   // which nested page should stand in for it. This runs first and hands it the answer directly:
   // when the root index.html is missing but the domain really was built, redirect to whichever
