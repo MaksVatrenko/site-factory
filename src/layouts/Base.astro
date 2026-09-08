@@ -10,18 +10,17 @@ const canonical = pageUrl(resolveOrigin(Astro.site, site.domain), page.slug);
 // one template (resolved by template id + block type, see BlockRenderer.astro) and appears only
 // on the pages whose content lists it. A header and footer are different: they belong to the
 // SITE, not to any one page's block list, so there is no per-page content array to add a "header"
-// block onto — `site.nav` / `site.headerButton` / `site.footer` sit next to `site.pages`, not
+// block onto — `site.nav` and `site.footer` sit next to `site.pages`, not
 // inside it (see normalizeSite in src/lib/normalize.mjs). Putting them here is what lets every
 // page of a site share the exact same header/footer without every template having to duplicate
 // that markup in its own hero/footer blocks.
 //
-// `site.nav`, `site.headerButton` and `site.footer` are normalized the same way for every site
+// `site.nav` and `site.footer` are normalized the same way for every site
 // regardless of which template renders it (always an array / plain objects, never undefined) —
 // see normalizeSite. A site that never provided this data (every example that predates it) gets
 // an empty nav and an all-blank footer, which is exactly what gates both sections off below, so
 // those older examples keep building with no header or footer at all, unchanged.
 const showHeader = site.nav.length > 0;
-const showHeaderButton = site.headerButton.label !== '' && site.headerButton.href !== '';
 
 const footer = site.footer;
 const showAgeBlock = footer.ageWarning !== '' || footer.ageText !== '';
@@ -62,11 +61,6 @@ const showFooter =
               <a href={item.href}>{item.label}</a>
             ))}
           </nav>
-          {showHeaderButton && (
-            <a class="button site-header__button" href={site.headerButton.href}>
-              {site.headerButton.label}
-            </a>
-          )}
         </div>
       </header>
     )}
@@ -168,15 +162,6 @@ const showFooter =
 
   .site-header__nav a:hover {
     color: var(--text-primary);
-  }
-
-  .site-header__button {
-    flex-shrink: 0;
-    white-space: nowrap;
-  }
-
-  .site-header__button:hover {
-    background: var(--accent-hover);
   }
 
   .site-footer {

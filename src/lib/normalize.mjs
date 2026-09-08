@@ -345,7 +345,7 @@ function pickOverride(override, fromFile, fallback) {
   return toText(override, toText(fromFile, fallback));
 }
 
-// --- Shared settings for a site folder (nav, headerButton, footer) -----------------------------
+// --- Shared settings for a site folder (nav, footer) -----------------------------
 //
 // A site.json carries these alongside everything else at the top level (domain, locale, brand,
 // ...). They reach `site` the same way everything else in this function does: a wrong shape is
@@ -371,15 +371,6 @@ function buildNav(raw, warnings) {
     warnings.push('Часть пунктов меню пропущена — это не объекты');
   }
   return items;
-}
-
-function buildHeaderButton(raw, warnings) {
-  const isObject = isPlainObject(raw);
-  if (raw !== undefined && !isObject) {
-    warnings.push('Поле «headerButton» должно быть объектом — кнопка не выводится');
-  }
-  const input = isObject ? raw : {};
-  return { label: toText(input.label, ''), href: toText(input.href, '') };
 }
 
 function buildFooter(raw, warnings) {
@@ -433,7 +424,6 @@ export function normalizeSite(raw, options = {}) {
     style: pickOverride(overrides.style, input.style, ''),
     brand,
     nav: buildNav(input.nav, warnings),
-    headerButton: buildHeaderButton(input.headerButton, warnings),
     footer: buildFooter(input.footer, warnings),
     pages: [],
   };

@@ -750,18 +750,17 @@ describe('final-fix-5: normalizeSite proves a slug against a prober instead of p
   });
 });
 
-// A site folder's site.json carries nav, headerButton, footer and brand.tagline as shared
+// A site folder's site.json carries nav, footer and brand.tagline as shared
 // settings alongside everything else. They must reach `site` the same way everything else in this
 // module does: coerced defensively, never throwing — a site.json that leaves these fields unset
 // (or a site with no site.json at all) gets the defaults below.
-describe('normalizeSite: shared settings for folder-based sites (nav, headerButton, footer, brand.tagline)', () => {
-  it('defaults nav, headerButton, footer and brand.tagline when absent', () => {
+describe('normalizeSite: shared settings for folder-based sites (nav, footer, brand.tagline)', () => {
+  it('defaults nav, footer and brand.tagline when absent', () => {
     const { site, warnings } = normalizeSite(
       { pages: [{ slug: '/' }] },
       { supportedBlocks: BLOCKS },
     );
     expect(site.nav).toEqual([]);
-    expect(site.headerButton).toEqual({ label: '', href: '' });
     expect(site.footer).toEqual({
       ageWarning: '',
       ageText: '',
@@ -774,7 +773,7 @@ describe('normalizeSite: shared settings for folder-based sites (nav, headerButt
     expect(warnings).toHaveLength(0);
   });
 
-  it('carries a well-formed nav, headerButton, footer and tagline through onto site', () => {
+  it('carries a well-formed nav, footer and tagline through onto site', () => {
     const { site, warnings } = normalizeSite(
       {
         brand: { name: 'Acme', tagline: 'Acme does it all' },
@@ -783,7 +782,6 @@ describe('normalizeSite: shared settings for folder-based sites (nav, headerButt
           { label: 'Casino', href: '/casino' },
           { label: 'Slots', href: '/slots' },
         ],
-        headerButton: { label: 'Download', href: '/app.apk' },
         footer: {
           ageWarning: '18+',
           ageText: 'Must be an adult.',
@@ -800,7 +798,6 @@ describe('normalizeSite: shared settings for folder-based sites (nav, headerButt
       { label: 'Casino', href: '/casino' },
       { label: 'Slots', href: '/slots' },
     ]);
-    expect(site.headerButton).toEqual({ label: 'Download', href: '/app.apk' });
     expect(site.footer).toEqual({
       ageWarning: '18+',
       ageText: 'Must be an adult.',
@@ -830,12 +827,6 @@ describe('normalizeSite: shared settings for folder-based sites (nav, headerButt
   it('defaults a nav item missing a label instead of throwing', () => {
     const { site } = normalizeSite({ nav: [{ href: '/only-href' }] }, { supportedBlocks: BLOCKS });
     expect(site.nav).toEqual([{ label: '', href: '/only-href' }]);
-  });
-
-  it('does not throw when headerButton is not an object, and warns instead', () => {
-    const { site, warnings } = normalizeSite({ headerButton: 'oops' }, { supportedBlocks: BLOCKS });
-    expect(site.headerButton).toEqual({ label: '', href: '' });
-    expect(warnings.join(' ')).toContain('«headerButton»');
   });
 
   it('does not throw when footer is not an object, and warns instead', () => {

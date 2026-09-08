@@ -6,24 +6,46 @@
     "tagline": "Your ultimate destination for casino and cricket betting in Bangladesh."
   },
   "nav": [
-    { "label": "Casino", "href": "/casino" },
-    { "label": "Slots", "href": "/slots" },
-    { "label": "Games", "href": "/games" },
-    { "label": "Betting", "href": "/betting" },
-    { "label": "Bonus", "href": "/bonus" },
-    { "label": "App", "href": "/app" },
-    { "label": "Login", "href": "/login" }
+    {
+      "label": "Casino",
+      "href": "/casino"
+    },
+    {
+      "label": "Slots",
+      "href": "/slots"
+    },
+    {
+      "label": "Games",
+      "href": "/games"
+    },
+    {
+      "label": "Betting",
+      "href": "/betting"
+    },
+    {
+      "label": "Bonus",
+      "href": "/bonus"
+    },
+    {
+      "label": "App",
+      "href": "/app"
+    },
+    {
+      "label": "Login",
+      "href": "/login"
+    }
   ],
-  "headerButton": {
-    "label": "Download",
-    "href": "/899ok.apk"
-  },
   "footer": {
     "ageWarning": "18+",
     "ageText": "You must be at least 18 years old to create an account. We do not allow underage users.",
     "quickLinksTitle": "QUICK LINKS",
     "paymentsTitle": "SUPPORTED PAYMENT METHODS",
-    "payments": ["bKash", "Nagad", "Rocket", "USDT"],
+    "payments": [
+      "bKash",
+      "Nagad",
+      "Rocket",
+      "USDT"
+    ],
     "copyright": "© 899OK. All rights reserved 2026."
   },
   "partnerUrl": ""
