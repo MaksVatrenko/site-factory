@@ -65,6 +65,14 @@ async function loadLists() {
         (item) => item.id === document.querySelector('#field-template').value,
       );
       templateNote.textContent = chosen?.description ?? '';
+
+      // A template ships with the scheme it was designed against, so preselect it: picking a
+      // template and getting somebody else's palette is a worse default than the alphabetical one.
+      const schemeField = document.querySelector('#field-scheme');
+      const preferred = chosen?.defaultScheme;
+      if (preferred && [...schemeField.options].some((o) => o.value === preferred)) {
+        schemeField.value = preferred;
+      }
     };
     document.querySelector('#field-template').addEventListener('change', describe);
     describe();
