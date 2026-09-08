@@ -1,13 +1,13 @@
 ---
 import { asRecords, asText } from '../../_shared/props.mjs';
-import ElementRenderer from '../../../src/components/ElementRenderer.astro';
+import ElementRenderer from '../../_shared/ElementRenderer.astro';
 
 // A section carries an ordered `content` array instead of fixed named fields (heading,
 // paragraphs, list, table, subsections) -- the content decides what a section contains and in
 // what order, not this template. This file's job shrinks to the section shell: spacing, the
 // anchor id, the container. Each entry's own look (a heading tag, list bullets, a table's scroll
 // wrapper) lives in that entry's own element component -- see templates/review/elements/ and
-// src/components/ElementRenderer.astro, which resolves and renders one entry at a time, in order.
+// templates/_shared/ElementRenderer.astro, which resolves and renders one entry at a time, in order.
 const { content, anchor, templateId } = Astro.props;
 
 // An entry that is not a plain object cannot carry a `type` and is dropped by asRecords the same

@@ -1,13 +1,15 @@
 ---
-import { readManifest } from '../lib/templates.mjs';
+import { readManifest } from '../../src/lib/templates.mjs';
 
-// Mirrors BlockRenderer.astro exactly, one level down: a block (e.g. "section") carries an
+// Lives beside the templates rather than in src/ on purpose. BlockRenderer is called by the
+// engine and belongs to it; this one is called by a template, and a template that imports from
+// src/ could not be lifted out on its own. Mirrors BlockRenderer.astro exactly, one level down: a block (e.g. "section") carries an
 // ordered `content` array instead of a fixed set of named fields, and each entry names its own
 // element type ("title", "text", "list", "table", ...). Adding a new element type later is meant
 // to be exactly as cheap as adding a new block type -- one new file at
 // templates/<id>/elements/<type>.astro, discovered here the same way blockModules discovers a
 // block's file, plus one entry in that template's manifest.json.
-const elementModules = import.meta.glob('../../templates/*/elements/*.astro', { eager: true });
+const elementModules = import.meta.glob('../*/elements/*.astro', { eager: true });
 
 const { entry, templateId } = Astro.props;
 
@@ -31,7 +33,7 @@ if (type !== '' && !isSupported) {
   console.warn(`[factory] шаблон не поддерживает элемент «${type}» — пропущен`);
 }
 
-const key = `../../templates/${templateId}/elements/${type}.astro`;
+const key = `../${templateId}/elements/${type}.astro`;
 const Component = isSupported ? elementModules[key]?.default : undefined;
 ---
 

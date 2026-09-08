@@ -34,7 +34,7 @@ export function readManifest(id, root = process.cwd()) {
     description: typeof raw.description === 'string' ? raw.description : '',
     blocks: Array.isArray(raw.blocks) ? raw.blocks.filter((b) => typeof b === 'string') : [],
     // Element types a "section" block's own content entries may use (see
-    // src/components/ElementRenderer.astro) -- the same declare-to-support mechanism as `blocks`,
+    // templates/_shared/ElementRenderer.astro) -- the same declare-to-support mechanism as `blocks`,
     // one level down.
     elements: Array.isArray(raw.elements) ? raw.elements.filter((e) => typeof e === 'string') : [],
     defaultScheme: typeof raw.defaultScheme === 'string' ? raw.defaultScheme : '',
