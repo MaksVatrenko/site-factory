@@ -331,6 +331,61 @@ function pickOverride(override, fromFile, fallback) {
   return toText(override, toText(fromFile, fallback));
 }
 
+// --- Shared settings for a folder-of-pages site (nav, headerButton, footer) -------------------
+//
+// A SITE_DIR site.json carries these in addition to everything a single SITE_JSON file already
+// could (domain, locale, brand, ...). They reach `site` the same way everything else in this
+// function does: a wrong shape is coerced to a safe default and, where the wrong shape could only
+// come from a genuine mistake rather than the field simply being unused, reported with a warning —
+// never thrown. Every existing SITE_JSON caller leaves all three fields unset, so the defaults
+// below (an empty nav, an empty header button, an all-blank footer) are exactly what today's
+// sites already effectively have.
+
+function buildNavItem(raw) {
+  if (!isPlainObject(raw)) return null;
+  return { label: toText(raw.label, ''), href: toText(raw.href, '') };
+}
+
+function buildNav(raw, warnings) {
+  if (raw === undefined) return [];
+  if (!Array.isArray(raw)) {
+    warnings.push('Поле «nav» должно быть списком — меню не выводится');
+    return [];
+  }
+  const items = raw.map(buildNavItem).filter((item) => item !== null);
+  if (items.length !== raw.length) {
+    warnings.push('Часть пунктов меню пропущена — это не объекты');
+  }
+  return items;
+}
+
+function buildHeaderButton(raw, warnings) {
+  const isObject = isPlainObject(raw);
+  if (raw !== undefined && !isObject) {
+    warnings.push('Поле «headerButton» должно быть объектом — кнопка не выводится');
+  }
+  const input = isObject ? raw : {};
+  return { label: toText(input.label, ''), href: toText(input.href, '') };
+}
+
+function buildFooter(raw, warnings) {
+  const isObject = isPlainObject(raw);
+  if (raw !== undefined && !isObject) {
+    warnings.push('Поле «footer» должно быть объектом — использованы значения по умолчанию');
+  }
+  const input = isObject ? raw : {};
+  return {
+    ageWarning: toText(input.ageWarning, ''),
+    ageText: toText(input.ageText, ''),
+    quickLinksTitle: toText(input.quickLinksTitle, ''),
+    paymentsTitle: toText(input.paymentsTitle, ''),
+    payments: toArray(input.payments)
+      .filter((value) => typeof value === 'string' && value.trim() !== '')
+      .map((value) => value.trim()),
+    copyright: toText(input.copyright, ''),
+  };
+}
+
 export function normalizeSite(raw, options = {}) {
   const warnings = [];
   const overrides = options.overrides || {};
@@ -348,6 +403,7 @@ export function normalizeSite(raw, options = {}) {
   const brand = {
     name: pickOverride(overrides.brand, brandInput.name, DEFAULT_BRAND),
     logo: toText(brandInput.logo, ''),
+    tagline: toText(brandInput.tagline, ''),
   };
 
   const locale = pickOverride(overrides.locale, input.locale, DEFAULT_LOCALE);
@@ -362,6 +418,9 @@ export function normalizeSite(raw, options = {}) {
     partnerUrl: pickOverride(overrides.partnerUrl, input.partnerUrl, ''),
     style: pickOverride(overrides.style, input.style, ''),
     brand,
+    nav: buildNav(input.nav, warnings),
+    headerButton: buildHeaderButton(input.headerButton, warnings),
+    footer: buildFooter(input.footer, warnings),
     pages: [],
   };
 

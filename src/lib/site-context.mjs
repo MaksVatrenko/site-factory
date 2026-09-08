@@ -4,6 +4,7 @@ import { normalizeSite } from './normalize.mjs';
 import { loadTemplate, missingBlockFiles } from './templates.mjs';
 import { readScheme } from './schemes.mjs';
 import { createOutputProber } from './slug-prober.mjs';
+import { loadSiteDirInput } from './site-dir.mjs';
 
 let cache = null;
 
@@ -48,16 +49,24 @@ function buildProber(root) {
 export function loadContext(root = process.cwd()) {
   if (cache) return cache;
 
+  // SITE_DIR (a folder of pages) wins when both are set — it is the richer source, and setting
+  // both at once only happens because a caller (a test, or the factory server building a folder
+  // site) left the other one around from a shared base configuration.
+  const dir = process.env.SITE_DIR;
   const file = process.env.SITE_JSON;
-  if (!file) {
-    throw new Error('SITE_JSON is not set: point it at a content file');
-  }
 
   let raw;
-  try {
-    raw = JSON.parse(readFileSync(file, 'utf8'));
-  } catch (error) {
-    throw new Error(`Cannot read content from ${file}: ${error.message}`);
+  if (dir) {
+    raw = loadSiteDirInput(dir);
+  } else {
+    if (!file) {
+      throw new Error('SITE_JSON is not set: point it at a content file');
+    }
+    try {
+      raw = JSON.parse(readFileSync(file, 'utf8'));
+    } catch (error) {
+      throw new Error(`Cannot read content from ${file}: ${error.message}`);
+    }
   }
 
   const template = loadTemplate(process.env.TEMPLATE || '', root);
