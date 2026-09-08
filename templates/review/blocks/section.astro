@@ -117,7 +117,6 @@ const idAttrs = anchorId ? { id: anchorId } : {};
   .rsection__inner {
     display: grid;
     gap: 1.1rem;
-    max-width: 44rem;
   }
 
   .rsection__inner:has(.rsection__table-wrap, .rsection__subgrid) {
@@ -131,7 +130,7 @@ const idAttrs = anchorId ? { id: anchorId } : {};
   }
 
   .rsection__table-wrap {
-    max-width: 44rem;
+    max-width: 100%;
     overflow-x: auto;
   }
 
@@ -161,7 +160,6 @@ const idAttrs = anchorId ? { id: anchorId } : {};
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
     gap: 1.25rem;
-    max-width: 56rem;
     /* Without this, the browser sizes this grid item's automatic minimum from its OWN
        min-content — which for a nested auto-fit/minmax grid is (pessimistically) wide enough
        for every column at once — so it refuses to shrink below that and overflows its parent

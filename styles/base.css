@@ -111,6 +111,11 @@ main > section + section {
 main > section {
   position: relative;
   isolation: isolate;
+  /* The glow below is wider than the viewport and deliberately hangs past the section's edge.
+     Clipping keeps it from widening the document and creating a horizontal scrollbar on a phone.
+     `clip` rather than `hidden`: it crops without turning the section into a scroll container,
+     which would otherwise break `position: sticky` for anything inside it. */
+  overflow: clip;
 }
 
 main > section::before {
