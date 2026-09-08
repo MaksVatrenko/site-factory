@@ -1,0 +1,7 @@
+{
+  "id": "review",
+  "name": "Обзорный",
+  "description": "Тёмная тема с золотым акцентом: лонгриды с оглавлением, таблицами и раскрывающимся FAQ",
+  "blocks": ["hero", "toc", "section", "links", "faq"],
+  "defaultScheme": "night"
+}

@@ -1,4 +1,5 @@
 :root {
+  /* Legacy tokens: kept exactly as-is, templates t1-t3 read these directly. */
   --c-bg: #0f141c;
   --c-fg: #e8eef7;
   --c-surface: #18202b;
@@ -7,4 +8,21 @@
   --c-primary: #4d97ff;
   --c-primary-fg: #08111c;
   --c-accent: #7db4ff;
+
+  /* Extended tokens: same names in every scheme file (see tests/schemes.test.mjs), used by the
+     "review" template. Values here suit this existing dark, blue-accent palette specifically —
+     distinct from the new "night" scheme's gold accent below. */
+  --bg-primary: #0f141c;
+  --bg-secondary: #18202b;
+  --bg-elevated: #202938;
+  --border-subtle: #202838;
+  --border-default: #2a3646;
+  --border-accent: #4d97ff;
+  --text-primary: #e8eef7;
+  --text-secondary: #9aa9bd;
+  --text-tertiary: #6d7c93;
+  --accent-primary: #4d97ff;
+  --accent-hover: #7db4ff;
+  --text-on-accent: #08111c;
+  --success: #22c55e;
 }

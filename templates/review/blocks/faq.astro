@@ -1,0 +1,89 @@
+---
+import { asRecords, asText, slugify } from '../../_shared/props.mjs';
+
+const { heading, items } = Astro.props;
+const title = asText(heading);
+const questions = asRecords(items)
+  .map((item) => ({ q: asText(item.q), a: asText(item.a) }))
+  .filter((entry) => entry.q !== '' || entry.a !== '');
+
+const anchorId = slugify(title);
+const idAttrs = anchorId ? { id: anchorId } : {};
+---
+
+{questions.length > 0 && (
+  <section class="faq section" {...idAttrs}>
+    <div class="container faq__inner">
+      {title && <h2>{title}</h2>}
+      <div class="faq__list">
+        {questions.map((item) => (
+          <details class="faq__item">
+            {item.q && <summary class="faq__question">{item.q}</summary>}
+            {item.a && <p class="faq__answer">{item.a}</p>}
+          </details>
+        ))}
+      </div>
+    </div>
+  </section>
+)}
+
+<style>
+  .faq {
+    scroll-margin-top: 5.5rem;
+  }
+
+  .faq__inner {
+    max-width: 46rem;
+  }
+
+  .faq__list {
+    margin-top: 1.75rem;
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .faq__item {
+    padding: 1.1rem 1.4rem;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+  }
+
+  .faq__question {
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    color: var(--text-primary);
+    font-weight: 650;
+  }
+
+  .faq__question::-webkit-details-marker {
+    display: none;
+  }
+
+  /* Same CSS-only chevron technique as the "links" block's arrow (right + bottom border,
+     rotated), pointing down while closed and flipped to point up once expanded -- no JS, no
+     emoji, just the details/summary open state driving a CSS transform. */
+  .faq__question::after {
+    content: '';
+    flex-shrink: 0;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-right: 2px solid var(--text-tertiary);
+    border-bottom: 2px solid var(--text-tertiary);
+    transform: rotate(45deg);
+    transition: transform 0.15s ease;
+  }
+
+  .faq__item[open] .faq__question::after {
+    transform: rotate(-135deg);
+  }
+
+  .faq__answer {
+    margin-top: 0.85rem;
+    color: var(--text-secondary);
+  }
+</style>

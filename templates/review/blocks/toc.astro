@@ -1,0 +1,67 @@
+---
+import { asList, asText, slugify } from '../../_shared/props.mjs';
+
+const { heading, items } = Astro.props;
+const title = asText(heading);
+const entries = asList(items)
+  .map((text) => asText(text))
+  .filter((text) => text !== '')
+  .map((text) => ({ text, href: `#${slugify(text)}` }));
+---
+
+{entries.length > 0 && (
+  <section class="toc section">
+    <div class="container">
+      <nav class="toc__card" aria-label={title || 'Table of contents'}>
+        {title && <h2 class="toc__heading">{title}</h2>}
+        <ul class="toc__grid">
+          {entries.map((entry) => (
+            <li>
+              <a class="toc__link" href={entry.href}>{entry.text}</a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </div>
+  </section>
+)}
+
+<style>
+  .toc {
+    padding-block: 0 var(--space);
+  }
+
+  .toc__card {
+    display: block;
+    padding: 1.75rem;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-top: 3px solid var(--border-accent);
+    border-radius: var(--radius);
+  }
+
+  .toc__heading {
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+  }
+
+  .toc__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 0.6rem 1.5rem;
+    list-style: none;
+    padding: 0;
+  }
+
+  .toc__link {
+    display: block;
+    padding-block: 0.15rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+  }
+
+  .toc__link:hover {
+    color: var(--accent-primary);
+    text-decoration: underline;
+  }
+</style>

@@ -18,6 +18,11 @@ const ASTRO_BIN = join(ROOT, 'node_modules', '.bin', 'astro');
 const PUBLIC_UI_DIR = join(HERE, 'public');
 const PORT = Number(process.env.PORT || 3002);
 
+// The template a build gets when a request names none at all. Deliberately not "whichever
+// template sorts first" (see the comment where this is used) -- t1 is the original, general-
+// purpose starting point every example and this comment's own history was written against.
+const DEFAULT_TEMPLATE_ID = 't1';
+
 const builds = new Map();
 
 const MAX_NAME_LENGTH = 100;
@@ -260,19 +265,32 @@ export function createApp() {
       return;
     }
 
-    // Empty/absent template or scheme stay valid — they mean "use the default", which the
-    // engine already resolves (loadTemplate('') and readScheme('') both fall back on their own).
-    // A *present* value of the wrong type is neither of those things, so it is refused the same
-    // way an unknown string id already is, instead of being coerced into '' and treated as absent.
+    // Empty/absent template or scheme stay valid — they mean "use the default". A *present*
+    // value of the wrong type is neither of those things, so it is refused the same way an
+    // unknown string id already is, instead of being coerced into '' and treated as absent.
     if (isPresentNonString(body.template)) {
       res.status(400).json({ error: 'Поле «template» должно быть строкой' });
       return;
     }
-    const template = trimmedString(body.template);
-    if (template !== '' && !listTemplates(ROOT).some((candidate) => candidate.id === template)) {
-      res.status(400).json({ error: `Шаблон «${template}» не найден` });
+    const templateInput = trimmedString(body.template);
+    if (
+      templateInput !== '' &&
+      !listTemplates(ROOT).some((candidate) => candidate.id === templateInput)
+    ) {
+      res.status(400).json({ error: `Шаблон «${templateInput}» не найден` });
       return;
     }
+    // An absent template resolves to DEFAULT_TEMPLATE_ID here, explicitly, rather than being
+    // handed to the engine as '' and left to loadTemplate('')'s own fallback (listTemplates()[0]
+    // — see src/lib/templates.mjs). That fallback exists for a genuinely unknown id and picking
+    // *a* template beats refusing to build one at all, but "whichever template sorts
+    // alphabetically first" is not a deliberate default — it is just also what t1 happened to be
+    // while t1/t2/t3 were the only templates. "review" sorts before "t1", so without this, every
+    // request that does not name a template would now silently build with "review" instead —
+    // a client-specific template that does not even support several block types (richtext,
+    // cards, columns) the general-purpose examples use — rather than continuing to get the
+    // general-purpose template this behavior has always meant to hand out.
+    const template = templateInput === '' ? DEFAULT_TEMPLATE_ID : templateInput;
 
     if (isPresentNonString(body.scheme)) {
       res.status(400).json({ error: 'Поле «scheme» должно быть строкой' });

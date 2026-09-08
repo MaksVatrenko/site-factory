@@ -1,0 +1,29 @@
+:root {
+  /* Legacy tokens: mapped from the extended palette below so templates t1-t3 can also use this
+     scheme, even though it was designed for "review" (see the extended tokens for the source of
+     truth — these values are the client's real reference-site palette). */
+  --c-bg: #0a0e1a;
+  --c-fg: #e8ecf4;
+  --c-surface: #131829;
+  --c-border: #2a3454;
+  --c-muted: #b8c1d3;
+  --c-primary: #ffb800;
+  --c-primary-fg: #0a0e1a;
+  --c-accent: #ffcb47;
+
+  /* Extended tokens: the reference site's actual palette (dark, gold accent), used by the
+     "review" template. Same names in every scheme file (see tests/schemes.test.mjs). */
+  --bg-primary: #0a0e1a;
+  --bg-secondary: #131829;
+  --bg-elevated: #1a2138;
+  --border-subtle: #1f2740;
+  --border-default: #2a3454;
+  --border-accent: #ffb800;
+  --text-primary: #e8ecf4;
+  --text-secondary: #b8c1d3;
+  --text-tertiary: #8b95a9;
+  --accent-primary: #ffb800;
+  --accent-hover: #ffcb47;
+  --text-on-accent: #0a0e1a;
+  --success: #22c55e;
+}

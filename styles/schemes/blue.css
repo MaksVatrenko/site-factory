@@ -1,4 +1,5 @@
 :root {
+  /* Legacy tokens: kept exactly as-is, templates t1-t3 read these directly. */
   --c-bg: #ffffff;
   --c-fg: #16202f;
   --c-surface: #f1f5f9;
@@ -7,4 +8,20 @@
   --c-primary: #2563eb;
   --c-primary-fg: #ffffff;
   --c-accent: #1d4ed8;
+
+  /* Extended tokens: same names in every scheme file (see tests/schemes.test.mjs), used by the
+     "review" template. Values here suit this light, corporate-blue palette specifically. */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f1f5f9;
+  --bg-elevated: #ffffff;
+  --border-subtle: #eaf0f6;
+  --border-default: #dbe3ec;
+  --border-accent: #2563eb;
+  --text-primary: #16202f;
+  --text-secondary: #5b6b80;
+  --text-tertiary: #8a97a8;
+  --accent-primary: #2563eb;
+  --accent-hover: #1d4ed8;
+  --text-on-accent: #ffffff;
+  --success: #16a34a;
 }

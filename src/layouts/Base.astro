@@ -4,6 +4,33 @@ import { resolveOrigin, pageUrl } from '../lib/urls.mjs';
 
 const { site, page, scheme } = Astro.props;
 const canonical = pageUrl(resolveOrigin(Astro.site, site.domain), page.slug);
+
+// Header and footer are rendered here, in the layout every template shares, instead of as block
+// files inside a template folder. Every other piece of markup in this engine is owned by exactly
+// one template (resolved by template id + block type, see BlockRenderer.astro) and appears only
+// on the pages whose content lists it. A header and footer are different: they belong to the
+// SITE, not to any one page's block list, so there is no per-page content array to add a "header"
+// block onto — `site.nav` / `site.headerButton` / `site.footer` sit next to `site.pages`, not
+// inside it (see normalizeSite in src/lib/normalize.mjs). Putting them here is what lets every
+// page of a site share the exact same header/footer without every template having to duplicate
+// that markup in its own hero/footer blocks.
+//
+// `site.nav`, `site.headerButton` and `site.footer` are normalized the same way for every site
+// regardless of which template renders it (always an array / plain objects, never undefined) —
+// see normalizeSite. A site that never provided this data (every example that predates it) gets
+// an empty nav and an all-blank footer, which is exactly what gates both sections off below, so
+// those older examples keep building with no header or footer at all, unchanged.
+const showHeader = site.nav.length > 0;
+const showHeaderButton = site.headerButton.label !== '' && site.headerButton.href !== '';
+
+const footer = site.footer;
+const showAgeBlock = footer.ageWarning !== '' || footer.ageText !== '';
+const showFooter =
+  showAgeBlock ||
+  footer.quickLinksTitle !== '' ||
+  footer.paymentsTitle !== '' ||
+  footer.payments.length > 0 ||
+  footer.copyright !== '';
 ---
 
 <html lang={site.lang} dir={site.dir}>
@@ -20,6 +47,230 @@ const canonical = pageUrl(resolveOrigin(Astro.site, site.domain), page.slug);
     <style set:html={`${baseCss}\n${scheme.css}`}></style>
   </head>
   <body>
+    {showHeader && (
+      <header class="site-header">
+        <div class="container site-header__inner">
+          <a class="site-header__brand" href="/">
+            {site.brand.logo ? (
+              <img src={site.brand.logo} alt={site.brand.name} />
+            ) : (
+              <span>{site.brand.name}</span>
+            )}
+          </a>
+          <nav class="site-header__nav" aria-label="Primary">
+            {site.nav.map((item) => (
+              <a href={item.href}>{item.label}</a>
+            ))}
+          </nav>
+          {showHeaderButton && (
+            <a class="button site-header__button" href={site.headerButton.href}>
+              {site.headerButton.label}
+            </a>
+          )}
+        </div>
+      </header>
+    )}
     <slot />
+    {showFooter && (
+      <footer class="site-footer">
+        <div class="container site-footer__grid">
+          <div class="site-footer__brand">
+            <p class="site-footer__brand-name">{site.brand.name}</p>
+            {site.brand.tagline && <p class="site-footer__tagline">{site.brand.tagline}</p>}
+            {showAgeBlock && (
+              <div class="site-footer__age">
+                {footer.ageWarning && (
+                  <span class="site-footer__age-badge">{footer.ageWarning}</span>
+                )}
+                {footer.ageText && <p class="site-footer__age-text">{footer.ageText}</p>}
+              </div>
+            )}
+          </div>
+          {site.nav.length > 0 && (
+            <div class="site-footer__col">
+              {footer.quickLinksTitle && <h3>{footer.quickLinksTitle}</h3>}
+              <ul class="site-footer__list">
+                {site.nav.map((item) => (
+                  <li><a href={item.href}>{item.label}</a></li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {footer.payments.length > 0 && (
+            <div class="site-footer__col">
+              {footer.paymentsTitle && <h3>{footer.paymentsTitle}</h3>}
+              <ul class="site-footer__payments">
+                {footer.payments.map((method) => (
+                  <li>{method}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+        {footer.copyright && (
+          <div class="site-footer__bottom">
+            <p class="container">{footer.copyright}</p>
+          </div>
+        )}
+      </footer>
+    )}
   </body>
 </html>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .site-header__inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1.5rem;
+    padding-block: 1rem;
+  }
+
+  .site-header__brand {
+    display: flex;
+    align-items: center;
+    color: var(--text-primary);
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .site-header__brand img {
+    max-height: 2.25rem;
+    width: auto;
+  }
+
+  .site-header__nav {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem 1.5rem;
+    flex: 1 1 auto;
+  }
+
+  .site-header__nav a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.95rem;
+  }
+
+  .site-header__nav a:hover {
+    color: var(--text-primary);
+  }
+
+  .site-header__button {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .site-header__button:hover {
+    background: var(--accent-hover);
+  }
+
+  .site-footer {
+    border-top: 1px solid var(--border-subtle);
+    background: var(--bg-secondary);
+    padding-block: 3rem 1.5rem;
+  }
+
+  .site-footer__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 2.5rem;
+  }
+
+  .site-footer__brand {
+    display: grid;
+    gap: 0.75rem;
+    align-content: start;
+  }
+
+  .site-footer__brand-name {
+    color: var(--text-primary);
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+
+  .site-footer__tagline {
+    color: var(--text-secondary);
+  }
+
+  .site-footer__age {
+    display: grid;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .site-footer__age-badge {
+    display: inline-block;
+    width: max-content;
+    padding: 0.2rem 0.6rem;
+    border: 1px solid var(--border-accent);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+
+  .site-footer__age-text {
+    color: var(--text-tertiary);
+    font-size: 0.85rem;
+    max-width: 32rem;
+  }
+
+  .site-footer__col h3 {
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .site-footer__list {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: 0.6rem;
+  }
+
+  .site-footer__list a {
+    color: var(--text-secondary);
+    text-decoration: none;
+  }
+
+  .site-footer__list a:hover {
+    color: var(--text-primary);
+  }
+
+  .site-footer__payments {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .site-footer__payments li {
+    padding: 0.3rem 0.7rem;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+  }
+
+  .site-footer__bottom {
+    margin-top: 2.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-subtle);
+    color: var(--text-tertiary);
+    font-size: 0.85rem;
+  }
+</style>

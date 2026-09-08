@@ -1,4 +1,5 @@
 :root {
+  /* Legacy tokens: kept exactly as-is, templates t1-t3 read these directly. */
   --c-bg: #ffffff;
   --c-fg: #14231b;
   --c-surface: #eef6f0;
@@ -7,4 +8,20 @@
   --c-primary: #10794a;
   --c-primary-fg: #ffffff;
   --c-accent: #0b5c37;
+
+  /* Extended tokens: same names in every scheme file (see tests/schemes.test.mjs), used by the
+     "review" template. Values here suit this light, eco-green palette specifically. */
+  --bg-primary: #ffffff;
+  --bg-secondary: #eef6f0;
+  --bg-elevated: #ffffff;
+  --border-subtle: #e7f1ea;
+  --border-default: #d5e6da;
+  --border-accent: #10794a;
+  --text-primary: #14231b;
+  --text-secondary: #4f6a59;
+  --text-tertiary: #82988c;
+  --accent-primary: #10794a;
+  --accent-hover: #0b5c37;
+  --text-on-accent: #ffffff;
+  --success: #15803d;
 }

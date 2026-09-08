@@ -1,0 +1,80 @@
+---
+import { asRecords, asText, slugify } from '../../_shared/props.mjs';
+
+const { heading, site } = Astro.props;
+const title = asText(heading);
+
+// site.nav is already normalized by the engine (see src/lib/normalize.mjs) into a clean list of
+// { label, href } strings, but every template treats `site` the same defensive way it treats its
+// own block props — never assume it stays that shape forever.
+const navItems = asRecords(site?.nav)
+  .map((item) => ({ label: asText(item.label), href: asText(item.href) }))
+  .filter((item) => item.label !== '' && item.href !== '');
+
+const anchorId = slugify(title);
+const idAttrs = anchorId ? { id: anchorId } : {};
+---
+
+{navItems.length > 0 && (
+  <section class="links section" {...idAttrs}>
+    <div class="container">
+      {title && <h2 class="links__heading">{title}</h2>}
+      <div class="links__grid">
+        {navItems.map((item) => (
+          <a class="links__card" href={item.href}>
+            <span class="links__label">{item.label}</span>
+            <span class="links__arrow" aria-hidden="true"></span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+)}
+
+<style>
+  .links__heading {
+    margin-bottom: 1.75rem;
+  }
+
+  .links__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    gap: 1rem;
+  }
+
+  .links__card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.1rem 1.4rem;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .links__card:hover {
+    border-color: var(--border-accent);
+  }
+
+  .links__card:hover .links__arrow {
+    border-color: var(--accent-primary);
+    transform: translateX(0.15rem) rotate(-45deg);
+  }
+
+  /* A small square with only its right and bottom borders drawn, rotated -45deg, reads as a
+     ">" chevron -- a CSS-only stand-in for the arrow icon the reference site draws with an
+     image/emoji (see the "no emoji" rule: this uses a border, not a glyph). */
+  .links__arrow {
+    flex-shrink: 0;
+    width: 0.55rem;
+    height: 0.55rem;
+    border-right: 2px solid var(--text-tertiary);
+    border-bottom: 2px solid var(--text-tertiary);
+    transform: rotate(-45deg);
+    transition: transform 0.15s ease, border-color 0.15s ease;
+  }
+</style>
