@@ -23,6 +23,13 @@ export function resetContextCache() {
 // content requirement (see createOutputProber's own contract) — if it cannot be built at all,
 // normalizeSite is simply called with no prober, exactly as it is in every unit test, and falls
 // back to the old predictive behaviour.
+// The single expression astro.config.mjs uses for publicDir, so the prober's scratch mirror, the
+// logo check and the build itself can never look at different folders.
+function resolvePublicDir(root) {
+  const envPublicDir = process.env.PUBLIC_DIR;
+  return envPublicDir && existsSync(envPublicDir) ? envPublicDir : join(root, 'public');
+}
+
 function buildProber(root) {
   try {
     // `resolve`, not `join`: OUT_DIR is relative in the test helpers but ALWAYS absolute in
@@ -32,10 +39,7 @@ function buildProber(root) {
     // `resolve` correctly discards `root` when the second argument is already absolute, exactly
     // like resolving a relative path against a base URL.
     const outDir = resolve(root, process.env.OUT_DIR || './output/preview');
-    const envPublicDir = process.env.PUBLIC_DIR;
-    const publicDir =
-      envPublicDir && existsSync(envPublicDir) ? envPublicDir : join(root, 'public');
-    return createOutputProber({ outDir, publicDir });
+    return createOutputProber({ outDir, publicDir: resolvePublicDir(root) });
   } catch {
     return null;
   }
@@ -105,6 +109,18 @@ export function loadContext(root = process.cwd()) {
     },
     prober: prober ? prober.tryClaim : undefined,
   });
+
+  // A logo named in the content but absent from the public folder would ship a broken image on
+  // every page of a live site, and nobody would notice until they opened it. The content is
+  // author-supplied and the public folder is a separate delivery, so the two drift apart easily —
+  // drop the reference and say so, the same way an unsupported block is dropped.
+  if (site.brand.logo !== '') {
+    const publicDir = resolvePublicDir(root);
+    if (!existsSync(join(publicDir, site.brand.logo))) {
+      warnings.push(`Логотип «${site.brand.logo}» не найден в папке public — не выводится`);
+      site.brand.logo = '';
+    }
+  }
 
   const scheme = readScheme(process.env.SCHEME || site.style || template.defaultScheme, root);
 

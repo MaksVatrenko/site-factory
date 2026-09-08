@@ -43,6 +43,30 @@ describe('engine build', () => {
     expect(readOutput(outDir)).toContain('dir="ltr"');
   });
 
+  it('drops a logo the public folder does not actually contain', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'site-factory-logo-'));
+    try {
+      const file = join(dir, 'site.json');
+      writeFileSync(
+        file,
+        JSON.stringify({
+          brand: { name: 'No Logo Here', logo: 'images/missing.svg' },
+          pages: [{ slug: '/', blocks: [{ type: 'hero', props: { title: 'Hero' } }] }],
+        }),
+      );
+      const built = buildSite({ outDir: join('output', 'test-missing-logo'), env: { SITE_JSON: file } });
+      const html = readOutput(built.outDir);
+      expect(html).not.toContain('images/missing.svg');
+      expect(built.log).toContain('Логотип');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps a logo the public folder does contain', () => {
+    expect(readOutput(outDir)).toContain('images/logo.svg');
+  });
+
   it('copies files from the example public folder', () => {
     expect(existsSync(join(outDir, 'images', 'logo.svg'))).toBe(true);
   });
