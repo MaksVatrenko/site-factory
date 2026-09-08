@@ -320,7 +320,17 @@ function resolveSlugsByProof(pages, warnings, prober) {
     // Same rule as the predictive path: a page that never provided a slug at all is not
     // reporting a content error, so it is not warned about.
     if (!candidate.missing) {
-      warnings.push(`Слаг «${candidate.raw}» недопустим — использован «${fallback}»`);
+      // Two very different faults land here, and they are fixed differently: a slug the
+      // filesystem refuses outright, and a perfectly good slug another page already took. Saying
+      // "недопустим" for the second sends the reader hunting for a problem in a value that is
+      // fine — the actual mistake is two pages declaring the same slug.
+      const takenByEarlierPage =
+        candidate.slug !== null && finalSlugs.some((slug, other) => other < index && slug === candidate.slug);
+      warnings.push(
+        takenByEarlierPage
+          ? `Слаг «${candidate.raw}» уже занят другой страницей — использован «${fallback}»`
+          : `Слаг «${candidate.raw}» недопустим — использован «${fallback}»`,
+      );
     }
   });
 

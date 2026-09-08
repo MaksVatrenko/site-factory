@@ -666,6 +666,19 @@ describe('final-fix-5: normalizeSite proves a slug against a prober instead of p
     expect(warnings.some((w) => w.includes('недопустим'))).toBe(false);
   });
 
+  it('says a slug is taken, not invalid, when another page already claimed it', () => {
+    // The two faults are fixed differently: one is a bad value, the other is two pages declaring
+    // the same good value. Calling the second "недопустим" sends the reader hunting in the wrong
+    // place — the case that actually happened when a site's second page kept slug "/".
+    const { warnings } = normalizeSite(
+      { pages: [{ slug: '/' }, { slug: '/' }] },
+      { supportedBlocks: BLOCKS, prober: fakeProber() },
+    );
+    const text = warnings.join(' ');
+    expect(text).toMatch(/занят/);
+    expect(text).not.toMatch(/недопустим/);
+  });
+
   it('falls back to page-N and warns "invalid", never "duplicate", when a claim fails', () => {
     const { site, warnings } = normalizeSite(
       {
@@ -682,8 +695,12 @@ describe('final-fix-5: normalizeSite proves a slug against a prober instead of p
     expect(site.pages).toHaveLength(3);
     const second = site.pages.find((p) => p.meta.title === 'Second');
     expect(second.slug).not.toBe('/about');
-    expect(warnings.some((w) => w.includes('недопустим'))).toBe(true);
-    expect(warnings.some((w) => w.includes('дубликат'))).toBe(false);
+    // The page must be reported, and the wording must not be the one the dropping path used:
+    // "дубликат слага — страница пропущена" would tell the reader their page is gone when it is
+    // not. Which of the two surviving wordings appears (taken vs invalid) depends on whether the
+    // collision was provable, and is asserted separately.
+    expect(warnings.some((w) => w.includes('/about'))).toBe(true);
+    expect(warnings.some((w) => w.includes('пропущена'))).toBe(false);
   });
 
   it('keeps two slugs distinct when the prober does not fold them, even though JS toLowerCase would', () => {
