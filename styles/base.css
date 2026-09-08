@@ -100,3 +100,35 @@ main > section:nth-child(even) {
 main > section + section {
   border-top: 1px solid var(--border-default);
 }
+
+/* A soft radial glow behind every section, alternating sides down the page. Purely decorative: it
+   breaks up what would otherwise be a flat wall of one colour on a very long page. It is a
+   pseudo-element rather than a div in each block, so no component has to carry markup that means
+   nothing to it — and it is hidden from assistive tech for the same reason.
+
+   The colour is the scheme's own: a scheme that wants no glow sets --section-glow to transparent
+   and everything below keeps working. */
+main > section {
+  position: relative;
+  isolation: isolate;
+}
+
+main > section::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: 50%;
+  width: min(78vw, 820px);
+  aspect-ratio: 1;
+  transform: translateY(-50%);
+  background: radial-gradient(circle, var(--section-glow) 0%, transparent 68%);
+  pointer-events: none;
+}
+
+main > section:nth-child(odd)::before {
+  right: -14%;
+}
+
+main > section:nth-child(even)::before {
+  left: -14%;
+}

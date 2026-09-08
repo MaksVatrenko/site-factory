@@ -13,6 +13,7 @@
      "review" template. Same names in every scheme file (see tests/schemes.test.mjs). */
   --bg-primary: #0a0e1a;
   --bg-secondary: #131829;
+  --section-glow: #ffb80014;
   --bg-alt: #1a2138;
   --bg-elevated: #1a2138;
   --border-subtle: #1f2740;

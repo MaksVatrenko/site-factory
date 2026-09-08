@@ -12,6 +12,7 @@
      "review" template. Values here suit this light, corporate-blue palette specifically. */
   --bg-primary: #ffffff;
   --bg-secondary: #f1f5f9;
+  --section-glow: #2563eb0f;
   --bg-alt: #f1f5f9;
   --bg-elevated: #ffffff;
   --border-subtle: #eaf0f6;
