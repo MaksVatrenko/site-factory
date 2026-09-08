@@ -70,7 +70,11 @@ const showFooter =
         </div>
       </header>
     )}
-    <slot />
+    <!-- The page's blocks live inside <main>: search engines and screen readers use it to tell
+         the page's own content from the header and footer repeated across every page. -->
+    <main>
+      <slot />
+    </main>
     {showFooter && (
       <footer class="site-footer">
         <div class="container site-footer__grid">

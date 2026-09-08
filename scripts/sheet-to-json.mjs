@@ -201,6 +201,13 @@ function classify(page) {
       return { type: 'toc', heading: block.heading, items: block.list };
     }
 
+    // A section with a heading and nothing else is the reference site's "other pages" grid: the
+    // spreadsheet holds only its title because the links come from the site's own page list.
+    // Naming it here keeps the template from having to infer intent from emptiness.
+    if (!block.table && !subs.length && !block.list && !block.paragraphs) {
+      return { type: 'links', heading: block.heading };
+    }
+
     return block;
   });
   return page;

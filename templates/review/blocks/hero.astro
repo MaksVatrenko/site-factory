@@ -1,11 +1,17 @@
 ---
 import { asList, asText } from '../../_shared/props.mjs';
 
-const { heading, paragraphs, site } = Astro.props;
-const title = asText(heading);
-const lead = asList(paragraphs)
+const { heading, title: legacyTitle, paragraphs, subtitle, site } = Astro.props;
+
+// Templates must stay interchangeable: any content file has to build with any template. The older
+// examples describe a hero as `title` + `subtitle`, this template's own content uses `heading` +
+// `paragraphs`. Reading both costs two lines and keeps that guarantee true — without it a template
+// silently renders an empty hero for content written for a different one.
+const title = asText(heading, asText(legacyTitle));
+const ownLead = asList(paragraphs)
   .map((text) => asText(text))
   .filter((text) => text !== '');
+const lead = ownLead.length > 0 ? ownLead : asList(subtitle).map((t) => asText(t)).filter(Boolean);
 const brandLabel = asText(site?.brand?.name);
 
 // The reference site accents the last couple of words of the hero heading in gold. The content

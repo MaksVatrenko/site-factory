@@ -55,7 +55,11 @@ for (const template of templates) {
       if (!primaryValue || !html.includes(primaryValue)) problems.push('нет переменных схемы');
       if (/<script[^>]*\ssrc=/i.test(html)) problems.push('в выходе есть JS');
       if (/<link[^>]*\brel=["']?stylesheet["']?/i.test(html)) problems.push('есть внешний стиль');
-      if (!html.includes('Find what actually works') && EXAMPLE === 'default') {
+      // Compare against the text, not the markup: a template is free to split a heading across
+      // elements (the review template accents its last words), and a substring search over raw
+      // HTML would report missing content that is in fact rendered.
+      const text = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+      if (!text.includes('Find what actually works') && EXAMPLE === 'default') {
         problems.push('нет контента hero');
       }
 
