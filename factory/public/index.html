@@ -37,6 +37,7 @@
             <label>Цветовая схема<select name="scheme" id="field-scheme"></select></label>
             <label>Сайт<select name="site" id="field-site"></select></label>
             <p class="note">data/sites/[папка]/site.json + файлы страниц</p>
+            <p class="note">Пустые поля бренда, гео и языка берутся из site.json выбранного сайта</p>
           </fieldset>
 
           <fieldset class="card">
@@ -44,6 +45,7 @@
             <label>Адрес сайта<input name="domain" type="text" placeholder="example.com" /></label>
             <p class="note">Пустое поле — имя папки берётся от папки с сайтом</p>
             <label>Ссылка партнёрки<input name="partnerUrl" type="url" placeholder="https://партнёрка.com/..." /></label>
+            <p class="note">Пустое поле — берётся partnerUrl из site.json выбранного сайта</p>
           </fieldset>
 
           <fieldset class="card">

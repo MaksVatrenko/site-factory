@@ -49,7 +49,16 @@ async function loadLists() {
 
     fillSelect(document.querySelector('#field-template'), templates.templates);
     fillSelect(document.querySelector('#field-scheme'), schemes.schemes);
-    fillSelect(document.querySelector('#field-site'), sites.sites);
+    // /api/sites reports each folder's id, page count and (when site.json declares one) brand
+    // name; the option text is built here so the picker shows something meaningful — which
+    // folder, how big it is, whose content it is — instead of a bare folder name.
+    fillSelect(
+      document.querySelector('#field-site'),
+      sites.sites.map((site) => {
+        const label = `${site.id} — ${site.pages} стр.`;
+        return { id: site.id, name: site.brand ? `${label} · ${site.brand}` : label };
+      }),
+    );
 
     const describe = () => {
       const chosen = templates.templates.find(

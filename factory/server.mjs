@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { StringDecoder } from 'node:string_decoder';
 import { fileURLToPath } from 'node:url';
@@ -46,23 +46,58 @@ function isPresentNonString(value) {
   return value !== undefined && typeof value !== 'string';
 }
 
-// A site folder "actually holds content" when it has at least one page file — a site.json alone
-// (or an empty folder) is not buildable, see loadSiteDirInput's own "no pages" check in
-// src/lib/site-dir.mjs. Reading that requirement here directly, rather than requiring a site.json
-// specifically, matches what a real build actually needs: a site.json is optional.
-function siteHasPages(dir) {
+// A page file is any *.json file besides site.json itself — the same definition
+// loadSiteDirInput uses for what counts as a page (see src/lib/site-dir.mjs). Reading that
+// requirement here directly, rather than requiring a site.json specifically, matches what a real
+// build actually needs: a site.json is optional, a page is not.
+function pageFileNames(dir) {
   try {
-    return readdirSync(dir).some((name) => name.endsWith('.json') && name !== 'site.json');
+    return readdirSync(dir).filter((name) => name.endsWith('.json') && name !== 'site.json');
   } catch {
-    return false;
+    return [];
   }
 }
 
-function listSites() {
+// A site folder "actually holds content" when it has at least one page file — a site.json alone
+// (or an empty folder) is not buildable, see loadSiteDirInput's own "no pages" check.
+function siteHasPages(dir) {
+  return pageFileNames(dir).length > 0;
+}
+
+// The brand name is the one thing about a site worth showing before anyone builds it — everything
+// else in site.json only matters once you're already looking at the output. Missing or unreadable
+// is not a listing-time error (that failure belongs to an actual build, see loadSiteDirInput):
+// here it just means this folder has no brand name to show yet.
+function siteBrandName(dir) {
+  try {
+    const raw = JSON.parse(readFileSync(join(dir, 'site.json'), 'utf8'));
+    const name = raw?.brand?.name;
+    return typeof name === 'string' ? name : '';
+  } catch {
+    return '';
+  }
+}
+
+// The allow-list `/api/generate` checks `site` against. Every entry is a literal name
+// readdirSync(SITES_DIR) actually returned, so this doubles as the escape guard for path
+// traversal: a value like "../../etc" can never equal one of these names, and nothing outside
+// this list is ever joined onto SITES_DIR (see finding M2 below for why an exact-match list,
+// rather than a sanitizer, is what makes that true).
+function listSiteNames() {
   if (!existsSync(SITES_DIR)) return [];
   return readdirSync(SITES_DIR)
     .filter((name) => siteHasPages(join(SITES_DIR, name)))
     .sort();
+}
+
+// The full listing the form actually shows: each site folder alongside how many pages it holds
+// and its brand name (when site.json declares one), so a dropdown entry means something before
+// anyone builds it.
+function listSites() {
+  return listSiteNames().map((name) => {
+    const dir = join(SITES_DIR, name);
+    return { id: name, pages: pageFileNames(dir).length, brand: siteBrandName(dir) };
+  });
 }
 
 function isBuildRunning(domain) {
@@ -260,7 +295,7 @@ export function createApp() {
     // the entry it came from (see finding M2).
     const siteInput = trimmedString(body.site);
     const site = siteInput === '' ? '899ok' : siteInput;
-    if (!listSites().includes(site)) {
+    if (!listSiteNames().includes(site)) {
       res.status(400).json({ error: `Папка с сайтом «${site}» не найдена` });
       return;
     }

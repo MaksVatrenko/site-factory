@@ -117,6 +117,25 @@ function schemeIdsOnDisk() {
     .sort();
 }
 
+// Same "read the filesystem independently" principle as the two helpers above, applied to a site
+// folder under data/sites: the page count is every *.json file except site.json — the exact same
+// definition loadSiteDirInput itself uses for a page file (see src/lib/site-dir.mjs) — and the
+// brand name is whatever that site's own site.json declares. Computed here from scratch so the
+// assertions below actually check the /api/sites route against real content on disk, not against
+// the same function the route calls internally.
+function pageCountOnDisk(siteId) {
+  return readdirSync(join('data', 'sites', siteId)).filter(
+    (name) => name.endsWith('.json') && name !== 'site.json',
+  ).length;
+}
+
+function siteBrandOnDisk(siteId) {
+  const file = join('data', 'sites', siteId, 'site.json');
+  if (!existsSync(file)) return '';
+  const name = JSON.parse(readFileSync(file, 'utf8'))?.brand?.name;
+  return typeof name === 'string' ? name : '';
+}
+
 describe('factory API', () => {
   it('lists templates read from disk', async () => {
     const data = await fetch(`${base}/api/templates`).then((r) => r.json());
@@ -129,10 +148,38 @@ describe('factory API', () => {
     expect(data.schemes).toEqual(schemeIdsOnDisk());
   });
 
-  it('lists site folders that actually hold content', async () => {
+  it('lists site folders read from disk, each with its page count and brand name', async () => {
     const data = await fetch(`${base}/api/sites`).then((r) => r.json());
-    expect(data.sites).toContain('899ok');
-    expect(data.sites).toContain('broken');
+    const byId = Object.fromEntries(data.sites.map((site) => [site.id, site]));
+
+    for (const siteId of ['899ok', 'broken']) {
+      expect(byId[siteId], `expected ${siteId} in /api/sites`).toBeTruthy();
+      expect(byId[siteId].pages).toBe(pageCountOnDisk(siteId));
+      expect(byId[siteId].brand).toBe(siteBrandOnDisk(siteId));
+    }
+  });
+
+  it('builds a real site folder end to end and the page holds that folder\'s own content', async () => {
+    const domain = 'sites-e2e-test.com';
+    rmSync(join('output', domain), { recursive: true, force: true });
+
+    const start = await fetch(`${base}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ site: '899ok', template: 'review', scheme: 'night', domain }),
+    }).then((r) => r.json());
+
+    try {
+      const log = await readUntilDone(start.buildId);
+      expect(log).toContain('event: done');
+
+      // Pulled straight from data/sites/899ok/home.json's own hero heading — proves the built
+      // page is genuinely assembled from that folder's content, not merely that a build ran.
+      const html = readFileSync(join('output', domain, 'index.html'), 'utf8');
+      expect(html).toContain('Everyday Casino');
+    } finally {
+      rmSync(join('output', domain), { recursive: true, force: true });
+    }
   });
 
   it('builds a site and reports success', async () => {
@@ -321,6 +368,27 @@ describe('factory API', () => {
       body: JSON.stringify({ site: 'does-not-exist' }),
     });
     expect(response.status).toBe(400);
+  });
+
+  // `site` is checked against listSiteNames() — literal entries of readdirSync('data/sites') — the
+  // same exact-match-against-a-real-list pattern M2 below relies on for template and scheme. A
+  // traversal string can never equal one of those literal folder names, so this can never reach
+  // `join(SITES_DIR, site)` with anything that escapes it; it is refused as simply unknown.
+  it('refuses a site folder name that attempts path traversal', async () => {
+    const sitesBefore = readdirSync(join('data', 'sites')).sort();
+    const domain = 'traversal-site-test.com';
+
+    const response = await fetch(`${base}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ site: '../../../../etc', domain }),
+    });
+    expect(response.status).toBe(400);
+    const data = await response.json();
+    expect(data.error).toBeTruthy();
+
+    expect(readdirSync(join('data', 'sites')).sort()).toEqual(sitesBefore);
+    expect(existsSync(join('output', domain))).toBe(false);
   });
 
   it('keeps the output directory inside the project even for a domain that tries to escape it', async () => {
