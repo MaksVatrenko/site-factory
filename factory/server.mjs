@@ -483,6 +483,38 @@ export function createApp() {
     res.redirect(302, `/preview/${req.params.domain}/${entry}/`);
   });
 
+  // A built site links to its own pages absolutely — /casino, /bonus — which is correct once it
+  // is deployed at a domain root, and wrong here, where preview serves it under /preview/<domain>/.
+  // Followed as-is those links leave the prefix and land on the factory itself. So rewrite them on
+  // the way out: the files on disk keep the absolute links they must ship with, and only this
+  // response gets the prefix. A URL starting with // is a protocol-relative link to another host
+  // and is left alone.
+  app.use('/preview', (req, res, next) => {
+    const segments = req.path.split('/').filter((part) => part !== '');
+    const domain = safeName(segments[0] ?? '', '');
+    if (domain === '') {
+      next();
+      return;
+    }
+
+    const rest = segments.slice(1).join('/');
+    const wantsDirectory = rest === '' || req.path.endsWith('/');
+    const file = wantsDirectory
+      ? join(OUTPUT_DIR, domain, rest, 'index.html')
+      : join(OUTPUT_DIR, domain, rest);
+
+    if (!file.endsWith('.html') || !existsSync(file)) {
+      next();
+      return;
+    }
+
+    const html = readFileSync(file, 'utf8').replace(
+      /\b(href|src)="\/(?!\/)/g,
+      `$1="/preview/${domain}/`,
+    );
+    res.type('html').send(html);
+  });
+
   app.use('/preview', express.static(OUTPUT_DIR, { index: 'index.html' }));
   app.use(express.static(PUBLIC_UI_DIR, { index: 'index.html' }));
 

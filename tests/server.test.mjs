@@ -213,6 +213,20 @@ describe('factory API', () => {
     expect(await response.text()).toContain('Everyday Casino');
   });
 
+  it('rewrites a preview page\'s absolute links onto the preview prefix', async () => {
+    const page = await fetch(`${base}/preview/api-test.com/`).then((r) => r.text());
+    // The nav links a site ships are absolute (/casino) because that is right once it is deployed
+    // at a domain root; under the preview prefix they would leave it and hit the factory itself.
+    expect(page).not.toMatch(/href="\/(?!preview\/)[a-z]/);
+    expect(page).toMatch(/href="\/preview\/api-test\.com\//);
+    expect(page).not.toContain('/preview/api-test.com/preview/');
+  });
+
+  it('leaves the links on disk absolute, since that is what ships', () => {
+    const html = readFileSync(join('output', 'api-test.com', 'index.html'), 'utf8');
+    expect(html).not.toContain('/preview/');
+  });
+
   it('returns a zip of a built site', async () => {
     const response = await fetch(`${base}/api/output/api-test.com/zip`);
     expect(response.status).toBe(200);
