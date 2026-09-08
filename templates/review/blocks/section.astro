@@ -1,7 +1,7 @@
 ---
-import { asList, asRecords, asText, slugify } from '../../_shared/props.mjs';
+import { asList, asRecords, asText } from '../../_shared/props.mjs';
 
-const { heading, paragraphs, list, table, subsections } = Astro.props;
+const { heading, paragraphs, list, table, subsections, anchor } = Astro.props;
 
 const title = asText(heading);
 const paras = asList(paragraphs)
@@ -42,7 +42,7 @@ const hasContent =
 
 // A heading is what a `toc` block's items link to (see toc.astro) — omitted only when there is
 // no heading, or nothing sensible survives slugifying it, rather than emitting a useless id="".
-const anchorId = slugify(title);
+const anchorId = asText(anchor);
 const idAttrs = anchorId ? { id: anchorId } : {};
 ---
 

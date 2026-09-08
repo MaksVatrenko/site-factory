@@ -1,13 +1,13 @@
 ---
-import { asRecords, asText, slugify } from '../../_shared/props.mjs';
+import { asRecords, asText } from '../../_shared/props.mjs';
 
-const { heading, items } = Astro.props;
+const { heading, items, anchor } = Astro.props;
 const title = asText(heading);
 const questions = asRecords(items)
   .map((item) => ({ q: asText(item.q), a: asText(item.a) }))
   .filter((entry) => entry.q !== '' || entry.a !== '');
 
-const anchorId = slugify(title);
+const anchorId = asText(anchor);
 const idAttrs = anchorId ? { id: anchorId } : {};
 ---
 

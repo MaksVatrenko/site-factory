@@ -159,10 +159,13 @@ describe('review template: resilience to unusual content shapes', () => {
         expect(positions[i]).toBeGreaterThan(positions[i - 1]);
       }
 
-      // The toc item's text matches the section's heading exactly in this fixture, so the
-      // generated anchor pair should actually resolve to each other.
-      expect(html).toContain('href="#section-third"');
-      expect(html).toContain('id="section-third"');
+      // Contents entries are paired with the sections that follow them by position, not by
+      // wording (see src/lib/anchors.mjs). Here the toc sits fourth, so its single entry points at
+      // the one heading-bearing block after it. Whatever the pairing picks, the link must resolve:
+      // an anchor pointing at nothing is the failure this whole mechanism exists to prevent.
+      const href = html.match(/class="toc__link" href="#([^"]+)"/);
+      expect(href).not.toBeNull();
+      expect(html).toContain(`id="${href[1]}"`);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

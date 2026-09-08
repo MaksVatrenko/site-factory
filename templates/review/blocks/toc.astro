@@ -1,12 +1,16 @@
 ---
-import { asList, asText, slugify } from '../../_shared/props.mjs';
+import { asList, asRecords, asText } from '../../_shared/props.mjs';
 
 const { heading, items } = Astro.props;
 const title = asText(heading);
-const entries = asList(items)
-  .map((text) => asText(text))
-  .filter((text) => text !== '')
-  .map((text) => ({ text, href: `#${slugify(text)}` }));
+
+// Entries arrive already paired with the anchor of the section they point at (see
+// src/lib/anchors.mjs) — the pairing is by position, because a contents entry usually paraphrases
+// the heading rather than repeating it. An entry whose section is missing keeps its label and
+// renders as plain text: a link that goes nowhere is worse than no link.
+const entries = asRecords(items)
+  .map((item) => ({ text: asText(item.label), anchor: asText(item.anchor) }))
+  .filter((entry) => entry.text !== '');
 ---
 
 {entries.length > 0 && (
@@ -17,7 +21,11 @@ const entries = asList(items)
         <ul class="toc__grid">
           {entries.map((entry) => (
             <li>
-              <a class="toc__link" href={entry.href}>{entry.text}</a>
+              {entry.anchor ? (
+                <a class="toc__link" href={`#${entry.anchor}`}>{entry.text}</a>
+              ) : (
+                <span class="toc__link toc__link--plain">{entry.text}</span>
+              )}
             </li>
           ))}
         </ul>
@@ -51,9 +59,28 @@ const entries = asList(items)
 
   .toc__link {
     display: block;
-    padding-block: 0.15rem;
+    padding: 0.55rem 0.8rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
     color: var(--text-secondary);
     text-decoration: none;
+    transition:
+      border-color 0.15s ease,
+      background-color 0.15s ease,
+      color 0.15s ease;
+  }
+
+  a.toc__link:hover,
+  a.toc__link:focus-visible {
+    border-color: var(--border-accent);
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+
+  /* An entry with no section to point at is not interactive, so it must not look interactive. */
+  .toc__link--plain {
+    border-style: dashed;
+    color: var(--text-tertiary);
   }
 
   .toc__link:hover {

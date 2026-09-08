@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { normalizeSite } from './normalize.mjs';
+import { linkAnchors } from './anchors.mjs';
 import { loadTemplate, missingBlockFiles } from './templates.mjs';
 import { readScheme } from './schemes.mjs';
 import { createOutputProber } from './slug-prober.mjs';
@@ -120,6 +121,10 @@ export function loadContext(root = process.cwd()) {
       site.brand.logo = '';
     }
   }
+
+  // Anchors are resolved once the page is otherwise final, because linking a table of contents to
+  // its sections needs the whole page in view — a block component only ever sees itself.
+  for (const page of site.pages) linkAnchors(page);
 
   const scheme = readScheme(process.env.SCHEME || site.style || template.defaultScheme, root);
 

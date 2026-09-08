@@ -1,7 +1,7 @@
 ---
-import { asRecords, asText, slugify } from '../../_shared/props.mjs';
+import { asRecords, asText } from '../../_shared/props.mjs';
 
-const { heading, site } = Astro.props;
+const { heading, site, anchor } = Astro.props;
 const title = asText(heading);
 
 // site.nav is already normalized by the engine (see src/lib/normalize.mjs) into a clean list of
@@ -11,7 +11,7 @@ const navItems = asRecords(site?.nav)
   .map((item) => ({ label: asText(item.label), href: asText(item.href) }))
   .filter((item) => item.label !== '' && item.href !== '');
 
-const anchorId = slugify(title);
+const anchorId = asText(anchor);
 const idAttrs = anchorId ? { id: anchorId } : {};
 ---
 

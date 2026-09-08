@@ -1,8 +1,9 @@
 ---
 import { asList, asText } from '../../_shared/props.mjs';
 
-const { heading, paragraphs, site } = Astro.props;
+const { heading, paragraphs, site, anchor } = Astro.props;
 
+const anchorId = asText(anchor);
 const title = asText(heading);
 const lead = asList(paragraphs)
   .map((text) => asText(text))
@@ -20,7 +21,7 @@ const accentWords = words.slice(words.length - accentCount).join(' ');
 ---
 
 {(title !== '' || lead.length > 0) && (
-  <section class="hero section">
+  <section class="hero section" id={anchorId || undefined}>
     <div class="container hero__inner">
       {brandLabel && <p class="hero__eyebrow">{brandLabel}</p>}
       {title && (

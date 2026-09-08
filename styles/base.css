@@ -137,3 +137,17 @@ main > section:nth-child(odd)::before {
 main > section:nth-child(even)::before {
   left: -14%;
 }
+
+/* Jumping to a section scrolls rather than teleports, so the reader keeps their bearings — and the
+   target stops clear of the sticky header instead of hiding under it. Both are honoured by the
+   browser itself, no script involved. The animation is dropped for readers who ask for less
+   motion, for whom a long scroll can be genuinely unpleasant. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+main > section[id] {
+  scroll-margin-top: 5.5rem;
+}
