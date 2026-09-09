@@ -65,9 +65,16 @@ const hasTable = cols.length > 0 || tableRows.length > 0;
 
   /* The header is tinted with the accent rather than filled with it: at full strength a gold bar
      across the top of a table competes with the section heading above it. The solid rule
-     underneath is what actually separates head from body. */
-  .rsection__table thead th {
+     underneath is what actually separates head from body.
+
+     The gradient is painted on the row, not on the cells: a cell-by-cell gradient restarts at
+     every column boundary, so a three-column table reads as three tinted blocks instead of one
+     sweep across the whole header. */
+  .rsection__table thead tr {
     background: linear-gradient(90deg, var(--accent-soft), transparent 70%);
+  }
+
+  .rsection__table thead th {
     border-bottom: 2px solid var(--accent-primary);
     color: var(--text-secondary);
     font-size: 0.78rem;
@@ -93,8 +100,21 @@ const hasTable = cols.length > 0 || tableRows.length > 0;
     background: var(--bg-subtle);
   }
 
+  /* Slow enough to be seen. The row highlight is the only feedback a wide table gives that the
+     eye and the cursor are on the same line, and at the default instant swap it registers as a
+     flicker when the pointer crosses several rows in a row. */
+  .rsection__table tbody tr {
+    transition: background-color 0.35s ease;
+  }
+
   .rsection__table tbody tr:hover {
     background: var(--bg-hover);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rsection__table tbody tr {
+      transition: none;
+    }
   }
 
   .rsection__table tbody tr:last-child td {

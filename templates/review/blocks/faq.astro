@@ -44,6 +44,36 @@ const idAttrs = anchorId ? { id: anchorId } : {};
     background: var(--bg-elevated);
     border: 1px solid var(--border-default);
     border-radius: var(--radius-sm);
+    /* Lets the height below animate to and from `auto`, which is what an answer of unknown length
+       has to resolve to. Inherited, so declaring it here reaches ::details-content without
+       switching the behaviour on for the whole document. */
+    interpolate-size: allow-keywords;
+  }
+
+  /* The answer slides open instead of appearing whole. Done entirely by the browser: the details
+     element's own content box is a pseudo-element that can be transitioned, so this needs no
+     script and no wrapper div. Where the pseudo-element is not supported the answer simply appears
+     as it did before -- nothing breaks, the motion is just missing.
+
+     content-visibility has to travel with the height: the browser hides the content the moment the
+     element closes, and without carrying that change through the transition the answer would
+     vanish before it finished collapsing. */
+  .faq__item::details-content {
+    block-size: 0;
+    overflow: hidden;
+    transition:
+      block-size 0.35s ease,
+      content-visibility 0.35s allow-discrete;
+  }
+
+  .faq__item[open]::details-content {
+    block-size: auto;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .faq__item::details-content {
+      transition: none;
+    }
   }
 
   .faq__question {
@@ -72,7 +102,7 @@ const idAttrs = anchorId ? { id: anchorId } : {};
     border-right: 2px solid var(--text-tertiary);
     border-bottom: 2px solid var(--text-tertiary);
     transform: rotate(45deg);
-    transition: transform 0.15s ease;
+    transition: transform 0.35s ease;
   }
 
   .faq__item[open] .faq__question::after {

@@ -22,6 +22,20 @@ const canonical = pageUrl(resolveOrigin(Astro.site, site.domain), page.slug);
 // those older examples keep building with no header or footer at all, unchanged.
 const showHeader = site.nav.length > 0;
 
+// Trailing slashes are the only difference the same page can legitimately spell two ways: a slug
+// written "/casino/" and a nav href written "/casino" are one page, and comparing the raw strings
+// would leave the menu unmarked on exactly the sites whose content is written that way.
+function normalizePath(value) {
+  const path = typeof value === 'string' ? value.trim() : '';
+  const trimmed = path.replace(/\/+$/, '');
+  return trimmed === '' ? (path === '' ? '' : '/') : trimmed;
+}
+
+// The home page marks nothing. Its link in the menu, when a site has one, competes with the brand
+// in the corner — which already leads home — for saying the same thing twice.
+const currentPath = normalizePath(page.slug);
+const activePath = currentPath === '/' ? '' : currentPath;
+
 const footer = site.footer;
 const showAgeBlock = footer.ageWarning !== '' || footer.ageText !== '';
 const showFooter =
@@ -57,9 +71,18 @@ const showFooter =
             )}
           </a>
           <nav class="site-header__nav" aria-label="Primary">
-            {site.nav.map((item) => (
-              <a href={item.href}>{item.label}</a>
-            ))}
+            {site.nav.map((item) => {
+              const isActive = activePath !== '' && normalizePath(item.href) === activePath;
+              return (
+                <a
+                  href={item.href}
+                  class:list={[isActive && 'is-active']}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  {item.label}
+                </a>
+              );
+            })}
           </nav>
         </div>
       </header>
@@ -162,6 +185,12 @@ const showFooter =
 
   .site-header__nav a:hover {
     color: var(--text-primary);
+  }
+
+  /* The page you are on, in the scheme's accent. aria-current carries the same fact for anyone who
+     cannot see the colour. */
+  .site-header__nav a.is-active {
+    color: var(--accent-primary);
   }
 
   .site-footer {

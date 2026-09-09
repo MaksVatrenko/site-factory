@@ -118,6 +118,45 @@ describe('engine build', () => {
   });
 });
 
+describe('the header marks the page you are on', () => {
+  it('accents the nav entry for the current page and says so to a screen reader', () => {
+    const outDir = buildSite({ outDir: join('output', 'test-nav-active') }).outDir;
+
+    const casino = readOutput(outDir, join('casino', 'index.html'));
+    expect(casino).toMatch(/<a href="\/casino"[^>]*class="is-active"[^>]*aria-current="page"/);
+    // Exactly one entry is marked -- the others are still plain links.
+    expect(casino.match(/aria-current="page"/g)).toHaveLength(1);
+
+    // The home page marks nothing: the brand in the corner already leads there.
+    expect(readOutput(outDir)).not.toContain('aria-current');
+  });
+
+  it('matches a nav href to the page it names even when one of them carries a trailing slash', () => {
+    // The two are written by different people -- site.json's nav by hand, the slug by the page
+    // file -- so "/casino/" against "/casino" is not a hypothetical, and a raw string comparison
+    // would leave the menu silently unmarked on any site that spells them differently.
+    const dir = mkdtempSync(join(tmpdir(), 'site-factory-nav-'));
+    writeSiteDirFromContent(dir, {
+      brand: { name: 'Trailing' },
+      nav: [{ label: 'Casino', href: '/casino/' }],
+      pages: [
+        { slug: '/', meta: {}, blocks: [{ type: 'hero', props: { heading: 'Home' } }] },
+        { slug: '/casino', meta: {}, blocks: [{ type: 'hero', props: { heading: 'Casino' } }] },
+      ],
+    });
+    try {
+      const outDir = buildSite({
+        outDir: join('output', 'test-nav-active-slash'),
+        env: { SITE_DIR: dir },
+      }).outDir;
+      expect(readOutput(outDir, join('casino', 'index.html'))).toContain('aria-current="page"');
+      expect(readOutput(outDir)).not.toContain('aria-current');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe('brand logo copied from the public folder', () => {
   let dir;
   let outDir;
