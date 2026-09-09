@@ -124,6 +124,9 @@ async function main() {
   } else {
     // Written as a starting point rather than left out: without it the site builds with no header
     // and no footer at all, which looks like a bug rather than a setting nobody filled in yet.
+    // Only `nav` and `footer` truly have to live here — the form overrides brand, domain, locale,
+    // geo and partnerUrl at build time. They are still written so a build straight from the
+    // command line, with no form involved, has sane values instead of falling back to example.com.
     const nav = targets
       .filter((target) => target.slug !== '/')
       .map((target) => ({ label: target.name, href: target.slug }));
@@ -131,7 +134,10 @@ async function main() {
       siteFile,
       `${JSON.stringify({ domain: `${siteName}.com`, locale: 'en-US', brand: { name: siteName }, nav, partnerUrl: '' }, null, 2)}\n`,
     );
-    console.log(`\nsite.json создан — впишите бренд, домен и футер.`);
+    console.log(
+      '\nsite.json создан. Меню собрано из листов; впишите футер, а при желании слоган и логотип.' +
+        '\nБренд, домен, язык, гео и партнёрскую ссылку можно оставить как есть — форма их перекрывает.',
+    );
   }
 
   console.log(`\nСобрать: SITE_DIR=${dir} TEMPLATE=review SCHEME=night OUT_DIR=output/${siteName} npm run build:site`);
