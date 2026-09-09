@@ -295,8 +295,11 @@ function classify(page) {
   return page;
 }
 
+// Guarded so importing this module (import-sheet.mjs does) cannot run the CLI path against the
+// importer's own arguments.
+const runDirectly = process.argv[1] && process.argv[1].endsWith('sheet-to-json.mjs');
 const [input, slug, output] = process.argv.slice(2);
-if (input) {
+if (runDirectly && input) {
   const page = sheetToPage(readFileSync(input, 'utf8'), slug || '/');
   const json = `${JSON.stringify(page, null, 2)}\n`;
   if (output) {

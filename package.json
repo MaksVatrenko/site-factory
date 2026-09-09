@@ -10,7 +10,8 @@
     "dev": "node factory/server.mjs",
     "build:site": "astro build",
     "test": "vitest run",
-    "check:matrix": "node scripts/check-matrix.mjs"
+    "check:matrix": "node scripts/check-matrix.mjs",
+    "import:sheet": "node scripts/import-sheet.mjs"
   },
   "dependencies": {
     "archiver": "^8.0.0",
