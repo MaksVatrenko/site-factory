@@ -6,6 +6,9 @@
 // up with the same slug, which silently pushes the second one to /page-1.
 //
 // Usage: node scripts/import-sheet.mjs <spreadsheet url or id> <site folder name>
+//
+// A bare id is the easier thing to paste: a full sheet url carries a `?`, which zsh takes
+// for a filename pattern and refuses to run the command at all.
 
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -88,6 +91,7 @@ async function main() {
   const [input, siteName] = process.argv.slice(2);
   if (!input || !siteName) {
     console.error('Использование: node scripts/import-sheet.mjs <ссылка или id таблицы> <папка сайта>');
+    console.error('Ссылку нужно взять в кавычки — id таблицы можно передать как есть.');
     process.exit(1);
   }
 

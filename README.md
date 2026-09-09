@@ -37,7 +37,16 @@ npm run build:site
 собирается из неё одной командой:
 
 ```bash
-npm run import:sheet -- <ссылка на таблицу> <имя сайта>
+npm run import:sheet -- 19euPydRRVrAQR_0PMh_j21HF9KaeKC4-mp5bWJmdoWE 520bdapp
+```
+
+Первый аргумент — таблица, второй — имя папки сайта. Вместо id можно передать и
+целую ссылку, но тогда её нужно взять в кавычки: `?` в адресе zsh принимает за
+шаблон имени файла и обрывает команду с `no matches found` ещё до запуска
+скрипта.
+
+```bash
+npm run import:sheet -- 'https://docs.google.com/spreadsheets/d/19euPy…/edit?gid=1469241983' 520bdapp
 ```
 
 Скрипт сам находит листы, скачивает каждый, превращает в страницу и раскладывает
