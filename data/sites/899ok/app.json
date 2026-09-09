@@ -152,31 +152,21 @@
           "text": "The real 899OK app never asks for SMS or contact access. If any APK asks for those, cancel the install — it's fake."
         },
         {
-          "type": "title",
-          "tag": "h3",
-          "text": "Step 1 — Grab the APK"
-        },
-        {
-          "type": "text",
-          "text": "Only from the official site. Mirror sites often ship modified builds with hidden trackers."
-        },
-        {
-          "type": "title",
-          "tag": "h3",
-          "text": "Step 2 — Enable Unknown Sources"
-        },
-        {
-          "type": "text",
-          "text": "Android blocks the first install by default. Turn it on for your browser, then switch it back off after."
-        },
-        {
-          "type": "title",
-          "tag": "h3",
-          "text": "Step 3 — Install and Log In"
-        },
-        {
-          "type": "text",
-          "text": "Same login as the website. No separate account needed for the app."
+          "type": "cards",
+          "items": [
+            {
+              "title": "Step 1 — Grab the APK",
+              "text": "Only from the official site. Mirror sites often ship modified builds with hidden trackers."
+            },
+            {
+              "title": "Step 2 — Enable Unknown Sources",
+              "text": "Android blocks the first install by default. Turn it on for your browser, then switch it back off after."
+            },
+            {
+              "title": "Step 3 — Install and Log In",
+              "text": "Same login as the website. No separate account needed for the app."
+            }
+          ]
         }
       ]
     },
@@ -227,22 +217,17 @@
           "text": "Data usage per hour: Slots ~8–12 MB, Live casino tables 20–30 MB, Live cricket streams 80–120 MB (SD) / 250+ MB (HD)."
         },
         {
-          "type": "title",
-          "tag": "h3",
-          "text": "899OK App vs Mobile Browser Speed"
-        },
-        {
-          "type": "text",
-          "text": "Cold launch 2 seconds vs 7 in browser. Live tables render twice as fast, especially on mid-range phones."
-        },
-        {
-          "type": "title",
-          "tag": "h3",
-          "text": "Battery and Storage Impact"
-        },
-        {
-          "type": "text",
-          "text": "About 3–5% battery per hour of live play. App itself uses 40–60 MB storage after caching common games."
+          "type": "cards",
+          "items": [
+            {
+              "title": "899OK App vs Mobile Browser Speed",
+              "text": "Cold launch 2 seconds vs 7 in browser. Live tables render twice as fast, especially on mid-range phones."
+            },
+            {
+              "title": "Battery and Storage Impact",
+              "text": "About 3–5% battery per hour of live play. App itself uses 40–60 MB storage after caching common games."
+            }
+          ]
         }
       ]
     },
@@ -267,22 +252,17 @@
           "text": "Neither offer is available through the mobile browser or on iOS."
         },
         {
-          "type": "title",
-          "tag": "h3",
-          "text": "First Install Free Credit"
-        },
-        {
-          "type": "text",
-          "text": "৳150 no-deposit credit, 5x wagering, valid across all products including Aviator."
-        },
-        {
-          "type": "title",
-          "tag": "h3",
-          "text": "Push Notification Reload Offers"
-        },
-        {
-          "type": "text",
-          "text": "Personal reload bonuses (20–35%) drop as notifications a few hours before appearing on the site."
+          "type": "cards",
+          "items": [
+            {
+              "title": "First Install Free Credit",
+              "text": "৳150 no-deposit credit, 5x wagering, valid across all products including Aviator."
+            },
+            {
+              "title": "Push Notification Reload Offers",
+              "text": "Personal reload bonuses (20–35%) drop as notifications a few hours before appearing on the site."
+            }
+          ]
         }
       ]
     },

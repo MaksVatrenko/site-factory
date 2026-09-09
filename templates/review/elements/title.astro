@@ -1,17 +1,10 @@
 ---
-import { asText } from '../../_shared/props.mjs';
-
-// h1 belongs to the page's own hero heading (see templates/review/blocks/hero.astro) -- a content
-// file must never be able to emit a second one, so h1 is deliberately left out of this set.
-// Anything outside h2-h6 (missing, misspelled, or not a string at all) falls back to h2 rather
-// than being thrown -- content can never fail a build.
-const ALLOWED_TAGS = new Set(['h2', 'h3', 'h4', 'h5', 'h6']);
+// A thin pass-through: the tag rules and the look of a heading live in one place for the whole
+// template (see templates/review/Heading.astro), because the toc, links and faq blocks render
+// headings of their own that must match this one exactly.
+import Heading from '../Heading.astro';
 
 const { tag, text } = Astro.props;
-const value = asText(text);
-// Capitalized on purpose: Astro only renders a variable as a dynamic tag when its name starts
-// with an uppercase letter, otherwise it would emit a literal `<tag>` element.
-const Tag = typeof tag === 'string' && ALLOWED_TAGS.has(tag) ? tag : 'h2';
 ---
 
-{value && <Tag>{value}</Tag>}
+<Heading tag={tag} text={text} />

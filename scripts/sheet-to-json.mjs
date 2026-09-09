@@ -235,6 +235,45 @@ function splitSubsections(content) {
   return { head, subs };
 }
 
+// The last two or three h3 subsections of a section are usually parallel sub-points rather than
+// more prose -- the reference site sets them side by side as framed cards. A trailing run of h3s
+// that carry nothing but text is exactly that shape, and it is recognised here, once, for the same
+// reason the block types below are: so the template renders what the content says instead of
+// pattern-matching headings itself. The result is an ordinary `cards` element the JSON spells out
+// in full, so it can be reordered, edited or split back into headings by hand afterwards.
+//
+// Two is the minimum: a single card is not a set, it is a subheading.
+function groupTrailingCards(content) {
+  const { head, subs } = splitSubsections(content);
+  const isCard = (sub) => sub.items.length > 0 && sub.items.every((item) => item.type === 'text');
+
+  let start = subs.length;
+  while (start > 0 && isCard(subs[start - 1])) start -= 1;
+  if (subs.length - start < 2) return content;
+
+  const kept = subs
+    .slice(0, start)
+    .flatMap((sub) => [{ type: 'title', tag: 'h3', text: sub.heading }, ...sub.items]);
+  const cards = subs.slice(start).map((sub) => ({
+    type: 'card',
+    title: sub.heading,
+    text: sub.items.map((item) => item.text),
+  }));
+
+  return [
+    ...head,
+    ...kept,
+    {
+      type: 'cards',
+      items: cards.map(({ title, text }) => ({
+        title,
+        // One sentence stays a string; several stay separate paragraphs.
+        text: text.length === 1 ? text[0] : text,
+      })),
+    },
+  ];
+}
+
 // The spreadsheet has no notion of block types — every section is just an h2, optionally followed
 // by h3s. These are the shapes the reference site renders differently, recognised here once so the
 // template does not have to pattern-match on headings:
@@ -244,8 +283,13 @@ function splitSubsections(content) {
 //     -> `toc`, the page's own table of contents.
 //   - nothing at all under the h2 -> `links`, the reference site's "other pages" grid (its own
 //     links come from the site's nav, not the spreadsheet — see templates/review/blocks/links.astro).
-// Anything else stays an ordinary `section`, content array untouched.
-function classify(page) {
+// Anything else stays an ordinary `section`, its content array kept as it stands apart from the
+// trailing-h3 run groupTrailingCards folds into a `cards` element.
+//
+// Exported so the same rules can be applied to page files that were converted before a shape was
+// recognised, without re-downloading the spreadsheet: it maps blocks and re-reads nothing, so
+// running it twice over the same page changes nothing the second time.
+export function classify(page) {
   page.blocks = page.blocks.map((block) => {
     if (block.type !== 'section') return block;
 
@@ -290,7 +334,7 @@ function classify(page) {
       return { type: 'links', heading };
     }
 
-    return block;
+    return { ...block, content: groupTrailingCards(content) };
   });
   return page;
 }

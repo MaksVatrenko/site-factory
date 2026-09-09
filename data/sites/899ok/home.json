@@ -39,7 +39,7 @@
         {
           "type": "list",
           "items": [
-            "Live dealer tables stay busy from about 6pm till 4am — I've never seen an empty Andar Bahar table during BPL season",
+            "Live dealer tables stay busy from about 6pm till 4am — I've never seen an empty [Andar Bahar table](/casino) during BPL season",
             "Support chat replies in Bangla within roughly 90 seconds even at 2am",
             "My biggest bKash withdrawal (৳18,400) landed in 11 minutes last month — screenshots on my phone if anyone doubts it",
             "Slots from Pragmatic, PG Soft, JILI and Habanero — the real studios, not clones with slightly different names",
@@ -48,7 +48,7 @@
         },
         {
           "type": "text",
-          "text": "You can open the full casino lobby and browse without depositing. I did that for two evenings before putting any money in — nothing wrong with being cautious."
+          "text": "You can open the [full casino lobby](/casino) and browse without depositing. I did that for two evenings before putting any money in — nothing wrong with being cautious."
         }
       ]
     },
@@ -62,7 +62,7 @@
         },
         {
           "type": "text",
-          "text": "Cricket is basically what makes or breaks a Bangladeshi betting site. BPL evenings, India series, T20 World Cup nights — 899OK opens deep markets on all of it. Not just who wins. Top batter of the innings, method of next dismissal, runs in the powerplay, whether the next ball is a boundary. If you actually watch cricket seriously, the markets reward it."
+          "text": "Cricket is basically what makes or breaks a Bangladeshi betting site. [BPL evenings](/betting), [India series](/betting), [T20 World Cup nights](/betting) — 899OK opens deep markets on all of it. Not just who wins. Top batter of the innings, method of next dismissal, runs in the powerplay, whether the next ball is a boundary. If you actually watch cricket seriously, the markets reward it."
         },
         {
           "type": "text",
@@ -82,29 +82,24 @@
         },
         {
           "type": "text",
-          "text": "The sportsbook section has everything laid out by sport and league."
+          "text": "The [sportsbook section](/betting) has everything laid out by sport and league."
         },
         {
           "type": "text",
-          "text": "When cricket's done for the night, I usually drift into the live casino. Evolution and Ezugi run most tables, and the dealers actually chat with the table — not just spin and stare."
+          "text": "When cricket's done for the night, I usually drift into the [live casino](/casino). Evolution and Ezugi run most tables, and the dealers actually chat with the table — not just spin and stare."
         },
         {
-          "type": "title",
-          "tag": "h3",
-          "text": "BPL and India Series Markets"
-        },
-        {
-          "type": "text",
-          "text": "Expect 35–50 markets per international match at 899OK — full breakdown by session, batter, and over bands."
-        },
-        {
-          "type": "title",
-          "tag": "h3",
-          "text": "899OK Live Casino Floor"
-        },
-        {
-          "type": "text",
-          "text": "Teen Patti, Andar Bahar, Baccarat and Roulette from ৳50 minimum, with Bangla and Hindi speaking dealers on most tables."
+          "type": "cards",
+          "items": [
+            {
+              "title": "BPL and India Series Markets",
+              "text": "Expect 35–50 markets per international match at 899OK — full breakdown by session, batter, and over bands."
+            },
+            {
+              "title": "899OK Live Casino Floor",
+              "text": "Teen Patti, Andar Bahar, Baccarat and Roulette from ৳50 minimum, with Bangla and Hindi speaking dealers on most tables."
+            }
+          ]
         }
       ]
     },
@@ -161,7 +156,7 @@
         },
         {
           "type": "text",
-          "text": "Weekly reloads, cashback and free spin drops sit on the bonus page. The Sunday reload is the one I use most."
+          "text": "Weekly reloads, cashback and free spin drops sit on the [bonus page](/bonus). The Sunday reload is the one I use most."
         }
       ]
     },
@@ -229,22 +224,17 @@
           "text": "If a deposit doesn't credit within 5 minutes, copy the TRX ID from your wallet SMS and paste it in live chat. They'll trace and credit manually — mine has happened twice, both resolved inside 25 minutes."
         },
         {
-          "type": "title",
-          "tag": "h3",
-          "text": "bKash — Fastest for Most Players"
-        },
-        {
-          "type": "text",
-          "text": "bKash is what I use for both deposits and withdrawals. Deposits are instant, cashouts land in 8–20 minutes most days."
-        },
-        {
-          "type": "title",
-          "tag": "h3",
-          "text": "Nagad, Rocket and USDT"
-        },
-        {
-          "type": "text",
-          "text": "Nagad clears withdrawals in 10–30 minutes. Rocket is slower, usually 20–45. USDT is the pick if you're moving bigger sums."
+          "type": "cards",
+          "items": [
+            {
+              "title": "bKash — Fastest for Most Players",
+              "text": "bKash is what I use for both deposits and withdrawals. Deposits are instant, cashouts land in 8–20 minutes most days."
+            },
+            {
+              "title": "Nagad, Rocket and USDT",
+              "text": "Nagad clears withdrawals in 10–30 minutes. Rocket is slower, usually 20–45. USDT is the pick if you're moving bigger sums."
+            }
+          ]
         }
       ]
     },
@@ -342,22 +332,17 @@
           ]
         },
         {
-          "type": "title",
-          "tag": "h3",
-          "text": "Licensing and RNG Testing"
-        },
-        {
-          "type": "text",
-          "text": "Curacao gaming licence with independent RNG testing on slot titles. No Bangladesh domestic licence exists — no offshore site has one."
-        },
-        {
-          "type": "title",
-          "tag": "h3",
-          "text": "What Offshore Status Means"
-        },
-        {
-          "type": "text",
-          "text": "Dispute recourse is limited to the licensing body. Worth knowing before you deposit anything meaningful."
+          "type": "cards",
+          "items": [
+            {
+              "title": "Licensing and RNG Testing",
+              "text": "Curacao gaming licence with independent RNG testing on slot titles. No Bangladesh domestic licence exists — no offshore site has one."
+            },
+            {
+              "title": "What Offshore Status Means",
+              "text": "Dispute recourse is limited to the licensing body. Worth knowing before you deposit anything meaningful."
+            }
+          ]
         }
       ]
     },

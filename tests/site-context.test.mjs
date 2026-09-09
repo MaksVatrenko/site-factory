@@ -55,7 +55,7 @@ describe('final-fix-6, F4: buildProber resolves an absolute OUT_DIR instead of n
       SITE_DIR: contentDir,
       OUT_DIR: absoluteOutDir,
       TEMPLATE: 'review',
-      SCHEME: 'blue',
+      SCHEME: 'dark',
       PUBLIC_DIR: '',
       BRAND: '',
       LOCALE: '',

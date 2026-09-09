@@ -12,7 +12,7 @@ function outputPathFor(slug) {
 }
 
 // Mirrors the exact command the spec asks a human to run to check this template by hand:
-//   SITE_DIR=data/sites/899ok TEMPLATE=review SCHEME=night OUT_DIR=output/899ok
+//   SITE_DIR=data/sites/899ok TEMPLATE=review SCHEME=dark OUT_DIR=output/899ok
 //   SITE_URL=https://899ok-bd.net npm run build:site
 describe('review template: the real client site (data/sites/899ok)', () => {
   let outDir;
@@ -20,7 +20,7 @@ describe('review template: the real client site (data/sites/899ok)', () => {
   beforeAll(() => {
     outDir = buildSite({
       outDir: join('output', 'test-review-899ok'),
-      env: { SITE_DIR, TEMPLATE: 'review', SCHEME: 'night' },
+      env: { SITE_DIR, TEMPLATE: 'review', SCHEME: 'dark' },
     }).outDir;
   });
 
@@ -114,7 +114,7 @@ describe('review template: resilience to unusual content shapes', () => {
     try {
       const { outDir } = buildSite({
         outDir: join('output', 'test-review-heading-only'),
-        env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'night' },
+        env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'dark' },
       });
       const html = readOutput(outDir);
       expect(html).toContain('Just a heading, nothing else');
@@ -149,7 +149,7 @@ describe('review template: resilience to unusual content shapes', () => {
     try {
       const { outDir } = buildSite({
         outDir: join('output', 'test-review-scrambled'),
-        env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'night' },
+        env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'dark' },
       });
       const html = readOutput(outDir);
       expect(html).not.toMatch(/<script\b/i);
@@ -205,15 +205,15 @@ describe('review template: a section renders its content array in exactly the gi
     try {
       const { outDir } = buildSite({
         outDir: join('output', 'test-review-content-order'),
-        env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'night' },
+        env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'dark' },
       });
       const html = readOutput(outDir);
 
       // The tag each title asked for is the tag it got -- including h4, and including a second
       // h2 with nothing but another element between it and the first.
-      expect(html).toContain('<h2>First Heading</h2>');
-      expect(html).toContain('<h2>Second Heading Right After</h2>');
-      expect(html).toContain('<h4>A Chosen Heading Level</h4>');
+      expect(html).toMatch(/<h2[^>]*>First Heading<\/h2>/);
+      expect(html).toMatch(/<h2[^>]*>Second Heading Right After<\/h2>/);
+      expect(html).toMatch(/<h4[^>]*>A Chosen Heading Level<\/h4>/);
 
       const order = [
         'First Heading',
@@ -239,13 +239,132 @@ describe('review template: a section renders its content array in exactly the gi
     try {
       const { outDir } = buildSite({
         outDir: join('output', 'test-review-title-h1-guard'),
-        env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'night' },
+        env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'dark' },
       });
       const html = readOutput(outDir);
-      expect(html).toContain('<h2>Not A Real H1</h2>');
-      expect(html).not.toContain('<h1>Not A Real H1</h1>');
+      expect(html).toMatch(/<h2[^>]*>Not A Real H1<\/h2>/);
+      expect(html).not.toMatch(/<h1[^>]*>Not A Real H1<\/h1>/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('review template: links inside body text, and card sets', () => {
+  it('renders [label](/href) as a real link and leaves the rest of the sentence alone', () => {
+    const dir = buildSingleBlockPage([
+      {
+        type: 'section',
+        props: {
+          content: [
+            { type: 'title', tag: 'h2', text: 'Linked Section' },
+            { type: 'text', text: 'Open the [full lobby](/casino) tonight.' },
+            { type: 'list', items: ['Try the [Andar Bahar table](/casino)'] },
+            {
+              type: 'table',
+              columns: ['What'],
+              rows: [['Spins on [Gates of Olympus](/slots)']],
+            },
+          ],
+        },
+      },
+    ]);
+    try {
+      const { outDir } = buildSite({
+        outDir: join('output', 'test-review-links'),
+        env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'dark' },
+      });
+      const html = readOutput(outDir);
+
+      // A link in each of the three places a sentence can appear.
+      expect(html).toMatch(/<a[^>]*href="\/casino"[^>]*>full lobby<\/a>/);
+      expect(html).toMatch(/<a[^>]*href="\/casino"[^>]*>Andar Bahar table<\/a>/);
+      expect(html).toMatch(/<a[^>]*href="\/slots"[^>]*>Gates of Olympus<\/a>/);
+
+      // The words either side of the link are still there, and the markup itself is gone.
+      expect(html).toContain('Open the ');
+      expect(html).toContain(' tonight.');
+      expect(html).not.toContain('](/casino)');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses to build a link out of an href that would run something', () => {
+    const dir = buildSingleBlockPage([
+      {
+        type: 'section',
+        props: {
+          content: [
+            { type: 'title', tag: 'h2', text: 'Unsafe' },
+            { type: 'text', text: 'Tap [here](javascript:alert) to win.' },
+          ],
+        },
+      },
+    ]);
+    try {
+      const { outDir } = buildSite({
+        outDir: join('output', 'test-review-unsafe-link'),
+        env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'dark' },
+      });
+      const html = readOutput(outDir);
+      expect(html).not.toContain('javascript:');
+      // The sentence survives in full -- only the link does not.
+      expect(html).toContain('Tap ');
+      expect(html).toContain('here');
+      expect(html).toContain(' to win.');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('renders a cards element as framed items, each keeping its heading tag', () => {
+    const dir = buildSingleBlockPage([
+      {
+        type: 'section',
+        props: {
+          content: [
+            { type: 'title', tag: 'h2', text: 'Two Ways In' },
+            {
+              type: 'cards',
+              items: [
+                { title: 'BPL Markets', text: 'Thirty-five a match.' },
+                { title: 'Live Floor', text: ['Teen Patti.', 'Andar Bahar.'] },
+              ],
+            },
+          ],
+        },
+      },
+    ]);
+    try {
+      const { outDir } = buildSite({
+        outDir: join('output', 'test-review-cards'),
+        env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'dark' },
+      });
+      const html = readOutput(outDir);
+      expect(html).toContain('class="rcards"');
+      expect(html).toMatch(/<h3[^>]*>BPL Markets<\/h3>/);
+      expect(html).toMatch(/<h3[^>]*>Live Floor<\/h3>/);
+      // A card given several sentences keeps them as separate paragraphs.
+      expect(html).toContain('Teen Patti.');
+      expect(html).toContain('Andar Bahar.');
+      expect(html).not.toContain('Teen Patti.,');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('puts the contents heading outside the contents card, level with every other heading', () => {
+    const { outDir } = buildSite({
+      outDir: join('output', 'test-review-toc-heading'),
+      env: { SITE_DIR, TEMPLATE: 'review', SCHEME: 'dark' },
+    });
+    const html = readOutput(outDir);
+    const card = html.match(/<nav class="toc__card"[\s\S]*?<\/nav>/);
+    expect(card).not.toBeNull();
+    // The heading is on the page, but not inside the card: it sits in the section above it, on the
+    // same left edge as every other section heading.
+    expect(html).toMatch(/<h2[^>]*class="rheading"[^>]*>What&#39;s on This Page<\/h2>/);
+    expect(card[0]).not.toContain('<h2');
   });
 });

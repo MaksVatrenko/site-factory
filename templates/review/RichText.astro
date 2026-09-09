@@ -1,0 +1,45 @@
+---
+// Renders one string of body text, turning [label](/href) into a real link. Used everywhere a
+// sentence can appear -- a paragraph, a list item, a table cell, a card -- so the markup means the
+// same thing wherever the content puts it.
+import { parseRichText } from '../_shared/rich-text.mjs';
+
+const { text } = Astro.props;
+const parts = parseRichText(text);
+---
+
+{parts.map((part) =>
+  part.href ? (
+    <a class="rlink" href={part.href}>{part.text}</a>
+  ) : (
+    <Fragment>{part.text}</Fragment>
+  ),
+)}
+
+<style>
+  /* The underline is drawn as a background image rather than with text-decoration, because only
+     a background can be animated from zero width: it grows left to right on hover instead of
+     appearing all at once. */
+  .rlink {
+    color: var(--accent-primary);
+    text-decoration: none;
+    background-image: linear-gradient(currentColor, currentColor);
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    background-size: 0% 1px;
+    transition: background-size 0.25s ease;
+  }
+
+  .rlink:hover,
+  .rlink:focus-visible {
+    background-size: 100% 1px;
+  }
+
+  /* Without a transition the underline still appears on hover, it just does not sweep -- the
+     state stays visible for anyone who asked for less motion. */
+  @media (prefers-reduced-motion: reduce) {
+    .rlink {
+      transition: none;
+    }
+  }
+</style>

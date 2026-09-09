@@ -1,5 +1,6 @@
 ---
 import { asList, asText } from '../../_shared/props.mjs';
+import RichText from '../RichText.astro';
 
 const { heading, paragraphs, site, anchor } = Astro.props;
 
@@ -9,28 +10,15 @@ const lead = asList(paragraphs)
   .map((text) => asText(text))
   .filter((text) => text !== '');
 const brandLabel = asText(site?.brand?.name);
-
-// The reference site accents the last couple of words of the hero heading in gold. The content
-// gives one plain heading string, not pre-split marker text, so the split happens here: every
-// word but the last two renders plain, the last two (or the whole heading, if it is one or two
-// words already) render inside the accent span.
-const words = title.split(/\s+/).filter(Boolean);
-const accentCount = Math.min(2, words.length);
-const leadWords = words.slice(0, words.length - accentCount).join(' ');
-const accentWords = words.slice(words.length - accentCount).join(' ');
 ---
 
 {(title !== '' || lead.length > 0) && (
   <section class="hero section" id={anchorId || undefined}>
     <div class="container hero__inner">
       {brandLabel && <p class="hero__eyebrow">{brandLabel}</p>}
-      {title && (
-        <h1>
-          {leadWords && `${leadWords} `}<span class="hero__accent">{accentWords}</span>
-        </h1>
-      )}
+      {title && <h1 class="hero__title">{title}</h1>}
       {lead.map((paragraph) => (
-        <p class="hero__lead">{paragraph}</p>
+        <p class="hero__lead"><RichText text={paragraph} /></p>
       ))}
     </div>
   </section>
@@ -54,8 +42,25 @@ const accentWords = words.slice(words.length - accentCount).join(' ');
     text-transform: uppercase;
   }
 
-  .hero__accent {
-    color: var(--accent-primary);
+  /* The heading is painted with the scheme's gradient rather than a flat colour, matching the
+     reference site: it runs across the whole heading box, so a second line starts part-way along
+     the gradient rather than restarting it. The gradient itself belongs to the scheme, not here --
+     a scheme that wants a flat heading sets --heading-gradient to a single colour. */
+  .hero__title {
+    background-image: var(--heading-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Without background-clip the text would be painted in `transparent` -- that is, invisible. The
+     colour is restored wherever the clip is unsupported, which is also what print and forced-
+     colours modes fall back to. */
+  @supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+    .hero__title {
+      background-image: none;
+      color: var(--text-primary);
+    }
   }
 
   .hero__lead {

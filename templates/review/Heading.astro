@@ -1,0 +1,55 @@
+---
+// Every heading this template renders comes through here: a section's own h2 or h3 (via
+// elements/title.astro), and the headings the toc, links and faq blocks carry in their own props.
+// One component rather than four so the accent bar down the left is defined once -- Astro scopes a
+// <style> to the component that owns the markup, so the same rule copied into four files would be
+// four rules to keep in step.
+import { asText } from '../_shared/props.mjs';
+
+// h1 belongs to the page's own hero heading (see blocks/hero.astro) -- content must never be able
+// to emit a second one, so h1 is deliberately absent. Anything outside h2-h6 (missing, misspelled,
+// or not a string at all) falls back to h2 rather than being thrown -- content can never fail a
+// build.
+const ALLOWED_TAGS = new Set(['h2', 'h3', 'h4', 'h5', 'h6']);
+
+const { tag, text } = Astro.props;
+const value = asText(text);
+// Capitalized on purpose: Astro only renders a variable as a dynamic tag when its name starts
+// with an uppercase letter, otherwise it would emit a literal `<tag>` element.
+const Tag = typeof tag === 'string' && ALLOWED_TAGS.has(tag) ? tag : 'h2';
+const isSub = Tag !== 'h2';
+---
+
+{value && (
+  <Tag class:list={['rheading', isSub && 'rheading--sub']}>{value}</Tag>
+)}
+
+<style>
+  .rheading {
+    position: relative;
+    padding-left: 1rem;
+  }
+
+  /* The bar is inset from the text's own line box rather than matching it exactly: a cap-height
+     start and a baseline end read as aligned, where a bar spanning the full line box reads as
+     too tall next to the letters. */
+  .rheading::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.18em;
+    bottom: 0.18em;
+    width: 4px;
+    border-radius: 999px;
+    background: var(--accent-primary);
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+
+  .rheading--sub {
+    padding-left: 0.8rem;
+  }
+
+  .rheading--sub::before {
+    width: 3px;
+  }
+</style>

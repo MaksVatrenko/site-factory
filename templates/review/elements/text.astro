@@ -1,8 +1,11 @@
 ---
 import { asText } from '../../_shared/props.mjs';
+import RichText from '../RichText.astro';
 
 const { text } = Astro.props;
 const value = asText(text);
 ---
 
-{value && <p>{value}</p>}
+{value && (
+  <p><RichText text={value} /></p>
+)}

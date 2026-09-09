@@ -1,30 +1,46 @@
 :root {
   /* Legacy tokens: still read directly by styles/base.css (body background/text colour, link
-     colour, the header/CTA .button) regardless of template. This comment used to list four more
-     (--c-surface, --c-border, --c-muted, --c-accent) — dropped once templates t1-t3, the only
-     code that ever read them, were removed; nothing reads them any more. */
-  --c-bg: #0f141c;
-  --c-fg: #e8eef7;
-  --c-primary: #4d97ff;
-  --c-primary-fg: #08111c;
+     colour, the header/CTA .button) regardless of template — mapped from the extended palette
+     below, the source of truth for this scheme (these values are the client's real
+     reference-site palette). */
+  --c-bg: #0a0e1a;
+  --c-fg: #e8ecf4;
+  --c-primary: #ffb800;
+  --c-primary-fg: #0a0e1a;
 
-  /* Extended tokens: same names in every scheme file (see tests/schemes.test.mjs), used by the
-     "review" template. Values here suit this existing dark, blue-accent palette specifically —
-     distinct from the new "night" scheme's gold accent below. */
-  --bg-primary: #0f141c;
-  --bg-secondary: #18202b;
-  --section-glow: #4d97ff14;
-  --bg-hover: #26303f;
-  --bg-alt: #18202b;
-  --bg-elevated: #202938;
-  --border-subtle: #202838;
-  --border-default: #2a3646;
-  --border-accent: #4d97ff;
-  --text-primary: #e8eef7;
-  --text-secondary: #9aa9bd;
-  --text-tertiary: #6d7c93;
-  --accent-primary: #4d97ff;
-  --accent-hover: #7db4ff;
-  --text-on-accent: #08111c;
+  /* Extended tokens: the reference site's actual palette (dark, gold accent), used by the
+     "review" template. Every scheme file must define the same names — see
+     tests/schemes.test.mjs, which is what keeps a second scheme from silently missing one. */
+  --bg-primary: #0a0e1a;
+  --bg-secondary: #131829;
+  --section-glow: #ffb80014;
+  --bg-hover: #202944;
+  --bg-alt: #1a2138;
+  /* Deliberately translucent, unlike every other background here. Sections alternate between
+     --bg-primary and --bg-alt, so a card painted a fixed colour reads as raised on one of them
+     and disappears into the other. A veil composites over whatever is behind it and is always
+     exactly one step lighter than it. A light scheme uses a black veil at the same opacity. */
+  --bg-elevated: #ffffff0a;
+  /* The same idea at half strength, for a surface that should be felt rather than seen: the
+     striping down a table's rows. */
+  --bg-subtle: #ffffff05;
+  --border-subtle: #1f2740;
+  --border-default: #2a3454;
+  --border-accent: #ffb800;
+  --text-primary: #e8ecf4;
+  --text-secondary: #b8c1d3;
+  --text-tertiary: #8b95a9;
+  --accent-primary: #ffb800;
+  --accent-hover: #ffcb47;
+  /* The accent at low opacity, for surfaces that should read as tinted rather than coloured:
+     a table's header row, a card's hover fill. */
+  --accent-soft: #ffb8001f;
+  /* The accent as a halo. Used for glows (list bullets, heading bars, a hovered card's outer
+     shadow), where the full-strength accent would read as a hard second edge. */
+  --accent-glow: #ffb80059;
+  /* The hero heading is painted with this gradient rather than a flat colour, matching the
+     reference site: it starts in the text colour and resolves into the accent. */
+  --heading-gradient: linear-gradient(100deg, #ffffff 0%, #f6e2b0 42%, #ffb800 92%);
+  --text-on-accent: #0a0e1a;
   --success: #22c55e;
 }

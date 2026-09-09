@@ -87,22 +87,17 @@
           "text": "One warning: the ৳500 minimum deposit is the trigger. A ৳200 test deposit won't activate anything."
         },
         {
-          "type": "title",
-          "tag": "h3",
-          "text": "How the 899OK Welcome Credits"
-        },
-        {
-          "type": "text",
-          "text": "Deposit qualifies automatically once you tick the bonus box at checkout. Match lands in bonus balance within a minute — free spins arrive at the same time."
-        },
-        {
-          "type": "title",
-          "tag": "h3",
-          "text": "What Voids the Bonus"
-        },
-        {
-          "type": "text",
-          "text": "Exceeding the ৳250 max bet during wagering, or withdrawing before wagering clears."
+          "type": "cards",
+          "items": [
+            {
+              "title": "How the 899OK Welcome Credits",
+              "text": "Deposit qualifies automatically once you tick the bonus box at checkout. Match lands in bonus balance within a minute — free spins arrive at the same time."
+            },
+            {
+              "title": "What Voids the Bonus",
+              "text": "Exceeding the ৳250 max bet during wagering, or withdrawing before wagering clears."
+            }
+          ]
         }
       ]
     },
@@ -232,22 +227,17 @@
           "text": "For me, cashback usually softens 30–40% of a losing week. Because there's no wagering attached, this is the easiest offer at 899OK to actually turn into withdrawn taka."
         },
         {
-          "type": "title",
-          "tag": "h3",
-          "text": "How Cashback Calculates"
-        },
-        {
-          "type": "text",
-          "text": "Total deposits minus total withdrawals for the week. Lost ৳8,000 net at Silver tier? ৳640 lands Monday."
-        },
-        {
-          "type": "title",
-          "tag": "h3",
-          "text": "Live Casino Rebate"
-        },
-        {
-          "type": "text",
-          "text": "Separate 0.8% rebate on live table turnover, credited daily. Stacks with the weekly cashback."
+          "type": "cards",
+          "items": [
+            {
+              "title": "How Cashback Calculates",
+              "text": "Total deposits minus total withdrawals for the week. Lost ৳8,000 net at Silver tier? ৳640 lands Monday."
+            },
+            {
+              "title": "Live Casino Rebate",
+              "text": "Separate 0.8% rebate on live table turnover, credited daily. Stacks with the weekly cashback."
+            }
+          ]
         }
       ]
     },
@@ -297,22 +287,17 @@
           "text": "Bet builder rescue: 25% back as free bet if your bet builder loses by one leg on featured cricket and football fixtures."
         },
         {
-          "type": "title",
-          "tag": "h3",
-          "text": "Accumulator Boost Rules"
-        },
-        {
-          "type": "text",
-          "text": "Every leg must clear at odds of 1.40 or higher, and all legs must win. Boost applies to net winnings only, not your stake."
-        },
-        {
-          "type": "title",
-          "tag": "h3",
-          "text": "Cricket Insurance Offer"
-        },
-        {
-          "type": "text",
-          "text": "On selected BPL, IPL and international matches, if one leg of your acca loses, you get your stake back as a free bet up to ৳1,500."
+          "type": "cards",
+          "items": [
+            {
+              "title": "Accumulator Boost Rules",
+              "text": "Every leg must clear at odds of 1.40 or higher, and all legs must win. Boost applies to net winnings only, not your stake."
+            },
+            {
+              "title": "Cricket Insurance Offer",
+              "text": "On selected BPL, IPL and international matches, if one leg of your acca loses, you get your stake back as a free bet up to ৳1,500."
+            }
+          ]
         }
       ]
     },

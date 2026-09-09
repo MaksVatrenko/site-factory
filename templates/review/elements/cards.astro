@@ -1,0 +1,89 @@
+---
+import { asList, asRecords, asText } from '../../_shared/props.mjs';
+import RichText from '../RichText.astro';
+
+// A row of framed cards: a short heading and a sentence or two each, side by side. The reference
+// site uses it for the two or three sub-points that close a section ("BPL and India Series
+// Markets", "899OK Live Casino Floor") -- the same words as an h3 with a paragraph under it, but
+// read as a set of parallel items rather than as more of the section's prose.
+//
+// The card keeps a real heading tag: it is still a subheading of the section, and turning it into
+// a styled <p> would take it out of the page outline for anything reading the structure.
+const ALLOWED_TAGS = new Set(['h3', 'h4', 'h5', 'h6']);
+
+const { items } = Astro.props;
+const cards = asRecords(items)
+  .map((item) => ({
+    title: asText(item.title),
+    tag: ALLOWED_TAGS.has(item.tag) ? item.tag : 'h3',
+    // A card whose text arrived as a list of sentences renders them as its own paragraphs rather
+    // than running them together.
+    lines: asList(item.text)
+      .map((line) => asText(line))
+      .filter((line) => line !== ''),
+  }))
+  .filter((card) => card.title !== '' || card.lines.length > 0);
+---
+
+{cards.length > 0 && (
+  <div class="rcards">
+    {cards.map((card) => {
+      const Tag = card.tag;
+      return (
+        <div class="rcards__item">
+          {card.title && <Tag class="rcards__title">{card.title}</Tag>}
+          {card.lines.map((line) => (
+            <p class="rcards__text"><RichText text={line} /></p>
+          ))}
+        </div>
+      );
+    })}
+  </div>
+)}
+
+<style>
+  .rcards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+    gap: 1rem;
+  }
+
+  .rcards__item {
+    display: grid;
+    align-content: start;
+    gap: 0.6rem;
+    padding: 1.35rem 1.5rem;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease,
+      transform 0.2s ease;
+  }
+
+  .rcards__item:hover {
+    border-color: var(--border-accent);
+    box-shadow: 0 0 24px var(--accent-glow);
+    transform: translateY(-2px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rcards__item {
+      transition: none;
+    }
+
+    .rcards__item:hover {
+      transform: none;
+    }
+  }
+
+  .rcards__title {
+    color: var(--text-primary);
+    font-size: 1.15rem;
+  }
+
+  .rcards__text {
+    color: var(--text-secondary);
+  }
+</style>

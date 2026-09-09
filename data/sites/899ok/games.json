@@ -90,22 +90,17 @@
           "text": "Minimum bet is ৳10. Real talk — auto-cashout keeps you honest. Watching the plane and \"feeling it out\" is how sessions die."
         },
         {
-          "type": "title",
-          "tag": "h3",
-          "text": "Aviator on 899OK"
-        },
-        {
-          "type": "text",
-          "text": "Provably fair — every round hash can be checked afterwards. RTP sits at 97%, min bet ৳10."
-        },
-        {
-          "type": "title",
-          "tag": "h3",
-          "text": "Other Crash Titles"
-        },
-        {
-          "type": "text",
-          "text": "JetX and Spaceman use the same core mechanic with different pacing. Auto-cashout at 1.8x is the closest thing to a discipline system."
+          "type": "cards",
+          "items": [
+            {
+              "title": "Aviator on 899OK",
+              "text": "Provably fair — every round hash can be checked afterwards. RTP sits at 97%, min bet ৳10."
+            },
+            {
+              "title": "Other Crash Titles",
+              "text": "JetX and Spaceman use the same core mechanic with different pacing. Auto-cashout at 1.8x is the closest thing to a discipline system."
+            }
+          ]
         }
       ]
     },
@@ -139,22 +134,17 @@
           "text": "Per-shot range: ৳0.1 to ৳100. You control ammo cost, so a modest deposit can last hours if you play with discipline."
         },
         {
-          "type": "title",
-          "tag": "h3",
-          "text": "How Fishing Rooms Pay"
-        },
-        {
-          "type": "text",
-          "text": "Every shot costs your chosen stake. Small fish return 2–10x, bosses 100–500x."
-        },
-        {
-          "type": "title",
-          "tag": "h3",
-          "text": "Room Traffic and Timing"
-        },
-        {
-          "type": "text",
-          "text": "Four-player rooms fill up after 8 PM. Daytime rooms often sit at one player, which stretches boss timers."
+          "type": "cards",
+          "items": [
+            {
+              "title": "How Fishing Rooms Pay",
+              "text": "Every shot costs your chosen stake. Small fish return 2–10x, bosses 100–500x."
+            },
+            {
+              "title": "Room Traffic and Timing",
+              "text": "Four-player rooms fill up after 8 PM. Daytime rooms often sit at one player, which stretches boss timers."
+            }
+          ]
         }
       ]
     },
@@ -175,22 +165,17 @@
           "text": "Why they work: rounds finish in seconds, you decide when to stop on most of them, low stakes often from ৳10, runs smooth on any budget phone."
         },
         {
-          "type": "title",
-          "tag": "h3",
-          "text": "Mines and Plinko"
-        },
-        {
-          "type": "text",
-          "text": "Mines lets you keep clicking tiles until you either cash out or hit a bomb. Plinko drops a ball through pegs, min bet ৳10."
-        },
-        {
-          "type": "title",
-          "tag": "h3",
-          "text": "Dice and Wheel"
-        },
-        {
-          "type": "text",
-          "text": "Round times under 10 seconds. RTP sits at 96–97%, listed inside each game info panel."
+          "type": "cards",
+          "items": [
+            {
+              "title": "Mines and Plinko",
+              "text": "Mines lets you keep clicking tiles until you either cash out or hit a bomb. Plinko drops a ball through pegs, min bet ৳10."
+            },
+            {
+              "title": "Dice and Wheel",
+              "text": "Round times under 10 seconds. RTP sits at 96–97%, listed inside each game info panel."
+            }
+          ]
         }
       ]
     },

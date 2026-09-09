@@ -16,7 +16,7 @@ describe('engine build', () => {
   let outDir;
 
   beforeAll(() => {
-    outDir = buildSite({ scheme: 'blue' }).outDir;
+    outDir = buildSite({ scheme: 'dark' }).outDir;
   });
 
   it('writes a home page', () => {
@@ -34,7 +34,13 @@ describe('engine build', () => {
   it('inlines the colour scheme', () => {
     const html = readOutput(outDir);
     expect(html).toContain('--c-primary');
-    expect(html).toContain('#2563eb');
+    // The value the scheme file itself assigns, read from disk rather than written out here: the
+    // name --c-primary also appears in styles/base.css as `var(--c-primary)`, so only the literal
+    // colour proves the scheme was inlined and not merely referenced.
+    const primary = readFileSync(join('styles', 'schemes', 'dark.css'), 'utf8').match(
+      /--c-primary:\s*([^;]+);/,
+    )[1];
+    expect(html).toContain(primary);
   });
 
   it('sets language and direction', () => {
@@ -105,8 +111,8 @@ describe('engine build', () => {
     expect(html).not.toMatch(/<p>\s*<\/p>/);
     // A `title` element whose tag is not one of h2-h6 falls back to h2 instead of faking the
     // page's own h1 (see templates/review/elements/title.astro).
-    expect(html).toContain('<h2>A content file cannot fake an h1</h2>');
-    expect(html).not.toContain('<h1>A content file cannot fake an h1</h1>');
+    expect(html).toMatch(/<h2[^>]*>A content file cannot fake an h1<\/h2>/);
+    expect(html).not.toMatch(/<h1[^>]*>A content file cannot fake an h1<\/h1>/);
     // A `list` whose `items` is a single string is coerced into a one-item list, not dropped.
     expect(html).toContain('Coerced into a single list item');
   });

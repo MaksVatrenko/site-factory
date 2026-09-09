@@ -1,5 +1,6 @@
 ---
 import { asRecords, asText } from '../../_shared/props.mjs';
+import Heading from '../Heading.astro';
 
 const { heading, items, anchor } = Astro.props;
 const title = asText(heading);
@@ -14,7 +15,7 @@ const idAttrs = anchorId ? { id: anchorId } : {};
 {questions.length > 0 && (
   <section class="faq section" {...idAttrs}>
     <div class="container faq__inner">
-      {title && <h2>{title}</h2>}
+      {title && <Heading text={title} />}
       <div class="faq__list">
         {questions.map((item) => (
           <details class="faq__item">
@@ -30,9 +31,6 @@ const idAttrs = anchorId ? { id: anchorId } : {};
 <style>
   .faq {
     scroll-margin-top: 5.5rem;
-  }
-
-  .faq__inner {
   }
 
   .faq__list {

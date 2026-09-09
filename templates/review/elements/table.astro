@@ -1,5 +1,6 @@
 ---
 import { asList, asText } from '../../_shared/props.mjs';
+import RichText from '../RichText.astro';
 
 const { columns, rows } = Astro.props;
 const cols = asList(columns)
@@ -30,7 +31,7 @@ const hasTable = cols.length > 0 || tableRows.length > 0;
           {tableRows.map((row) => (
             <tr>
               {row.map((cell) => (
-                <td>{cell}</td>
+                <td><RichText text={cell} /></td>
               ))}
             </tr>
           ))}
@@ -43,7 +44,11 @@ const hasTable = cols.length > 0 || tableRows.length > 0;
 <style>
   .rsection__table-wrap {
     max-width: 100%;
+    /* A wide table scrolls inside its own frame rather than widening the page. `auto` also makes
+       this a scroll container, which is what keeps the rounded corners clipping the header row. */
     overflow-x: auto;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
   }
 
   .rsection__table {
@@ -53,18 +58,46 @@ const hasTable = cols.length > 0 || tableRows.length > 0;
 
   .rsection__table th,
   .rsection__table td {
-    padding: 0.75rem 1rem;
+    padding: 0.85rem 1.15rem;
     text-align: left;
-    border-bottom: 1px solid var(--border-default);
+    border-bottom: 1px solid var(--border-subtle);
   }
 
+  /* The header is tinted with the accent rather than filled with it: at full strength a gold bar
+     across the top of a table competes with the section heading above it. The solid rule
+     underneath is what actually separates head from body. */
   .rsection__table thead th {
-    background: var(--bg-elevated);
-    color: var(--text-primary);
+    background: linear-gradient(90deg, var(--accent-soft), transparent 70%);
+    border-bottom: 2px solid var(--accent-primary);
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     white-space: nowrap;
   }
 
   .rsection__table tbody td {
     color: var(--text-secondary);
+  }
+
+  /* The first cell of a row names what the row is about, so it reads as the row's own label. */
+  .rsection__table tbody td:first-child {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  /* Striping, not colour: the rows only need to be told apart while the eye tracks across a wide
+     row. --bg-subtle is a veil, so this reads the same whether the section behind it is the dark
+     or the light half of the alternating pair. */
+  .rsection__table tbody tr:nth-child(even) {
+    background: var(--bg-subtle);
+  }
+
+  .rsection__table tbody tr:hover {
+    background: var(--bg-hover);
+  }
+
+  .rsection__table tbody tr:last-child td {
+    border-bottom: 0;
   }
 </style>

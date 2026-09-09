@@ -166,7 +166,7 @@ describe('factory API', () => {
     const start = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ site: '899ok', template: 'review', scheme: 'night', domain }),
+      body: JSON.stringify({ site: '899ok', template: 'review', scheme: 'dark', domain }),
     }).then((r) => r.json());
 
     try {
@@ -190,7 +190,7 @@ describe('factory API', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         brand: 'API Test',
-        scheme: 'green',
+        scheme: 'dark',
         site: '899ok',
         domain: 'api-test.com',
       }),
@@ -284,7 +284,7 @@ describe('factory API', () => {
     const start = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ site: '899ok', scheme: 'blue' }),
+      body: JSON.stringify({ site: '899ok', scheme: 'dark' }),
     }).then((r) => r.json());
 
     expect(start.domain).toBe('899ok');
@@ -448,8 +448,22 @@ describe('factory API', () => {
 // stops matching the real entry and the request silently resolves to something else (or, for
 // `site`, is wrongly rejected as not found). The fixture ids below use a space/parentheses —
 // characters safeName replaces, not just re-cases — chosen to sort after every real template and
-// blue/dark/green/night scheme id, so a fallback-to-first-available would never coincidentally
-// land on the right file and mask the bug.
+// scheme id, so a fallback-to-first-available would never coincidentally land on the right file
+// and mask the bug.
+// A colour no scheme on disk uses, so a built page containing it can only have got it from the
+// fixture file written below — that is what makes these tests prove which file was actually read
+// rather than merely that a build succeeded.
+const FIXTURE_PRIMARY = '#4d97ff';
+
+// Copies a real scheme's variables (so the "every scheme defines the same variables" invariant
+// still holds) with only --c-primary swapped for the marker colour above.
+function fixtureSchemeCss() {
+  return readFileSync(join('styles', 'schemes', 'dark.css'), 'utf8').replace(
+    /--c-primary:\s*[^;]+;/,
+    `--c-primary: ${FIXTURE_PRIMARY};`,
+  );
+}
+
 describe('site, template and scheme are validated against the real lists, not rewritten (M2)', () => {
   it('accepts a site folder name safeName would mangle into a 404', async () => {
     const siteId = 'My Site';
@@ -484,10 +498,7 @@ describe('site, template and scheme are validated against the real lists, not re
     const schemeId = 'warm (sunset)';
     const schemeFile = join('styles', 'schemes', `${schemeId}.css`);
     const domain = 'safename-scheme-test.com';
-    // Copies an existing scheme's variables verbatim (so the "every scheme defines the same
-    // variables" invariant still holds) but keeps a --c-primary no real scheme uses, so the
-    // built page can prove which file actually got read.
-    writeFileSync(schemeFile, readFileSync(join('styles', 'schemes', 'dark.css'), 'utf8'));
+    writeFileSync(schemeFile, fixtureSchemeCss());
 
     try {
       const response = await fetch(`${base}/api/generate`, {
@@ -499,7 +510,7 @@ describe('site, template and scheme are validated against the real lists, not re
 
       const data = await response.json();
       await readUntilDone(data.buildId);
-      expect(readFileSync(join('output', domain, 'index.html'), 'utf8')).toContain('#4d97ff');
+      expect(readFileSync(join('output', domain, 'index.html'), 'utf8')).toContain(FIXTURE_PRIMARY);
     } finally {
       rmSync(schemeFile, { force: true });
       rmSync(join('output', domain), { recursive: true, force: true });
@@ -509,11 +520,18 @@ describe('site, template and scheme are validated against the real lists, not re
   it('accepts a template id safeName would mangle past recognition', async () => {
     const templateId = 'warm (sunset)';
     const templateDir = join('templates', templateId);
+    // The fixture template points at a fixture scheme rather than the real one: with a single
+    // scheme shipped, a template whose defaultScheme is that scheme proves nothing — the same
+    // colour would land in the page from the fall-back-to-first-available path this is meant to
+    // catch. A scheme only this template names cannot arrive by accident.
+    const schemeId = 'warm (sunset)';
+    const schemeFile = join('styles', 'schemes', `${schemeId}.css`);
     const domain = 'safename-template-test.com';
+    writeFileSync(schemeFile, fixtureSchemeCss());
     mkdirSync(join(templateDir, 'blocks'), { recursive: true });
     writeFileSync(
       join(templateDir, 'manifest.json'),
-      JSON.stringify({ id: templateId, name: 'Fixture', blocks: [], defaultScheme: 'dark' }),
+      JSON.stringify({ id: templateId, name: 'Fixture', blocks: [], defaultScheme: schemeId }),
     );
 
     try {
@@ -528,8 +546,9 @@ describe('site, template and scheme are validated against the real lists, not re
 
       const data = await response.json();
       await readUntilDone(data.buildId);
-      expect(readFileSync(join('output', domain, 'index.html'), 'utf8')).toContain('#4d97ff');
+      expect(readFileSync(join('output', domain, 'index.html'), 'utf8')).toContain(FIXTURE_PRIMARY);
     } finally {
+      rmSync(schemeFile, { force: true });
       rmSync(templateDir, { recursive: true, force: true });
       rmSync(join('output', domain), { recursive: true, force: true });
     }

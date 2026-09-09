@@ -24,23 +24,29 @@ describe('colour schemes', () => {
   });
 
   it('reads the requested scheme', () => {
-    const scheme = readScheme('green');
-    expect(scheme.id).toBe('green');
+    const [first] = schemeIdsOnDisk();
+    const scheme = readScheme(first);
+    expect(scheme.id).toBe(first);
     expect(scheme.fellBack).toBe(false);
     expect(scheme.css).toContain('--c-primary');
   });
 
   it('falls back to the first scheme when the id is unknown', () => {
     const scheme = readScheme('chartreuse');
-    expect(scheme.id).toBe('blue');
+    expect(scheme.id).toBe(schemeIdsOnDisk()[0]);
     expect(scheme.fellBack).toBe(true);
   });
 
   it('falls back when no id is given at all', () => {
-    expect(readScheme('').id).toBe('blue');
-    expect(readScheme(undefined).id).toBe('blue');
+    const [first] = schemeIdsOnDisk();
+    expect(readScheme('').id).toBe(first);
+    expect(readScheme(undefined).id).toBe(first);
   });
 
+  // Only one scheme ships right now, so this has nothing to compare against today. It is kept
+  // because the moment a second scheme file appears it is what catches the one token whoever
+  // wrote it forgot — a missing --accent-glow does not fail a build, it silently renders a
+  // shadow of `none`.
   it('defines the same variables in every scheme', () => {
     const [first, ...rest] = listSchemes();
     const expected = variablesOf(readScheme(first).css);

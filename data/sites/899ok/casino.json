@@ -48,22 +48,17 @@
           ]
         },
         {
-          "type": "title",
-          "tag": "h3",
-          "text": "Dealer Languages at 899OK"
-        },
-        {
-          "type": "text",
-          "text": "Bangla dealers cover Andar Bahar and Teen Patti most nights after 8 PM. Baccarat and Blackjack usually run in English and Hindi."
-        },
-        {
-          "type": "title",
-          "tag": "h3",
-          "text": "899OK Stream Quality on Mobile Data"
-        },
-        {
-          "type": "text",
-          "text": "Roughly 70–100 MB per hour. Audio cuts before video when the signal drops, so you'll know when to switch to wifi."
+          "type": "cards",
+          "items": [
+            {
+              "title": "Dealer Languages at 899OK",
+              "text": "Bangla dealers cover Andar Bahar and Teen Patti most nights after 8 PM. Baccarat and Blackjack usually run in English and Hindi."
+            },
+            {
+              "title": "899OK Stream Quality on Mobile Data",
+              "text": "Roughly 70–100 MB per hour. Audio cuts before video when the signal drops, so you'll know when to switch to wifi."
+            }
+          ]
         }
       ]
     },
@@ -110,22 +105,17 @@
           ]
         },
         {
-          "type": "title",
-          "tag": "h3",
-          "text": "Blackjack at 899OK"
-        },
-        {
-          "type": "text",
-          "text": "Classic rules, 3:2 payout, minimum ৳100 on standard tables. Side bets like Perfect Pairs are entertaining but bleed your bankroll faster than you expect."
-        },
-        {
-          "type": "title",
-          "tag": "h3",
-          "text": "Baccarat Tables"
-        },
-        {
-          "type": "text",
-          "text": "Six to eight tables running most evenings. Banker edge sits at 1.06%, Player at 1.24%, Tie at 14.36% — skip the Tie unless you're feeling reckless."
+          "type": "cards",
+          "items": [
+            {
+              "title": "Blackjack at 899OK",
+              "text": "Classic rules, 3:2 payout, minimum ৳100 on standard tables. Side bets like Perfect Pairs are entertaining but bleed your bankroll faster than you expect."
+            },
+            {
+              "title": "Baccarat Tables",
+              "text": "Six to eight tables running most evenings. Banker edge sits at 1.06%, Player at 1.24%, Tie at 14.36% — skip the Tie unless you're feeling reckless."
+            }
+          ]
         }
       ]
     },
@@ -299,22 +289,17 @@
           "text": "Withdrawals return to the same wallet you deposited from. Have your NID and a selfie ready before your first cash-out to skip the 24-hour verification queue."
         },
         {
-          "type": "title",
-          "tag": "h3",
-          "text": "Deposit Times"
-        },
-        {
-          "type": "text",
-          "text": "bKash and Nagad clear instantly from ৳100 upward. Bank transfer takes 5–10 minutes in normal hours."
-        },
-        {
-          "type": "title",
-          "tag": "h3",
-          "text": "Withdrawal Speed"
-        },
-        {
-          "type": "text",
-          "text": "10–20 minutes back to bKash for standard amounts. Above ৳25,000 goes to manual review, usually cleared same day."
+          "type": "cards",
+          "items": [
+            {
+              "title": "Deposit Times",
+              "text": "bKash and Nagad clear instantly from ৳100 upward. Bank transfer takes 5–10 minutes in normal hours."
+            },
+            {
+              "title": "Withdrawal Speed",
+              "text": "10–20 minutes back to bKash for standard amounts. Above ৳25,000 goes to manual review, usually cleared same day."
+            }
+          ]
         }
       ]
     },

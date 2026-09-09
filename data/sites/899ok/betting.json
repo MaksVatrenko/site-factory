@@ -103,22 +103,17 @@
           "text": "Shakib's wicket props and Mustafizur economy lines are the two bets my chat argues about most."
         },
         {
-          "type": "title",
-          "tag": "h3",
-          "text": "BPL Betting on 899OK"
-        },
-        {
-          "type": "text",
-          "text": "Every BPL fixture carries 40+ live markets. Player prop bets on local heroes always draw a crowd."
-        },
-        {
-          "type": "title",
-          "tag": "h3",
-          "text": "IPL & International Cricket"
-        },
-        {
-          "type": "text",
-          "text": "IPL gets the deepest book — 60+ markets on marquee fixtures — plus full coverage of every Bangladesh Test, ODI and T20I."
+          "type": "cards",
+          "items": [
+            {
+              "title": "BPL Betting on 899OK",
+              "text": "Every BPL fixture carries 40+ live markets. Player prop bets on local heroes always draw a crowd."
+            },
+            {
+              "title": "IPL & International Cricket",
+              "text": "IPL gets the deepest book — 60+ markets on marquee fixtures — plus full coverage of every Bangladesh Test, ODI and T20I."
+            }
+          ]
         }
       ]
     },
@@ -256,22 +251,17 @@
           "text": "Winning bets settle automatically the moment the match result is confirmed."
         },
         {
-          "type": "title",
-          "tag": "h3",
-          "text": "bKash Payouts"
-        },
-        {
-          "type": "text",
-          "text": "On amounts under ৳25,000 my bKash withdrawals usually hit in 10–15 minutes. Above that, expect a manual review that adds up to an hour."
-        },
-        {
-          "type": "title",
-          "tag": "h3",
-          "text": "Bank Transfer Timing"
-        },
-        {
-          "type": "text",
-          "text": "Bank transfers clear in 20–45 minutes on weekdays. Friday evenings are slower."
+          "type": "cards",
+          "items": [
+            {
+              "title": "bKash Payouts",
+              "text": "On amounts under ৳25,000 my bKash withdrawals usually hit in 10–15 minutes. Above that, expect a manual review that adds up to an hour."
+            },
+            {
+              "title": "Bank Transfer Timing",
+              "text": "Bank transfers clear in 20–45 minutes on weekdays. Friday evenings are slower."
+            }
+          ]
         }
       ]
     },

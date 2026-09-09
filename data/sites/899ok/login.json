@@ -157,22 +157,17 @@
           "text": "Phishing watch: if you get an SMS or email that looks like it's from 899OK and pushes a login link, check the domain letter by letter. Anything with \"899ok-bonus\" or \"899ok-official\" tacked on is a fake."
         },
         {
-          "type": "title",
-          "tag": "h3",
-          "text": "Two-Factor Authentication"
-        },
-        {
-          "type": "text",
-          "text": "You'll find it in Account settings. Highest-value security tick on the list, honestly."
-        },
-        {
-          "type": "title",
-          "tag": "h3",
-          "text": "Spotting a Fake 899OK Login Page"
-        },
-        {
-          "type": "text",
-          "text": "Check the URL character by character. A padlock icon isn't proof of legitimacy — phishing pages have SSL too."
+          "type": "cards",
+          "items": [
+            {
+              "title": "Two-Factor Authentication",
+              "text": "You'll find it in Account settings. Highest-value security tick on the list, honestly."
+            },
+            {
+              "title": "Spotting a Fake 899OK Login Page",
+              "text": "Check the URL character by character. A padlock icon isn't proof of legitimacy — phishing pages have SSL too."
+            }
+          ]
         }
       ]
     },
@@ -201,22 +196,17 @@
           "text": "If you've lost the phone number too: message support with your registered name, rough signup date, last deposit amount + method, and a clear NID scan. They'll manually verify within 24–48 hours."
         },
         {
-          "type": "title",
-          "tag": "h3",
-          "text": "Recovery via SMS"
-        },
-        {
-          "type": "text",
-          "text": "A 6-digit code hits your registered number. The reset window closes after 10 minutes."
-        },
-        {
-          "type": "title",
-          "tag": "h3",
-          "text": "When Your Old Number Is Gone"
-        },
-        {
-          "type": "text",
-          "text": "Contact live chat with NID, last deposit method and date. Verified accounts usually recover inside 24 hours."
+          "type": "cards",
+          "items": [
+            {
+              "title": "Recovery via SMS",
+              "text": "A 6-digit code hits your registered number. The reset window closes after 10 minutes."
+            },
+            {
+              "title": "When Your Old Number Is Gone",
+              "text": "Contact live chat with NID, last deposit method and date. Verified accounts usually recover inside 24 hours."
+            }
+          ]
         }
       ]
     },
@@ -245,22 +235,17 @@
           "text": "Most BD players default to mobile. I only fire up desktop when there's a big cricket night and I want three markets on-screen at once."
         },
         {
-          "type": "title",
-          "tag": "h3",
-          "text": "Logging In on Mobile"
-        },
-        {
-          "type": "text",
-          "text": "The app keeps your session indefinitely; the mobile browser signs you out after roughly 48 hours of inactivity."
-        },
-        {
-          "type": "title",
-          "tag": "h3",
-          "text": "Desktop and Shared Devices"
-        },
-        {
-          "type": "text",
-          "text": "Always log out on shared machines. Account settings shows your last 20 sessions with device and rough location."
+          "type": "cards",
+          "items": [
+            {
+              "title": "Logging In on Mobile",
+              "text": "The app keeps your session indefinitely; the mobile browser signs you out after roughly 48 hours of inactivity."
+            },
+            {
+              "title": "Desktop and Shared Devices",
+              "text": "Always log out on shared machines. Account settings shows your last 20 sessions with device and rough location."
+            }
+          ]
         }
       ]
     },

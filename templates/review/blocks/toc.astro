@@ -1,5 +1,6 @@
 ---
-import { asList, asRecords, asText } from '../../_shared/props.mjs';
+import { asRecords, asText } from '../../_shared/props.mjs';
+import Heading from '../Heading.astro';
 
 const { heading, items } = Astro.props;
 const title = asText(heading);
@@ -15,9 +16,9 @@ const entries = asRecords(items)
 
 {entries.length > 0 && (
   <section class="toc section">
-    <div class="container">
+    <div class="container toc__inner">
+      {title && <Heading text={title} />}
       <nav class="toc__card" aria-label={title || 'Table of contents'}>
-        {title && <h2 class="toc__heading">{title}</h2>}
         <ul class="toc__grid">
           {entries.map((entry) => (
             <li>
@@ -35,6 +36,14 @@ const entries = asRecords(items)
 )}
 
 <style>
+  /* The heading sits outside the card, aligned with every other section heading on the page --
+     inside it, the one section that summarises the page was the only one whose title was boxed
+     away from the left edge the rest share. */
+  .toc__inner {
+    display: grid;
+    gap: 1.5rem;
+  }
+
   .toc__card {
     display: block;
     padding: 1.75rem;
@@ -42,11 +51,6 @@ const entries = asRecords(items)
     border: 1px solid var(--border-default);
     border-top: 3px solid var(--border-accent);
     border-radius: var(--radius);
-  }
-
-  .toc__heading {
-    margin-bottom: 1rem;
-    font-size: 1.1rem;
   }
 
   .toc__grid {

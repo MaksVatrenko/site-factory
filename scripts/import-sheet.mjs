@@ -144,7 +144,7 @@ async function main() {
     );
   }
 
-  console.log(`\nСобрать: SITE_DIR=${dir} TEMPLATE=review SCHEME=night OUT_DIR=output/${siteName} npm run build:site`);
+  console.log(`\nСобрать: SITE_DIR=${dir} TEMPLATE=review SCHEME=dark OUT_DIR=output/${siteName} npm run build:site`);
 }
 
 if (process.argv[1] && process.argv[1].endsWith('import-sheet.mjs')) {
