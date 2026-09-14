@@ -388,9 +388,7 @@ export function loadSiteDirInput(dir) {
     const raw = readJsonFile(join(dir, name));
     const slug = slugFromFileName(name);
     if (isPlainObject(raw) && raw.slug !== undefined) {
-      warnings.push(
-        `«${name}»: поле slug больше не используется — адрес страницы берётся из имени файла (${slug})`,
-      );
+      warnings.push(`${slug}: поле slug больше не используется — адрес берётся из имени файла ${name}`);
     }
     return { raw, slug };
   });
