@@ -4,6 +4,11 @@
 // numeric id, downloading it, running the converter and inventing a file name — eight times per
 // site, every time. The file name is not a detail: it is the page's address (src/lib/site-dir.mjs),
 // so two sheets landing on one file name would silently lose a page.
+//
+// Usage: node scripts/import-sheet.mjs <spreadsheet url or id> <site folder name>
+//
+// A bare id is the easier thing to paste: a full sheet url carries a `?`, which zsh takes
+// for a filename pattern and refuses to run the command at all.
 
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -46,28 +51,34 @@ export function isHomeSheet(sheetName) {
   return HOME_SHEET_NAMES.has(String(sheetName ?? '').trim().toLowerCase());
 }
 
-// Every sheet becomes one file, and the file name is the page's address. The front-page sheet is
-// always home.json, whatever it is called; every other sheet is named after itself. A name already
-// taken — by an earlier sheet ("Bonus" and "bonus!") or by one of the folder's service files (a
-// sheet called "Site" or "Images") — gets a numbered name here, loudly, instead of overwriting what
-// is already there.
+const HOME_FILE = 'home.json';
+
+// Every sheet becomes one file, and the file name is the page's address. home.json — the site root —
+// is reserved from the start for the first front-page sheet: a sheet that only reduces to "home"
+// ("Home!", "🏠 Home") is not a front-page sheet, and must not take the root from the real one just
+// by coming first. Any other name already taken — by an earlier sheet ("Bonus" and "bonus!") or by
+// one of the folder's service files (a sheet called "Site" or "Images") — gets a numbered name here,
+// loudly, instead of overwriting what is already there.
 export function assignTargets(sheets) {
-  const taken = new Set(SERVICE_FILE_NAMES);
+  const taken = new Set([...SERVICE_FILE_NAMES, HOME_FILE]);
   const notes = [];
+  let homeAssigned = false;
 
   return {
     targets: sheets.map((sheet) => {
-      const base = isHomeSheet(sheet.name) ? 'home' : fileNameFor(sheet.name);
+      const isHome = isHomeSheet(sheet.name);
+      if (isHome && !homeAssigned) {
+        homeAssigned = true;
+        return { ...sheet, file: HOME_FILE };
+      }
+
+      const base = isHome ? 'home' : fileNameFor(sheet.name);
       let file = `${base}.json`;
       if (taken.has(file)) {
         let n = 2;
         while (taken.has(`${base}-${n}.json`)) n += 1;
         const renamed = `${base}-${n}.json`;
-        notes.push(
-          SERVICE_FILE_NAMES.includes(file)
-            ? `Лист «${sheet.name}» совпадает со служебным файлом ${file} — использован «${renamed}»`
-            : `Лист «${sheet.name}» даёт то же имя файла, что и предыдущий — использован «${renamed}»`,
-        );
+        notes.push(collisionNote(sheet.name, file, isHome, renamed));
         file = renamed;
       }
       taken.add(file);
@@ -75,6 +86,20 @@ export function assignTargets(sheets) {
     }),
     notes,
   };
+}
+
+// Says why a sheet did not get the file name it asked for — the three causes are fixed in three
+// different places, so the note names which one it was.
+function collisionNote(sheetName, file, isHome, renamed) {
+  if (SERVICE_FILE_NAMES.includes(file)) {
+    return `Лист «${sheetName}» совпадает со служебным файлом ${file} — использован «${renamed}»`;
+  }
+  if (file === HOME_FILE) {
+    return isHome
+      ? `Лист «${sheetName}» — ещё одна главная страница, главной остаётся первая — использован «${renamed}»`
+      : `Лист «${sheetName}» не главная страница, но даёт имя ${HOME_FILE} — использован «${renamed}»`;
+  }
+  return `Лист «${sheetName}» даёт то же имя файла, что и предыдущий — использован «${renamed}»`;
 }
 
 async function fetchText(url, what) {

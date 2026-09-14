@@ -95,6 +95,18 @@ describe('assignTargets', () => {
     ]);
     expect(targets.map((t) => t.file)).toEqual(['home.json', 'home-2.json']);
     expect(notes).toHaveLength(1);
+    expect(notes[0]).toContain('ещё одна главная страница');
+  });
+
+  it('never lets a sheet that only reduces to "home" take the site root from the real front page', () => {
+    const { targets, notes } = assignTargets([
+      { name: 'Home!', gid: '1' },
+      { name: 'Home', gid: '2' },
+    ]);
+    expect(targets.map((t) => t.file)).toEqual(['home-2.json', 'home.json']);
+    expect(notes).toEqual([
+      'Лист «Home!» не главная страница, но даёт имя home.json — использован «home-2.json»',
+    ]);
   });
 
   it('never names a page after a service file', () => {
