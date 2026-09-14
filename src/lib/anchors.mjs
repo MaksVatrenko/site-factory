@@ -21,22 +21,18 @@ function slugify(text) {
     .replace(/-+$/g, '');
 }
 
-// A `section` block names its heading through its own ordered `content` array now -- the first
-// `title` element in it, wherever it sits -- rather than a dedicated `heading` field: content
-// decides what a section contains and in what order, so the heading is no longer guaranteed to be
-// entry zero. Every other block type (hero, faq, links) is untouched by that change and keeps
-// naming its heading directly through `props.heading`.
-function firstTitleText(content) {
+function firstOfType(content, type) {
   const list = Array.isArray(content) ? content : [];
-  const title = list.find(
-    (entry) => entry && typeof entry === 'object' && !Array.isArray(entry) && entry.type === 'title',
+  return list.find(
+    (entry) => entry && typeof entry === 'object' && !Array.isArray(entry) && entry.type === type,
   );
-  return title && typeof title.text === 'string' ? title.text : '';
 }
 
+// Every block names its heading the same way now: the first `title` element in its content,
+// wherever it sits — content order is the author's call, so it is not always entry zero.
 function headingOf(block) {
-  if (block.type === 'section') return firstTitleText(block.props.content);
-  return typeof block.props.heading === 'string' ? block.props.heading : '';
+  const title = firstOfType(block.props.content, 'title');
+  return title && typeof title.text === 'string' ? title.text : '';
 }
 
 function uniqueAnchor(base, taken, index) {
@@ -68,12 +64,15 @@ export function linkAnchors(page) {
   });
 
   // Then hand each contents entry the anchor of the section holding the same position after it.
-  // An entry with no section left to point at keeps its label and simply is not a link.
+  // The contents are the first list in the toc block's content; the pairs are stored beside it as
+  // `tocLinks`, which the toc block draws in that list's place. An entry with no section left to
+  // point at keeps its label and simply is not a link.
   for (const [index, block] of blocks.entries()) {
     if (block?.type !== 'toc' || !block.props) continue;
     const targets = blocks.slice(index + 1).filter((candidate) => candidate?.props?.anchor);
-    const labels = Array.isArray(block.props?.items) ? block.props.items : [];
-    block.props.items = labels.map((label, position) => ({
+    const list = firstOfType(block.props.content, 'list');
+    const labels = Array.isArray(list?.items) ? list.items : [];
+    block.props.tocLinks = labels.map((label, position) => ({
       label: typeof label === 'string' ? label : '',
       anchor: targets[position]?.props.anchor ?? '',
     }));

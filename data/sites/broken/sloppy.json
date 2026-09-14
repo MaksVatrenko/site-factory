@@ -4,27 +4,39 @@
     { "type": "hero" },
     {
       "type": "hero",
-      "heading": { "note": "broken heading" },
-      "paragraphs": { "note": "broken paragraphs" }
+      "heading": "Old-style heading nobody reads",
+      "paragraphs": ["Old-style paragraph"]
     },
     { "title": "no type at all" },
     "just a string",
-    { "type": "carousel", "items": [] },
-    { "type": "faq", "heading": "Still nothing to show", "items": "nope" },
-    { "type": "faq", "items": [null, { "q": "only a question" }] },
+    {
+      "type": "carousel",
+      "content": [{ "type": "text", "text": "An unknown block type still shows its content" }]
+    },
+    { "type": "faq", "content": "not an array at all" },
+    { "type": "faq", "content": [null, { "type": "toggle", "title": "only a question" }] },
     {
       "type": "section",
       "content": [
         "just a string",
         { "note": "entry with no type field" },
         { "type": "quote", "text": "Unknown element type, dropped with a warning" },
-        { "type": "title", "tag": "h1", "text": "A content file cannot fake an h1" },
+        { "type": "title", "tag": "h2", "text": "Old-style title with no heading key" },
+        { "type": "title", "h2": "First heading key wins", "h3": "Second key ignored" },
+        { "type": "title", "h1": "The one real h1" },
+        { "type": "title", "h1": "A second h1 becomes h2" },
+        { "type": "title", "h2": "   " },
         { "type": "list", "items": "Coerced into a single list item" },
         { "type": "table", "columns": ["A", "B"], "rows": [] },
+        { "image": "not-in-registry" },
+        { "image": "missing-file" },
+        { "image": "no-src" },
+        { "image": "script" },
+        { "type": "image", "image": "no-alt" },
+        { "image": 42 },
         { "type": "text", "text": "Text still renders after every broken entry above it" }
       ]
     },
-    { "type": "section", "content": "not an array at all" },
-    { "type": "faq", "heading": { "note": "x" }, "items": [{ "q": 1, "a": [] }] }
+    { "type": "section", "content": "not an array at all" }
   ]
 }

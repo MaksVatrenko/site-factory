@@ -1,9 +1,9 @@
 // Turns a whole content spreadsheet into a ready site folder.
 //
 // The spreadsheet holds one sheet per page. Doing this by hand means looking up each sheet's
-// numeric id, downloading it, running the converter, inventing a filename and typing a slug —
-// eight times per site, every time. That is also where a real mistake came from: two pages ending
-// up with the same slug, which silently pushes the second one to /page-1.
+// numeric id, downloading it, running the converter and inventing a file name — eight times per
+// site, every time. The file name is not a detail: it is the page's address (src/lib/site-dir.mjs),
+// so two sheets landing on one file name would silently lose a page.
 //
 // Usage: node scripts/import-sheet.mjs <spreadsheet url or id> <site folder name>
 //
@@ -12,6 +12,7 @@
 
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { SERVICE_FILE_NAMES, slugFromFileName } from '../src/lib/site-dir.mjs';
 import { sheetToPage } from './sheet-to-json.mjs';
 
 // Sheet names that mean "this is the front page" rather than a page called "home".
@@ -46,37 +47,59 @@ export function fileNameFor(sheetName) {
   return base === '' ? 'page' : base;
 }
 
-export function slugFor(sheetName) {
-  const base = fileNameFor(sheetName);
-  return HOME_SHEET_NAMES.has(String(sheetName ?? '').trim().toLowerCase()) ? '/' : `/${base}`;
+export function isHomeSheet(sheetName) {
+  return HOME_SHEET_NAMES.has(String(sheetName ?? '').trim().toLowerCase());
 }
 
-// Two sheets can reduce to the same name ("Bonus" and "bonus!"), and two pages sharing a slug is
-// exactly the failure this script exists to prevent — so collisions are resolved here, loudly,
-// rather than discovered later as a page that quietly became /page-1.
+const HOME_FILE = 'home.json';
+
+// Every sheet becomes one file, and the file name is the page's address. home.json — the site root —
+// is reserved from the start for the first front-page sheet: a sheet that only reduces to "home"
+// ("Home!", "🏠 Home") is not a front-page sheet, and must not take the root from the real one just
+// by coming first. Any other name already taken — by an earlier sheet ("Bonus" and "bonus!") or by
+// one of the folder's service files (a sheet called "Site" or "Images") — gets a numbered name here,
+// loudly, instead of overwriting what is already there.
 export function assignTargets(sheets) {
-  const takenFiles = new Set();
-  const takenSlugs = new Set();
+  const taken = new Set([...SERVICE_FILE_NAMES, HOME_FILE]);
   const notes = [];
+  let homeAssigned = false;
 
   return {
     targets: sheets.map((sheet) => {
-      let file = fileNameFor(sheet.name);
-      let slug = slugFor(sheet.name);
-      if (takenSlugs.has(slug)) {
-        let n = 2;
-        while (takenSlugs.has(`${slug}-${n}`)) n += 1;
-        notes.push(`Лист «${sheet.name}» даёт тот же адрес, что и предыдущий — использован «${slug}-${n}»`);
-        slug = `${slug}-${n}`;
-        file = `${file}-${n}`;
+      const isHome = isHomeSheet(sheet.name);
+      if (isHome && !homeAssigned) {
+        homeAssigned = true;
+        return { ...sheet, file: HOME_FILE };
       }
-      while (takenFiles.has(file)) file = `${file}-x`;
-      takenFiles.add(file);
-      takenSlugs.add(slug);
-      return { ...sheet, file: `${file}.json`, slug };
+
+      const base = isHome ? 'home' : fileNameFor(sheet.name);
+      let file = `${base}.json`;
+      if (taken.has(file)) {
+        let n = 2;
+        while (taken.has(`${base}-${n}.json`)) n += 1;
+        const renamed = `${base}-${n}.json`;
+        notes.push(collisionNote(sheet.name, file, isHome, renamed));
+        file = renamed;
+      }
+      taken.add(file);
+      return { ...sheet, file };
     }),
     notes,
   };
+}
+
+// Says why a sheet did not get the file name it asked for — the three causes are fixed in three
+// different places, so the note names which one it was.
+function collisionNote(sheetName, file, isHome, renamed) {
+  if (SERVICE_FILE_NAMES.includes(file)) {
+    return `Лист «${sheetName}» совпадает со служебным файлом ${file} — использован «${renamed}»`;
+  }
+  if (file === HOME_FILE) {
+    return isHome
+      ? `Лист «${sheetName}» — ещё одна главная страница, главной остаётся первая — использован «${renamed}»`
+      : `Лист «${sheetName}» не главная страница, но даёт имя ${HOME_FILE} — использован «${renamed}»`;
+  }
+  return `Лист «${sheetName}» даёт то же имя файла, что и предыдущий — использован «${renamed}»`;
 }
 
 async function fetchText(url, what) {
@@ -115,9 +138,10 @@ async function main() {
       `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${target.gid}`,
       `лист «${target.name}»`,
     );
-    const page = sheetToPage(csv, target.slug);
+    const page = sheetToPage(csv);
     writeFileSync(join(dir, target.file), `${JSON.stringify(page, null, 2)}\n`);
-    console.log(`  ${target.file.padEnd(18)} ${target.slug.padEnd(12)} ${page.blocks.length} блоков`);
+    const route = slugFromFileName(target.file);
+    console.log(`  ${target.file.padEnd(18)} ${route.padEnd(12)} ${page.blocks.length} блоков`);
   }
 
   for (const note of notes) console.log(`\n  ${note}`);
@@ -132,8 +156,8 @@ async function main() {
     // geo and partnerUrl at build time. They are still written so a build straight from the
     // command line, with no form involved, has sane values instead of falling back to example.com.
     const nav = targets
-      .filter((target) => target.slug !== '/')
-      .map((target) => ({ label: target.name, href: target.slug }));
+      .map((target) => ({ label: target.name, href: slugFromFileName(target.file) }))
+      .filter((item) => item.href !== '/');
     writeFileSync(
       siteFile,
       `${JSON.stringify({ domain: `${siteName}.com`, locale: 'en-US', brand: { name: siteName }, nav, partnerUrl: '' }, null, 2)}\n`,

@@ -11,7 +11,9 @@ import { readManifest } from '../../src/lib/templates.mjs';
 // block's file, plus one entry in that template's manifest.json.
 const elementModules = import.meta.glob('../*/elements/*.astro', { eager: true });
 
-const { entry, templateId } = Astro.props;
+// `context` is what the enclosing block tells its elements about where they sit — the hero asks its
+// pictures to load at once — passed through untouched, so no element has to know which block it is in.
+const { entry, templateId, context } = Astro.props;
 
 // `entry` has already been through asRecords in section.astro, so it is always a plain object by
 // the time it gets here -- but this file has no way to enforce that a future caller keeps that
@@ -37,4 +39,4 @@ const key = `../${templateId}/elements/${type}.astro`;
 const Component = isSupported ? elementModules[key]?.default : undefined;
 ---
 
-{Component && <Component {...entry} />}
+{Component && <Component {...entry} context={context} />}

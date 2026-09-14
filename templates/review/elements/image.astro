@@ -1,0 +1,33 @@
+---
+import { asText } from '../../_shared/props.mjs';
+
+// A picture from the site's images.json. The engine has already turned the name into { src, alt,
+// width, height } and dropped every picture it could not find (src/lib/content.mjs), so all this
+// decides is how it loads: lazily, unless the enclosing block asks for it at once — the hero does,
+// because a first-screen picture held back until scrolling is what the load metric waits on.
+const { image, context } = Astro.props;
+const src = asText(image?.src);
+const alt = typeof image?.alt === 'string' ? image.alt : '';
+const eager = Boolean(context?.eagerImages);
+---
+
+{src && (
+  <img
+    class="rimage"
+    src={src}
+    alt={alt}
+    width={image.width}
+    height={image.height}
+    loading={eager ? 'eager' : 'lazy'}
+    decoding="async"
+    fetchpriority={eager ? 'high' : undefined}
+  />
+)}
+
+<style>
+  .rimage {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius);
+  }
+</style>

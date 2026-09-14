@@ -1,8 +1,14 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildSite, readOutput } from './helpers/build.mjs';
+import {
+  SERVICE_FILE_NAMES,
+  isPageFileName,
+  loadSiteDirInput,
+  slugFromFileName,
+} from '../src/lib/site-dir.mjs';
 
 function makeSiteDir() {
   return mkdtempSync(join(tmpdir(), 'site-factory-site-dir-'));
@@ -15,6 +21,164 @@ function writeJson(dir, name, data) {
 function outputPathFor(slug) {
   return slug === '/' ? 'index.html' : join(slug.slice(1), 'index.html');
 }
+
+// A folder of files, written from a { fileName: content } map. A string is written verbatim (for
+// the "not valid JSON" case); anything else is written as JSON.
+function writeFolder(files) {
+  const dir = makeSiteDir();
+  for (const [name, data] of Object.entries(files)) {
+    writeFileSync(join(dir, name), typeof data === 'string' ? data : JSON.stringify(data));
+  }
+  return dir;
+}
+
+describe('a page address comes from its file name', () => {
+  it('maps a file name to a route', () => {
+    expect(slugFromFileName('casino.json')).toBe('/casino');
+    expect(slugFromFileName('live-dealer.json')).toBe('/live-dealer');
+  });
+
+  it('treats home.json as the site root, in any case', () => {
+    expect(slugFromFileName('home.json')).toBe('/');
+    expect(slugFromFileName('Home.json')).toBe('/');
+    expect(slugFromFileName('HOME.json')).toBe('/');
+  });
+
+  it('does not treat a name that merely contains "home" as the root', () => {
+    expect(slugFromFileName('homepage.json')).toBe('/homepage');
+    expect(slugFromFileName('my-home.json')).toBe('/my-home');
+  });
+
+  it('leaves the rest of the name alone — cleaning it is the slug rules\' job', () => {
+    expect(slugFromFileName('Live Dealer.json')).toBe('/Live Dealer');
+  });
+});
+
+describe('service files are not pages', () => {
+  it('names exactly the two service files', () => {
+    expect(SERVICE_FILE_NAMES).toEqual(['site.json', 'images.json']);
+  });
+
+  it('tells a page file from a service file or a non-JSON file', () => {
+    expect(isPageFileName('casino.json')).toBe(true);
+    expect(isPageFileName('site.json')).toBe(false);
+    expect(isPageFileName('images.json')).toBe(false);
+    expect(isPageFileName('notes.txt')).toBe(false);
+  });
+});
+
+describe('loadSiteDirInput', () => {
+  it('gives each page the address of its file, home first, the rest by file name', () => {
+    const dir = writeFolder({
+      'site.json': { brand: { name: 'Folder' } },
+      'casino.json': { title: 'Casino' },
+      'about.json': { title: 'About' },
+      'home.json': { title: 'Home' },
+    });
+    try {
+      const { input, warnings } = loadSiteDirInput(dir);
+      expect(input.pages.map((page) => [page.slug, page.meta.title])).toEqual([
+        ['/', 'Home'],
+        ['/about', 'About'],
+        ['/casino', 'Casino'],
+      ]);
+      expect(input.brand).toEqual({ name: 'Folder' });
+      expect(warnings).toEqual([]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('reads images.json as the image registry, not as a page', () => {
+    const registry = { main: { src: '/images/main.webp', alt: 'Main' } };
+    const dir = writeFolder({ 'home.json': { title: 'Home' }, 'images.json': registry });
+    try {
+      const { input, images } = loadSiteDirInput(dir);
+      expect(input.pages).toHaveLength(1);
+      expect(images).toEqual(registry);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('returns no registry when the folder has no images.json', () => {
+    const dir = writeFolder({ 'home.json': { title: 'Home' } });
+    try {
+      expect(loadSiteDirInput(dir).images).toBeUndefined();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('ignores a slug field left in a page file, and says which file and which address won', () => {
+    // A forgotten "slug": "/promo" in bonus.json would otherwise silently give /bonus, and the
+    // reader would go looking for where /promo went.
+    const dir = writeFolder({
+      'home.json': { title: 'Home' },
+      'bonus.json': { slug: '/promo', title: 'Bonus' },
+    });
+    try {
+      const { input, warnings } = loadSiteDirInput(dir);
+      expect(input.pages.map((page) => page.slug)).toEqual(['/', '/bonus']);
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toContain('bonus.json');
+      expect(warnings[0]).toContain('/bonus');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('warns when the folder has no home.json', () => {
+    const dir = writeFolder({ 'casino.json': { title: 'Casino' } });
+    try {
+      const { input, warnings } = loadSiteDirInput(dir);
+      expect(input.pages.map((page) => page.slug)).toEqual(['/casino']);
+      expect(warnings.join(' ')).toContain('home.json');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('does not read pages from subfolders, public/ included', () => {
+    const dir = writeFolder({ 'home.json': { title: 'Home' } });
+    try {
+      mkdirSync(join(dir, 'bn'));
+      writeFileSync(join(dir, 'bn', 'casino.json'), JSON.stringify({ title: 'Nested' }));
+      mkdirSync(join(dir, 'public'));
+      writeFileSync(join(dir, 'public', 'data.json'), '{}');
+      expect(loadSiteDirInput(dir).input.pages.map((page) => page.slug)).toEqual(['/']);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('passes a page file that is not an object through for the normalizer to drop', () => {
+    const dir = writeFolder({ 'home.json': { title: 'Home' }, 'odd.json': '"just a string"' });
+    try {
+      expect(loadSiteDirInput(dir).input.pages[1]).toBe('just a string');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('fails on an images.json that is not JSON, naming the file', () => {
+    const dir = writeFolder({ 'home.json': { title: 'Home' }, 'images.json': '{ nope' });
+    try {
+      expect(() => loadSiteDirInput(dir)).toThrow(/images\.json/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('still fails on a folder with no pages, even one holding both service files', () => {
+    const dir = writeFolder({ 'site.json': {}, 'images.json': {} });
+    try {
+      expect(() => loadSiteDirInput(dir)).toThrow(/no pages/i);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
 
 // SITE_DIR builds a site from a folder of pages. These tests cover the real client fixture
 // (data/sites/899ok), SITE_DIR being required at all, the two folder-shaped edge cases (no
@@ -78,10 +242,9 @@ describe('a folder with no site.json is still a usable site', () => {
     const dir = makeSiteDir();
     try {
       writeJson(dir, 'home.json', {
-        slug: '/',
         title: 'Only Page, No Settings',
         description: 'A folder with no site.json at all.',
-        blocks: [{ type: 'hero', heading: 'Hello' }],
+        blocks: [{ type: 'hero', content: [{ type: 'title', h1: 'Hello' }] }],
       });
       const { outDir } = buildSite({
         outDir: join('output', 'test-site-dir-no-settings'),
@@ -114,7 +277,7 @@ describe('a malformed nav in site.json does not throw', () => {
     const dir = makeSiteDir();
     try {
       writeJson(dir, 'site.json', { brand: { name: 'MalformedNav' }, nav: 'not a list' });
-      writeJson(dir, 'home.json', { slug: '/', title: 'Home', description: 'd', blocks: [] });
+      writeJson(dir, 'home.json', { title: 'Home', description: 'd', blocks: [] });
       const { outDir, log } = buildSite({
         outDir: join('output', 'test-site-dir-bad-nav'),
         env: { SITE_DIR: dir },
@@ -128,54 +291,56 @@ describe('a malformed nav in site.json does not throw', () => {
 });
 
 describe('a page whose blocks are reordered or partially stripped still builds', () => {
-  it('renders what a supported block can show and drops the rest, in whatever order they arrive', () => {
+  it('renders every block in the order it arrives, and shows an unknown block type as a section', () => {
     const dir = makeSiteDir();
     try {
       writeJson(dir, 'site.json', { brand: { name: 'Reorder' } });
       writeJson(dir, 'home.json', {
-        slug: '/',
         title: 'Home',
         description: 'd',
-        blocks: [{ type: 'hero', heading: 'Home hero' }],
+        blocks: [{ type: 'hero', content: [{ type: 'title', h1: 'Home hero' }] }],
       });
       writeJson(dir, 'mixed.json', {
-        slug: '/mixed',
         title: 'Mixed',
         description: 'd',
-        // Deliberately out of the "natural" hero-first order, missing fields a client rearranging
-        // this by hand would plausibly leave out, and one block type ("cards") the review template
-        // does not declare at all.
+        // Out of the "natural" hero-first order, with a stripped answer, and a block type
+        // ("gallery") the review template has no shell for.
         blocks: [
           {
             type: 'faq',
-            heading: 'Frequently Asked',
-            items: [
-              { q: 'Does this survive reordering?', a: 'Yes.' },
-              { q: 'What about a stripped answer?' },
+            content: [
+              { type: 'title', h2: 'Frequently Asked' },
+              { type: 'toggle', title: 'Does this survive reordering?', text: 'Yes.' },
+              { type: 'toggle', title: 'What about a stripped answer?' },
             ],
           },
-          { type: 'cards', heading: 'Not a block review declares', items: [] },
+          { type: 'gallery', content: [{ type: 'text', text: 'Shown as an ordinary section' }] },
           {
             type: 'section',
-            content: [{ type: 'title', tag: 'h2', text: 'A stripped section with nothing else' }],
+            content: [{ type: 'title', h2: 'A stripped section with nothing else' }],
           },
-          { type: 'hero', heading: 'Reordered hero' },
+          { type: 'hero', content: [{ type: 'title', h1: 'Reordered hero' }] },
         ],
       });
       const { outDir, log } = buildSite({
         outDir: join('output', 'test-site-dir-reordered-blocks'),
         env: { SITE_DIR: dir },
       });
-      expect(existsSync(join(outDir, 'mixed', 'index.html'))).toBe(true);
       const html = readOutput(outDir, join('mixed', 'index.html'));
-      expect(html).toContain('Frequently Asked');
       expect(html).toContain('Does this survive reordering?');
-      // A block reduced to just a heading still renders — a stripped block is not a crash.
-      expect(html).toContain('A stripped section with nothing else');
-      // "cards" is not a block the review template declares — dropped exactly like any other
-      // unsupported block type, wherever it sits in the list, not a crash.
-      expect(html).not.toContain('Not a block review declares');
-      expect(log).toContain('cards');
+      expect(html).toContain('What about a stripped answer?');
+      expect(log).toContain('«gallery» — выведен как обычная секция');
+
+      const order = [
+        'Frequently Asked',
+        'Shown as an ordinary section',
+        'A stripped section with nothing else',
+        'Reordered hero',
+      ].map((needle) => html.indexOf(needle));
+      expect(order.every((position) => position > -1)).toBe(true);
+      for (let i = 1; i < order.length; i += 1) {
+        expect(order[i]).toBeGreaterThan(order[i - 1]);
+      }
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

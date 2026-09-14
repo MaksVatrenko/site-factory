@@ -1,29 +1,45 @@
 {
-  "slug": "/slots",
   "title": "899OK Slots | Sweet Bonanza, Megaways & Jackpots",
   "description": "Explore 800+ slots at 899OK — Sweet Bonanza, Gates of Olympus, Fortune Tiger and crore-sized jackpots. My honest player guide from Bangladesh.",
   "blocks": [
     {
       "type": "hero",
-      "heading": "899OK Slots — Real Reels, Honest Reviews",
-      "paragraphs": [
-        "Late-night spins with a cup of cha beside me — that's how most of my slot sessions start. If you haven't properly wandered through the slots section at 899OK, you're skipping the noisiest, most colourful part of the lobby. 800+ titles live in there, from three-reel fruit machines to Megaways monsters offering 117,000+ ways to win.",
-        "The jackpot tickers keep me hooked. Watching a Mega Moolah-style pot creep past ৳3 crore quietly does something to your brain — you start dreaming."
+      "content": [
+        {
+          "type": "title",
+          "h1": "899OK Slots — Real Reels, Honest Reviews"
+        },
+        {
+          "type": "text",
+          "text": "Late-night spins with a cup of cha beside me — that's how most of my slot sessions start. If you haven't properly wandered through the slots section at 899OK, you're skipping the noisiest, most colourful part of the lobby. 800+ titles live in there, from three-reel fruit machines to Megaways monsters offering 117,000+ ways to win."
+        },
+        {
+          "type": "text",
+          "text": "The jackpot tickers keep me hooked. Watching a Mega Moolah-style pot creep past ৳3 crore quietly does something to your brain — you start dreaming."
+        }
       ]
     },
     {
       "type": "toc",
-      "heading": "What's on This Page",
-      "items": [
-        "Top Slots at 899OK",
-        "Slot Breakdown",
-        "Progressive Jackpots",
-        "Megaways & Bonus Features",
-        "RTP & Volatility Explained",
-        "Free Spins at 899OK",
-        "Providers Worth Playing",
-        "Practical Slot Tips",
-        "Slot FAQ"
+      "content": [
+        {
+          "type": "title",
+          "h2": "What's on This Page"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Top Slots at 899OK",
+            "Slot Breakdown",
+            "Progressive Jackpots",
+            "Megaways & Bonus Features",
+            "RTP & Volatility Explained",
+            "Free Spins at 899OK",
+            "Providers Worth Playing",
+            "Practical Slot Tips",
+            "Slot FAQ"
+          ]
+        }
       ]
     },
     {
@@ -31,8 +47,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "Top Slot Games at 899OK"
+          "h2": "Top Slot Games at 899OK"
         },
         {
           "type": "text",
@@ -117,8 +132,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "Slot-by-Slot Breakdown"
+          "h2": "Slot-by-Slot Breakdown"
         },
         {
           "type": "text",
@@ -143,8 +157,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "Progressive Jackpot Slots at 899OK"
+          "h2": "Progressive Jackpot Slots at 899OK"
         },
         {
           "type": "text",
@@ -178,8 +191,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "Megaways & Bonus Features"
+          "h2": "Megaways & Bonus Features"
         },
         {
           "type": "text",
@@ -205,8 +217,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "Understanding RTP & Volatility"
+          "h2": "Understanding RTP & Volatility"
         },
         {
           "type": "text",
@@ -252,8 +263,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "Free Spins Offers at 899OK"
+          "h2": "Free Spins Offers at 899OK"
         },
         {
           "type": "text",
@@ -279,8 +289,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "Slot Providers I Actually Trust"
+          "h2": "Slot Providers I Actually Trust"
         },
         {
           "type": "text",
@@ -337,8 +346,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "How to Start Playing Slots at 899OK"
+          "h2": "How to Start Playing Slots at 899OK"
         },
         {
           "type": "text",
@@ -365,8 +373,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "Practical Slot Playing Tips"
+          "h2": "Practical Slot Playing Tips"
         },
         {
           "type": "text",
@@ -405,8 +412,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "Final Word on 899OK Slots"
+          "h2": "Final Word on 899OK Slots"
         },
         {
           "type": "text",
@@ -424,39 +430,54 @@
     },
     {
       "type": "links",
-      "heading": "899OK — More Pages"
+      "content": [
+        {
+          "type": "title",
+          "h2": "899OK — More Pages"
+        }
+      ]
     },
     {
       "type": "faq",
-      "heading": "Slot FAQ — RTP, Jackpots and 899OK Free Spins",
-      "items": [
+      "content": [
         {
-          "q": "What's the best slot at 899OK?",
-          "a": "Depends on your goal. Sweet Bonanza for high-volatility bonus hunts. Starburst for chill low-variance play. Book of Dead for classic bonus chasing."
+          "type": "title",
+          "h2": "Slot FAQ — RTP, Jackpots and 899OK Free Spins"
         },
         {
-          "q": "Are the slot RTPs real at 899OK?",
-          "a": "Yes. The RTP shown on the game info screen is the certified one, audited by iTech Labs and the providers' own compliance teams. It's a long-term average, not a per-session promise."
+          "type": "toggle",
+          "title": "What's the best slot at 899OK?",
+          "text": "Depends on your goal. Sweet Bonanza for high-volatility bonus hunts. Starburst for chill low-variance play. Book of Dead for classic bonus chasing."
         },
         {
-          "q": "Can I play slots on the 899OK app?",
-          "a": "Yes. The Android APK runs every slot in the library. Animations feel smoother than in mobile browser, especially on 4G."
+          "type": "toggle",
+          "title": "Are the slot RTPs real at 899OK?",
+          "text": "Yes. The RTP shown on the game info screen is the certified one, audited by iTech Labs and the providers' own compliance teams. It's a long-term average, not a per-session promise."
         },
         {
-          "q": "What's the minimum slot bet?",
-          "a": "৳10 per spin on most Pragmatic and PG Soft titles. Some jackpot slots need ৳20–50 minimum because of the pool contribution."
+          "type": "toggle",
+          "title": "Can I play slots on the 899OK app?",
+          "text": "Yes. The Android APK runs every slot in the library. Animations feel smoother than in mobile browser, especially on 4G."
         },
         {
-          "q": "Are the jackpots at 899OK legit?",
-          "a": "Yes. They're network jackpots run directly by Microgaming, NetEnt or Playtech. 899OK doesn't control the pot — the game provider does."
+          "type": "toggle",
+          "title": "What's the minimum slot bet?",
+          "text": "৳10 per spin on most Pragmatic and PG Soft titles. Some jackpot slots need ৳20–50 minimum because of the pool contribution."
         },
         {
-          "q": "How do I trigger free spins in a slot?",
-          "a": "Land 3+ scatter symbols on a single spin. Some slots also trigger random free spins through wilds or bonus icons. Every game has its own rules."
+          "type": "toggle",
+          "title": "Are the jackpots at 899OK legit?",
+          "text": "Yes. They're network jackpots run directly by Microgaming, NetEnt or Playtech. 899OK doesn't control the pot — the game provider does."
         },
         {
-          "q": "I'm new — where should I start?",
-          "a": "Create an account in two minutes, deposit ৳500 via bKash, and your welcome package + 100 free spins on Sweet Bonanza will credit instantly."
+          "type": "toggle",
+          "title": "How do I trigger free spins in a slot?",
+          "text": "Land 3+ scatter symbols on a single spin. Some slots also trigger random free spins through wilds or bonus icons. Every game has its own rules."
+        },
+        {
+          "type": "toggle",
+          "title": "I'm new — where should I start?",
+          "text": "Create an account in two minutes, deposit ৳500 via bKash, and your welcome package + 100 free spins on Sweet Bonanza will credit instantly."
         }
       ]
     }

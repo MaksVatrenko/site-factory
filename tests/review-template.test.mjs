@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildSite, readOutput } from './helpers/build.mjs';
@@ -95,7 +95,6 @@ function buildSingleBlockPage(blocks, { nav } = {}) {
   writeFileSync(
     join(dir, 'home.json'),
     JSON.stringify({
-      slug: '/',
       title: 'Fixture',
       blocks: blocks.map(({ type, props }) => ({ type, ...props })),
     }),
@@ -108,7 +107,7 @@ describe('review template: resilience to unusual content shapes', () => {
     const dir = buildSingleBlockPage([
       {
         type: 'section',
-        props: { content: [{ type: 'title', tag: 'h2', text: 'Just a heading, nothing else' }] },
+        props: { content: [{ type: 'title', h2: 'Just a heading, nothing else' }] },
       },
     ]);
     try {
@@ -130,19 +129,43 @@ describe('review template: resilience to unusual content shapes', () => {
     // nothing here depends on what came before or after it in the list.
     const dir = buildSingleBlockPage(
       [
-        { type: 'faq', props: { heading: 'FAQ first', items: [{ q: 'Q?', a: 'A.' }] } },
-        { type: 'links', props: { heading: 'Links second' } },
+        {
+          type: 'faq',
+          props: {
+            content: [
+              { type: 'title', h2: 'FAQ first' },
+              { type: 'toggle', title: 'Q?', text: 'A.' },
+            ],
+          },
+        },
+        { type: 'links', props: { content: [{ type: 'title', h2: 'Links second' }] } },
         {
           type: 'section',
           props: {
             content: [
-              { type: 'title', tag: 'h2', text: 'Section third' },
+              { type: 'title', h2: 'Section third' },
               { type: 'text', text: 'Body text for section third.' },
             ],
           },
         },
-        { type: 'toc', props: { heading: 'TOC fourth', items: ['Section third'] } },
-        { type: 'hero', props: { heading: 'Hero last', paragraphs: ['Lead text.'] } },
+        {
+          type: 'toc',
+          props: {
+            content: [
+              { type: 'title', h2: 'TOC fourth' },
+              { type: 'list', items: ['Section third'] },
+            ],
+          },
+        },
+        {
+          type: 'hero',
+          props: {
+            content: [
+              { type: 'title', h1: 'Hero last' },
+              { type: 'text', text: 'Lead text.' },
+            ],
+          },
+        },
       ],
       { nav: [{ label: 'Casino', href: '/casino' }, { label: 'Slots', href: '/slots' }] },
     );
@@ -191,12 +214,12 @@ describe('review template: a section renders its content array in exactly the gi
         type: 'section',
         props: {
           content: [
-            { type: 'title', tag: 'h2', text: 'First Heading' },
+            { type: 'title', h2: 'First Heading' },
             { type: 'text', text: 'Paragraph before the table.' },
             { type: 'table', columns: ['A', 'B'], rows: [['1', '2']] },
             { type: 'text', text: 'Paragraph after the table.' },
-            { type: 'title', tag: 'h2', text: 'Second Heading Right After' },
-            { type: 'title', tag: 'h4', text: 'A Chosen Heading Level' },
+            { type: 'title', h2: 'Second Heading Right After' },
+            { type: 'title', h4: 'A Chosen Heading Level' },
             { type: 'list', items: ['Item one', 'Item two'] },
           ],
         },
@@ -232,18 +255,73 @@ describe('review template: a section renders its content array in exactly the gi
     }
   });
 
-  it('falls back to h2 for a tag outside h2-h6, and never emits a second h1', () => {
+  it('keeps one h1 per page: the first stays, a later one becomes h2', () => {
     const dir = buildSingleBlockPage([
-      { type: 'section', props: { content: [{ type: 'title', tag: 'h1', text: 'Not A Real H1' }] } },
+      { type: 'hero', props: { content: [{ type: 'title', h1: 'The Page Title' }] } },
+      { type: 'section', props: { content: [{ type: 'title', h1: 'Not A Second H1' }] } },
     ]);
     try {
-      const { outDir } = buildSite({
+      const { outDir, log } = buildSite({
         outDir: join('output', 'test-review-title-h1-guard'),
         env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'dark' },
       });
       const html = readOutput(outDir);
-      expect(html).toMatch(/<h2[^>]*>Not A Real H1<\/h2>/);
-      expect(html).not.toMatch(/<h1[^>]*>Not A Real H1<\/h1>/);
+      expect(html.match(/<h1\b/g)).toHaveLength(1);
+      expect(html).toMatch(/<h1[^>]*>The Page Title<\/h1>/);
+      expect(html).toMatch(/<h2[^>]*>Not A Second H1<\/h2>/);
+      expect(log).toContain('второй h1');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('renders a toggle as a native disclosure in an ordinary section', () => {
+    const dir = buildSingleBlockPage([
+      {
+        type: 'section',
+        props: {
+          content: [
+            { type: 'title', h2: 'Not an FAQ' },
+            { type: 'toggle', title: 'Can a toggle live here?', text: 'Yes, [anywhere](/casino).' },
+          ],
+        },
+      },
+    ]);
+    try {
+      const { outDir } = buildSite({
+        outDir: join('output', 'test-review-toggle'),
+        env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'dark' },
+      });
+      const html = readOutput(outDir);
+      expect(html).toMatch(/<details[^>]*class="rtoggle"/);
+      expect(html).toMatch(/<summary[^>]*>Can a toggle live here\?<\/summary>/);
+      expect(html).toMatch(/<a[^>]*href="\/casino"[^>]*>anywhere<\/a>/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('shows a block type it has no shell for as an ordinary section', () => {
+    const dir = buildSingleBlockPage([
+      {
+        type: 'promo',
+        props: {
+          content: [
+            { type: 'title', h2: 'Promo Heading' },
+            { type: 'text', text: 'Promo body.' },
+          ],
+        },
+      },
+    ]);
+    try {
+      const { outDir, log } = buildSite({
+        outDir: join('output', 'test-review-unknown-block'),
+        env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'dark' },
+      });
+      const html = readOutput(outDir);
+      expect(html).toContain('Promo Heading');
+      expect(html).toContain('Promo body.');
+      expect(log).toContain('«promo» — выведен как обычная секция');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -257,7 +335,7 @@ describe('review template: links inside body text, and card sets', () => {
         type: 'section',
         props: {
           content: [
-            { type: 'title', tag: 'h2', text: 'Linked Section' },
+            { type: 'title', h2: 'Linked Section' },
             { type: 'text', text: 'Open the [full lobby](/casino) tonight.' },
             { type: 'list', items: ['Try the [Andar Bahar table](/casino)'] },
             {
@@ -296,7 +374,7 @@ describe('review template: links inside body text, and card sets', () => {
         type: 'section',
         props: {
           content: [
-            { type: 'title', tag: 'h2', text: 'Unsafe' },
+            { type: 'title', h2: 'Unsafe' },
             { type: 'text', text: 'Tap [here](javascript:alert) to win.' },
           ],
         },
@@ -324,7 +402,7 @@ describe('review template: links inside body text, and card sets', () => {
         type: 'section',
         props: {
           content: [
-            { type: 'title', tag: 'h2', text: 'Two Ways In' },
+            { type: 'title', h2: 'Two Ways In' },
             {
               type: 'cards',
               items: [
@@ -366,5 +444,82 @@ describe('review template: links inside body text, and card sets', () => {
     // same left edge as every other section heading.
     expect(html).toMatch(/<h2[^>]*class="rheading"[^>]*>What&#39;s on This Page<\/h2>/);
     expect(card[0]).not.toContain('<h2');
+  });
+});
+
+describe('review template: pictures from images.json', () => {
+  // A single-page site with three real picture files in its public folder and a registry naming
+  // them — the shape a real site folder has once it carries pictures.
+  function buildWithPictures(blocks, outName) {
+    const dir = buildSingleBlockPage(blocks);
+    const publicDir = join(dir, 'public');
+    mkdirSync(join(publicDir, 'images'), { recursive: true });
+    for (const name of ['hero.webp', 'section.webp', 'card.webp']) {
+      writeFileSync(join(publicDir, 'images', name), 'not really a picture');
+    }
+    writeFileSync(
+      join(dir, 'images.json'),
+      JSON.stringify({
+        hero: { src: '/images/hero.webp', alt: 'Hero picture', width: 1200, height: 600 },
+        section: { src: '/images/section.webp', alt: 'Section picture' },
+        card: { src: '/images/card.webp', alt: 'Card picture' },
+      }),
+    );
+    try {
+      return buildSite({
+        outDir: join('output', outName),
+        env: { SITE_DIR: dir, PUBLIC_DIR: publicDir, TEMPLATE: 'review', SCHEME: 'dark' },
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  it('loads a picture in a section lazily, and one in the hero at once', () => {
+    const { outDir } = buildWithPictures(
+      [
+        { type: 'hero', props: { content: [{ type: 'title', h1: 'Pictures' }, { image: 'hero' }] } },
+        { type: 'section', props: { content: [{ type: 'title', h2: 'Below' }, { image: 'section' }] } },
+      ],
+      'test-review-pictures',
+    );
+    const html = readOutput(outDir);
+    const hero = html.match(/<img[^>]*src="\/images\/hero\.webp"[^>]*>/)?.[0] ?? '';
+    const section = html.match(/<img[^>]*src="\/images\/section\.webp"[^>]*>/)?.[0] ?? '';
+    expect(hero).toContain('alt="Hero picture"');
+    expect(hero).toContain('loading="eager"');
+    expect(hero).toContain('fetchpriority="high"');
+    expect(hero).toContain('width="1200"');
+    expect(section).toContain('alt="Section picture"');
+    expect(section).toContain('loading="lazy"');
+    expect(section).not.toContain('fetchpriority');
+    expect(existsSync(join(outDir, 'images', 'hero.webp'))).toBe(true);
+  });
+
+  it('renders the picture of a card', () => {
+    const { outDir } = buildWithPictures(
+      [
+        {
+          type: 'section',
+          props: {
+            content: [
+              { type: 'title', h1: 'Cards' },
+              { type: 'cards', items: [{ title: 'With picture', text: 'A', image: 'card' }] },
+            ],
+          },
+        },
+      ],
+      'test-review-card-picture',
+    );
+    expect(readOutput(outDir)).toMatch(/<img[^>]*src="\/images\/card\.webp"[^>]*alt="Card picture"/);
+  });
+
+  it('leaves out a picture it cannot find, and says so in the log', () => {
+    const { outDir, log } = buildWithPictures(
+      [{ type: 'section', props: { content: [{ type: 'title', h1: 'Gap' }, { image: 'nowhere' }] } }],
+      'test-review-missing-picture',
+    );
+    expect(readOutput(outDir)).not.toMatch(/<img\b/);
+    expect(log).toContain('картинки «nowhere» нет в images.json');
   });
 });

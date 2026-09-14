@@ -1,36 +1,48 @@
 ---
-import { asRecords, asText } from '../../_shared/props.mjs';
-import Heading from '../Heading.astro';
+import { asEntries, asRecords, asText } from '../../_shared/props.mjs';
+import ElementRenderer from '../../_shared/ElementRenderer.astro';
 
-const { heading, items } = Astro.props;
-const title = asText(heading);
+const { content, tocLinks, templateId } = Astro.props;
+const entries = asEntries(content);
 
-// Entries arrive already paired with the anchor of the section they point at (see
-// src/lib/anchors.mjs) — the pairing is by position, because a contents entry usually paraphrases
-// the heading rather than repeating it. An entry whose section is missing keeps its label and
-// renders as plain text: a link that goes nowhere is worse than no link.
-const entries = asRecords(items)
+// The first list in the content is the table of contents itself. The engine has already paired its
+// items with the sections that follow (tocLinks, see src/lib/anchors.mjs) — by position, because a
+// contents entry usually paraphrases the heading rather than repeating it — and the grid of links
+// is drawn in that list's place. An entry whose section is missing keeps its label as plain text: a
+// link that goes nowhere is worse than no link. Everything else renders as it would anywhere.
+const listIndex = entries.findIndex((entry) => entry.type === 'list');
+const links = asRecords(tocLinks)
   .map((item) => ({ text: asText(item.label), anchor: asText(item.anchor) }))
-  .filter((entry) => entry.text !== '');
+  .filter((item) => item.text !== '');
+const heading = entries.find((entry) => entry.type === 'title');
+const label = asText(heading?.text, 'Table of contents');
+const hasSomething = links.length > 0 || entries.some((_, index) => index !== listIndex);
 ---
 
-{entries.length > 0 && (
+{hasSomething && (
   <section class="toc section">
     <div class="container toc__inner">
-      {title && <Heading text={title} />}
-      <nav class="toc__card" aria-label={title || 'Table of contents'}>
-        <ul class="toc__grid">
-          {entries.map((entry) => (
-            <li>
-              {entry.anchor ? (
-                <a class="toc__link" href={`#${entry.anchor}`}>{entry.text}</a>
-              ) : (
-                <span class="toc__link toc__link--plain">{entry.text}</span>
-              )}
-            </li>
-          ))}
-        </ul>
-      </nav>
+      {entries.map((entry, index) =>
+        index === listIndex ? (
+          links.length > 0 && (
+            <nav class="toc__card" aria-label={label}>
+              <ul class="toc__grid">
+                {links.map((link) => (
+                  <li>
+                    {link.anchor ? (
+                      <a class="toc__link" href={`#${link.anchor}`}>{link.text}</a>
+                    ) : (
+                      <span class="toc__link toc__link--plain">{link.text}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          )
+        ) : (
+          <ElementRenderer entry={entry} templateId={templateId} />
+        ),
+      )}
     </div>
   </section>
 )}

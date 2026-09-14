@@ -3,7 +3,7 @@ import {
   spreadsheetId,
   parseSheetList,
   fileNameFor,
-  slugFor,
+  isHomeSheet,
   assignTargets,
 } from '../scripts/import-sheet.mjs';
 
@@ -44,21 +44,21 @@ describe('parseSheetList', () => {
   });
 });
 
-describe('fileNameFor / slugFor', () => {
-  it('turns a sheet name into a filename and a slug', () => {
+describe('fileNameFor / isHomeSheet', () => {
+  it('turns a sheet name into a file name', () => {
     expect(fileNameFor('Casino')).toBe('casino');
-    expect(slugFor('Casino')).toBe('/casino');
   });
 
-  it('treats the usual front-page names as the site root', () => {
-    for (const name of ['Home', 'home', 'Index', 'Main', 'Главная']) {
-      expect(slugFor(name)).toBe('/');
+  it('recognises the usual front-page names, and only those', () => {
+    for (const name of ['Home', 'home', 'Index', 'Main', 'Главная', ' Домашняя ']) {
+      expect(isHomeSheet(name), name).toBe(true);
     }
+    expect(isHomeSheet('Casino')).toBe(false);
+    expect(isHomeSheet('Homepage')).toBe(false);
   });
 
   it('handles spaces, punctuation and non-latin names', () => {
     expect(fileNameFor('Live Dealer!')).toBe('live-dealer');
-    expect(slugFor('Live Dealer!')).toBe('/live-dealer');
     expect(fileNameFor('Бонусы')).toBe('бонусы');
   });
 
@@ -69,32 +69,60 @@ describe('fileNameFor / slugFor', () => {
 });
 
 describe('assignTargets', () => {
-  it('gives every sheet its own file and slug', () => {
+  it('gives every sheet its own file, and the front page always home.json', () => {
     const { targets } = assignTargets([
-      { name: 'Home', gid: '1' },
+      { name: 'Main', gid: '1' },
       { name: 'Casino', gid: '2' },
     ]);
-    expect(targets.map((t) => [t.file, t.slug])).toEqual([
-      ['home.json', '/'],
-      ['casino.json', '/casino'],
-    ]);
+    expect(targets.map((t) => t.file)).toEqual(['home.json', 'casino.json']);
+    expect(targets[1]).not.toHaveProperty('slug');
   });
 
-  it('resolves two sheets that reduce to the same slug, and says so', () => {
-    // Two pages sharing a slug is the exact failure this script exists to prevent: the second one
-    // silently ends up at /page-1 at build time, which is very hard to trace back to the sheet.
+  it('resolves two sheets that reduce to the same file name, and says so', () => {
+    // The file name is the page's address, so two sheets on one file name would lose a page.
     const { targets, notes } = assignTargets([
       { name: 'Bonus', gid: '1' },
       { name: 'bonus!', gid: '2' },
     ]);
-    const slugs = targets.map((t) => t.slug);
-    expect(new Set(slugs).size).toBe(2);
-    expect(new Set(targets.map((t) => t.file)).size).toBe(2);
+    expect(targets.map((t) => t.file)).toEqual(['bonus.json', 'bonus-2.json']);
     expect(notes.join(' ')).toContain('bonus!');
   });
 
+  it('keeps only the first front-page sheet at home.json', () => {
+    const { targets, notes } = assignTargets([
+      { name: 'Home', gid: '1' },
+      { name: 'Главная', gid: '2' },
+    ]);
+    expect(targets.map((t) => t.file)).toEqual(['home.json', 'home-2.json']);
+    expect(notes).toHaveLength(1);
+    expect(notes[0]).toContain('ещё одна главная страница');
+  });
+
+  it('never lets a sheet that only reduces to "home" take the site root from the real front page', () => {
+    const { targets, notes } = assignTargets([
+      { name: 'Home!', gid: '1' },
+      { name: 'Home', gid: '2' },
+    ]);
+    expect(targets.map((t) => t.file)).toEqual(['home-2.json', 'home.json']);
+    expect(notes).toEqual([
+      'Лист «Home!» не главная страница, но даёт имя home.json — использован «home-2.json»',
+    ]);
+  });
+
+  it('never names a page after a service file', () => {
+    const { targets, notes } = assignTargets([
+      { name: 'Site', gid: '1' },
+      { name: 'Images', gid: '2' },
+    ]);
+    expect(targets.map((t) => t.file)).toEqual(['site-2.json', 'images-2.json']);
+    expect(notes.join(' ')).toContain('служебным файлом site.json');
+  });
+
   it('does not warn when there is nothing to resolve', () => {
-    const { notes } = assignTargets([{ name: 'Home', gid: '1' }, { name: 'App', gid: '2' }]);
+    const { notes } = assignTargets([
+      { name: 'Home', gid: '1' },
+      { name: 'App', gid: '2' },
+    ]);
     expect(notes).toEqual([]);
   });
 

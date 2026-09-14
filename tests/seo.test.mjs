@@ -101,14 +101,15 @@ describe('SEO artefacts with hostile slugs', () => {
     const locs = [...xml.matchAll(/<loc>([\s\S]*?)<\/loc>/g)].map((match) =>
       decodeXmlEntities(match[1]),
     );
-
-    pages.forEach((page, index) => {
+    const canonicals = pages.map((page) => {
       const htmlFile = page.slug === '/' ? 'index.html' : `${page.slug.slice(1)}/index.html`;
-      const html = readOutput(outDir, htmlFile);
-      const match = html.match(/<link rel="canonical" href="([^"]*)"/);
+      const match = readOutput(outDir, htmlFile).match(/<link rel="canonical" href="([^"]*)"/);
       expect(match).not.toBeNull();
-      expect(decodeXmlEntities(match[1])).toBe(locs[index]);
+      return decodeXmlEntities(match[1]);
     });
+    // Compared as sets: a folder lists pages home first, then by file name — not in this array's
+    // order — so what matters is that every page's canonical is exactly one of the sitemap's locs.
+    expect([...canonicals].sort()).toEqual([...locs].sort());
   });
 });
 

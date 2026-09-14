@@ -9,6 +9,7 @@ import { ZipArchive } from 'archiver';
 import express from 'express';
 import { listTemplates } from '../src/lib/templates.mjs';
 import { listSchemes } from '../src/lib/schemes.mjs';
+import { isPageFileName } from '../src/lib/site-dir.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -46,13 +47,14 @@ function isPresentNonString(value) {
   return value !== undefined && typeof value !== 'string';
 }
 
-// A page file is any *.json file besides site.json itself — the same definition
-// loadSiteDirInput uses for what counts as a page (see src/lib/site-dir.mjs). Reading that
-// requirement here directly, rather than requiring a site.json specifically, matches what a real
-// build actually needs: a site.json is optional, a page is not.
+// A page file is whatever src/lib/site-dir.mjs says it is — any *.json file in the folder itself
+// that is not a service file (site.json, images.json). Imported rather than restated: the rule
+// used to be copied here, and a copy is exactly what drifts when a service file is added.
 function pageFileNames(dir) {
   try {
-    return readdirSync(dir).filter((name) => name.endsWith('.json') && name !== 'site.json');
+    return readdirSync(dir, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && isPageFileName(entry.name))
+      .map((entry) => entry.name);
   } catch {
     return [];
   }

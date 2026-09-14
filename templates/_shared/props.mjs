@@ -11,6 +11,13 @@ export function asRecords(value) {
   return asList(value).filter((item) => typeof item === 'object' && !Array.isArray(item));
 }
 
+// The entries of a block's `content` a template can render: plain objects that name a type.
+// Anything else — a bare string, null, an object with no type — identifies nothing and is dropped
+// the same quiet way every other malformed collection in the templates is.
+export function asEntries(content) {
+  return asRecords(content).filter((entry) => asText(entry.type) !== '');
+}
+
 // Unicode "Combining Diacritical Marks" block (0x0300-0x036f): what NFKD decomposition leaves
 // behind on a base letter (e.g. an acute accent splits off as "e" + one of these). Built from
 // character codes rather than a regex literal containing the actual combining characters, so

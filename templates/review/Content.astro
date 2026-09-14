@@ -1,0 +1,14 @@
+---
+// Renders a block's content entries in order, each through its own element component. Every block
+// of this template draws its body with this, inside its own shell — which is what makes a hero, a
+// table of contents and an FAQ the same kind of thing underneath.
+import { asEntries } from '../_shared/props.mjs';
+import ElementRenderer from '../_shared/ElementRenderer.astro';
+
+const { content, templateId, context = {} } = Astro.props;
+const entries = asEntries(content);
+---
+
+{entries.map((entry) => (
+  <ElementRenderer entry={entry} templateId={templateId} context={context} />
+))}

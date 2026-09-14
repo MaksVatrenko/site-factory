@@ -1,0 +1,90 @@
+---
+import { asText } from '../../_shared/props.mjs';
+import RichText from '../RichText.astro';
+
+// A question and its answer that opens on click — native <details>/<summary>, so it needs no script.
+// Usable in any block: an FAQ is simply a block whose content is mostly these.
+const { title, text } = Astro.props;
+const question = asText(title);
+const answer = asText(text);
+---
+
+{(question || answer) && (
+  <details class="rtoggle">
+    {question && <summary class="rtoggle__question">{question}</summary>}
+    {answer && <p class="rtoggle__answer"><RichText text={answer} /></p>}
+  </details>
+)}
+
+<style>
+  .rtoggle {
+    padding: 1.1rem 1.4rem;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    /* Lets the height below animate to and from `auto`, which is what an answer of unknown length
+       resolves to. Inherited, so declaring it here reaches ::details-content without switching
+       the behaviour on for the whole document. */
+    interpolate-size: allow-keywords;
+  }
+
+  /* The answer slides open instead of appearing whole. The details element's own content box is a
+     pseudo-element that can be transitioned, so this needs no script and no wrapper. Where it is
+     not supported the answer simply appears — nothing breaks, the motion is just missing.
+     content-visibility has to travel with the height, or the answer would vanish before it
+     finished collapsing. */
+  .rtoggle::details-content {
+    block-size: 0;
+    overflow: hidden;
+    transition:
+      block-size 0.35s ease,
+      content-visibility 0.35s allow-discrete;
+  }
+
+  .rtoggle[open]::details-content {
+    block-size: auto;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rtoggle::details-content {
+      transition: none;
+    }
+  }
+
+  .rtoggle__question {
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    color: var(--text-primary);
+    font-weight: 650;
+  }
+
+  .rtoggle__question::-webkit-details-marker {
+    display: none;
+  }
+
+  /* A CSS-only chevron (right and bottom border, rotated), pointing down while closed and up once
+     open — no script, no glyph. */
+  .rtoggle__question::after {
+    content: '';
+    flex-shrink: 0;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-right: 2px solid var(--text-tertiary);
+    border-bottom: 2px solid var(--text-tertiary);
+    transform: rotate(45deg);
+    transition: transform 0.35s ease;
+  }
+
+  .rtoggle[open] .rtoggle__question::after {
+    transform: rotate(-135deg);
+  }
+
+  .rtoggle__answer {
+    margin-top: 0.85rem;
+    color: var(--text-secondary);
+  }
+</style>
