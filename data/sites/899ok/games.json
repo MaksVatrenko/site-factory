@@ -4,23 +4,40 @@
   "blocks": [
     {
       "type": "hero",
-      "heading": "899OK Games — Aviator, Crash & Instant Wins",
-      "paragraphs": [
-        "When cricket's off and I'm not feeling slots, this is where I land. The 899OK instant games lobby — crash, fishing, mines, dice, arcade — is quick, cheap to try from ৳10, and honestly more punishing on greed than any reel game.",
-        "Aviator gets all the headlines. But there's a bigger menu here than most players ever open. Let me walk through what's actually worth your taka."
+      "content": [
+        {
+          "type": "title",
+          "h1": "899OK Games — Aviator, Crash & Instant Wins"
+        },
+        {
+          "type": "text",
+          "text": "When cricket's off and I'm not feeling slots, this is where I land. The 899OK instant games lobby — crash, fishing, mines, dice, arcade — is quick, cheap to try from ৳10, and honestly more punishing on greed than any reel game."
+        },
+        {
+          "type": "text",
+          "text": "Aviator gets all the headlines. But there's a bigger menu here than most players ever open. Let me walk through what's actually worth your taka."
+        }
       ]
     },
     {
       "type": "toc",
-      "heading": "What's on This Page",
-      "items": [
-        "Aviator & Crash Games",
-        "Fishing Shooters",
-        "Arcade & Instant Games",
-        "How Each Game Works",
-        "Tips for Better Play",
-        "New Releases",
-        "Games FAQ"
+      "content": [
+        {
+          "type": "title",
+          "h2": "What's on This Page"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Aviator & Crash Games",
+            "Fishing Shooters",
+            "Arcade & Instant Games",
+            "How Each Game Works",
+            "Tips for Better Play",
+            "New Releases",
+            "Games FAQ"
+          ]
+        }
       ]
     },
     {
@@ -28,8 +45,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "Aviator & Crash Games on 899OK"
+          "h2": "Aviator & Crash Games on 899OK"
         },
         {
           "type": "text",
@@ -108,8 +124,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "899OK Fishing Games"
+          "h2": "899OK Fishing Games"
         },
         {
           "type": "text",
@@ -152,8 +167,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "899OK Arcade & Instant Games"
+          "h2": "899OK Arcade & Instant Games"
         },
         {
           "type": "text",
@@ -183,8 +197,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "How 899OK Game Types Actually Work"
+          "h2": "How 899OK Game Types Actually Work"
         },
         {
           "type": "table",
@@ -240,8 +253,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "How to Start Playing on 899OK"
+          "h2": "How to Start Playing on 899OK"
         },
         {
           "type": "text",
@@ -268,8 +280,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "Tips for Better Play on 899OK"
+          "h2": "Tips for Better Play on 899OK"
         },
         {
           "type": "text",
@@ -308,8 +319,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "New Game Releases on 899OK"
+          "h2": "New Game Releases on 899OK"
         },
         {
           "type": "text",
@@ -335,8 +345,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "Should You Play Aviator on 899OK?"
+          "h2": "Should You Play Aviator on 899OK?"
         },
         {
           "type": "text",
@@ -354,39 +363,54 @@
     },
     {
       "type": "links",
-      "heading": "899OK — More Pages"
+      "content": [
+        {
+          "type": "title",
+          "h2": "899OK — More Pages"
+        }
+      ]
     },
     {
       "type": "faq",
-      "heading": "Aviator, Crash & Fishing — 899OK Questions",
-      "items": [
+      "content": [
         {
-          "q": "Is Aviator on 899OK the real Spribe version?",
-          "a": "Yes. Same Spribe Aviator that's iTech Labs certified and provably fair. Every round has a hash you can verify after the round ends."
+          "type": "title",
+          "h2": "Aviator, Crash & Fishing — 899OK Questions"
         },
         {
-          "q": "What's the max multiplier on crash games?",
-          "a": "Most cap at 1000x (Aviator, BGaming Crash). JetX caps at 200x. Spaceman goes up to 5000x in theory."
+          "type": "toggle",
+          "title": "Is Aviator on 899OK the real Spribe version?",
+          "text": "Yes. Same Spribe Aviator that's iTech Labs certified and provably fair. Every round has a hash you can verify after the round ends."
         },
         {
-          "q": "Can I use bonus funds on Aviator?",
-          "a": "Yes, but Aviator counts around 5% toward wagering."
+          "type": "toggle",
+          "title": "What's the max multiplier on crash games?",
+          "text": "Most cap at 1000x (Aviator, BGaming Crash). JetX caps at 200x. Spaceman goes up to 5000x in theory."
         },
         {
-          "q": "Fishing games feel harsh — are they actually fair?",
-          "a": "Yes, they're audited. Variance is high because bosses appear at random intervals. A 30-minute cold streak is normal — patience is part of the design."
+          "type": "toggle",
+          "title": "Can I use bonus funds on Aviator?",
+          "text": "Yes, but Aviator counts around 5% toward wagering."
         },
         {
-          "q": "What's the best beginner game here?",
-          "a": "Dice or Plinko. Simple rules, small stakes, no learning curve. Once you're comfortable, work up to Mines or Aviator."
+          "type": "toggle",
+          "title": "Fishing games feel harsh — are they actually fair?",
+          "text": "Yes, they're audited. Variance is high because bosses appear at random intervals. A 30-minute cold streak is normal — patience is part of the design."
         },
         {
-          "q": "Do these games work well on Android?",
-          "a": "Yes, every one of them. Both mobile browser and the 899OK app run the full instant games lobby smoothly."
+          "type": "toggle",
+          "title": "What's the best beginner game here?",
+          "text": "Dice or Plinko. Simple rules, small stakes, no learning curve. Once you're comfortable, work up to Mines or Aviator."
         },
         {
-          "q": "How do I sign up?",
-          "a": "Registration takes 2 minutes — phone, OTP, done. A ৳500 bKash deposit activates the welcome bonus."
+          "type": "toggle",
+          "title": "Do these games work well on Android?",
+          "text": "Yes, every one of them. Both mobile browser and the 899OK app run the full instant games lobby smoothly."
+        },
+        {
+          "type": "toggle",
+          "title": "How do I sign up?",
+          "text": "Registration takes 2 minutes — phone, OTP, done. A ৳500 bKash deposit activates the welcome bonus."
         }
       ]
     }

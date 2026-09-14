@@ -1,31 +1,30 @@
 ---
-import { asList, asText } from '../../_shared/props.mjs';
-import RichText from '../RichText.astro';
+import { asEntries, asText } from '../../_shared/props.mjs';
+import Content from '../Content.astro';
 
-const { heading, paragraphs, site, anchor } = Astro.props;
-
+// The first screen: the brand as an eyebrow, then whatever the content holds — normally the page's
+// h1 and a lead paragraph or two. Pictures here load at once: a first-screen picture left lazy is
+// exactly what the browser waits for before the page counts as loaded (LCP).
+const { content, site, anchor, templateId } = Astro.props;
+const entries = asEntries(content);
 const anchorId = asText(anchor);
-const title = asText(heading);
-const lead = asList(paragraphs)
-  .map((text) => asText(text))
-  .filter((text) => text !== '');
 const brandLabel = asText(site?.brand?.name);
 ---
 
-{(title !== '' || lead.length > 0) && (
+{entries.length > 0 && (
   <section class="hero section" id={anchorId || undefined}>
     <div class="container hero__inner">
       {brandLabel && <p class="hero__eyebrow">{brandLabel}</p>}
-      {title && <h1 class="hero__title">{title}</h1>}
-      {lead.map((paragraph) => (
-        <p class="hero__lead"><RichText text={paragraph} /></p>
-      ))}
+      <div class="hero__content">
+        <Content content={entries} templateId={templateId} context={{ eagerImages: true }} />
+      </div>
     </div>
   </section>
 )}
 
 <style>
-  .hero__inner {
+  .hero__inner,
+  .hero__content {
     display: grid;
     justify-items: start;
     gap: 1.25rem;
@@ -42,28 +41,10 @@ const brandLabel = asText(site?.brand?.name);
     text-transform: uppercase;
   }
 
-  /* The heading is painted with the scheme's gradient rather than a flat colour, matching the
-     reference site: it runs across the whole heading box, so a second line starts part-way along
-     the gradient rather than restarting it. The gradient itself belongs to the scheme, not here --
-     a scheme that wants a flat heading sets --heading-gradient to a single colour. */
-  .hero__title {
-    background-image: var(--heading-gradient);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-
-  /* Without background-clip the text would be painted in `transparent` -- that is, invisible. The
-     colour is restored wherever the clip is unsupported, which is also what print and forced-
-     colours modes fall back to. */
-  @supports not ((-webkit-background-clip: text) or (background-clip: text)) {
-    .hero__title {
-      background-image: none;
-      color: var(--text-primary);
-    }
-  }
-
-  .hero__lead {
+  /* The hero's paragraphs read as a lead: larger and quieter than body text, held to a readable
+     measure. They are drawn by the shared text element, so the look is applied from here to
+     whatever paragraphs this block's content holds. */
+  .hero__content :global(p) {
     color: var(--text-secondary);
     font-size: 1.15rem;
     max-width: 42rem;

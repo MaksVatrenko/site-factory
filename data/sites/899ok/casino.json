@@ -4,25 +4,39 @@
   "blocks": [
     {
       "type": "hero",
-      "heading": "899OK Casino — Live Dealer Tables",
-      "paragraphs": [
-        "I've tried a bunch of live casino sites from my flat in Mirpur, and most either lag out or the dealer looks half-asleep. 899OK actually holds up. Streams stay sharp on my regular Grameenphone data, and the Bangla-speaking dealers on evening shifts make it feel like a proper table night, not a robot dealing cards at you."
+      "content": [
+        {
+          "type": "title",
+          "h1": "899OK Casino — Live Dealer Tables"
+        },
+        {
+          "type": "text",
+          "text": "I've tried a bunch of live casino sites from my flat in Mirpur, and most either lag out or the dealer looks half-asleep. 899OK actually holds up. Streams stay sharp on my regular Grameenphone data, and the Bangla-speaking dealers on evening shifts make it feel like a proper table night, not a robot dealing cards at you."
+        }
       ]
     },
     {
       "type": "toc",
-      "heading": "What's on This Page",
-      "items": [
-        "Live Dealer Experience",
-        "Providers on the Floor",
-        "Blackjack & Baccarat",
-        "Register in 5 Steps",
-        "Roulette Variations",
-        "Andar Bahar & Teen Patti",
-        "Deposits with bKash & Nagad",
-        "VIP Rewards",
-        "Live Casino FAQ",
-        "Final Word"
+      "content": [
+        {
+          "type": "title",
+          "h2": "What's on This Page"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Live Dealer Experience",
+            "Providers on the Floor",
+            "Blackjack & Baccarat",
+            "Register in 5 Steps",
+            "Roulette Variations",
+            "Andar Bahar & Teen Patti",
+            "Deposits with bKash & Nagad",
+            "VIP Rewards",
+            "Live Casino FAQ",
+            "Final Word"
+          ]
+        }
       ]
     },
     {
@@ -30,8 +44,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "The 899OK Live Dealer Experience"
+          "h2": "The 899OK Live Dealer Experience"
         },
         {
           "type": "text",
@@ -66,8 +79,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "Providers Running the 899OK Tables"
+          "h2": "Providers Running the 899OK Tables"
         },
         {
           "type": "text",
@@ -123,8 +135,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "Blackjack & Baccarat Tables"
+          "h2": "Blackjack & Baccarat Tables"
         },
         {
           "type": "text",
@@ -157,8 +168,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "How to Register at 899OK in 5 Steps"
+          "h2": "How to Register at 899OK in 5 Steps"
         },
         {
           "type": "text",
@@ -185,8 +195,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "899OK Roulette Variations"
+          "h2": "899OK Roulette Variations"
         },
         {
           "type": "text",
@@ -213,8 +222,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "Andar Bahar & Teen Patti at 899OK"
+          "h2": "Andar Bahar & Teen Patti at 899OK"
         },
         {
           "type": "text",
@@ -247,8 +255,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "Deposits with bKash & Nagad"
+          "h2": "Deposits with bKash & Nagad"
         },
         {
           "type": "text",
@@ -307,8 +314,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "899OK VIP Casino Rewards"
+          "h2": "899OK VIP Casino Rewards"
         },
         {
           "type": "text",
@@ -335,8 +341,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "899OK Live Casino — Worth Your Seat?"
+          "h2": "899OK Live Casino — Worth Your Seat?"
         },
         {
           "type": "text",
@@ -350,39 +355,54 @@
     },
     {
       "type": "links",
-      "heading": "899OK — More Pages"
+      "content": [
+        {
+          "type": "title",
+          "h2": "899OK — More Pages"
+        }
+      ]
     },
     {
       "type": "faq",
-      "heading": "899OK Live Casino Questions",
-      "items": [
+      "content": [
         {
-          "q": "Are 899OK live casino games actually fair?",
-          "a": "Yes. Games use real physical equipment — actual cards, actual wheels — streamed from certified studios. Evolution and Ezugi run these tables and both go through regular independent audits. Every card is visible on camera as it's dealt."
+          "type": "title",
+          "h2": "899OK Live Casino Questions"
         },
         {
-          "q": "Can I play Andar Bahar in Bangla?",
-          "a": "Yes. Ezugi runs South Asia tables with Bengali-speaking dealers on evening shifts BD time. Peak coverage is 7pm to 1am — that's when you'll find the most Bangla dealers online."
+          "type": "toggle",
+          "title": "Are 899OK live casino games actually fair?",
+          "text": "Yes. Games use real physical equipment — actual cards, actual wheels — streamed from certified studios. Evolution and Ezugi run these tables and both go through regular independent audits. Every card is visible on camera as it's dealt."
         },
         {
-          "q": "What's the minimum bet at 899OK live tables?",
-          "a": "৳50 for standard Blackjack, Baccarat, Roulette, and Andar Bahar. VIP rooms range from ৳500 to ৳10,000 minimum depending on provider and game."
+          "type": "toggle",
+          "title": "Can I play Andar Bahar in Bangla?",
+          "text": "Yes. Ezugi runs South Asia tables with Bengali-speaking dealers on evening shifts BD time. Peak coverage is 7pm to 1am — that's when you'll find the most Bangla dealers online."
         },
         {
-          "q": "Does live casino count toward welcome bonus wagering?",
-          "a": "Only 10%. A ৳15,000 wagering requirement would need ৳150,000 in live bets to clear. Slots clear at 100%, so they're way faster."
+          "type": "toggle",
+          "title": "What's the minimum bet at 899OK live tables?",
+          "text": "৳50 for standard Blackjack, Baccarat, Roulette, and Andar Bahar. VIP rooms range from ৳500 to ৳10,000 minimum depending on provider and game."
         },
         {
-          "q": "Which live provider is best on 899OK?",
-          "a": "Depends on your taste. Evolution for polish and variety. Ezugi for South Asian formats and Bangla dealers. Pragmatic Live for the fastest rounds. Try one of each and stick with what feels right."
+          "type": "toggle",
+          "title": "Does live casino count toward welcome bonus wagering?",
+          "text": "Only 10%. A ৳15,000 wagering requirement would need ৳150,000 in live bets to clear. Slots clear at 100%, so they're way faster."
         },
         {
-          "q": "Prefer sports over cards?",
-          "a": "The cricket and football sportsbook carries 200+ markets per major match with cash-out on live in-play bets."
+          "type": "toggle",
+          "title": "Which live provider is best on 899OK?",
+          "text": "Depends on your taste. Evolution for polish and variety. Ezugi for South Asian formats and Bangla dealers. Pragmatic Live for the fastest rounds. Try one of each and stick with what feels right."
         },
         {
-          "q": "Can I play live tables on mobile?",
-          "a": "Yes. All tables run in the mobile browser on any phone. The 899OK Android app keeps streams smoother when you're on 4G outside wifi range."
+          "type": "toggle",
+          "title": "Prefer sports over cards?",
+          "text": "The cricket and football sportsbook carries 200+ markets per major match with cash-out on live in-play bets."
+        },
+        {
+          "type": "toggle",
+          "title": "Can I play live tables on mobile?",
+          "text": "Yes. All tables run in the mobile browser on any phone. The 899OK Android app keeps streams smoother when you're on 4G outside wifi range."
         }
       ]
     }

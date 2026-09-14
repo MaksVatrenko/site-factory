@@ -4,23 +4,37 @@
   "blocks": [
     {
       "type": "hero",
-      "heading": "899OK — Bangladesh's Everyday Casino & Cricket Book",
-      "paragraphs": [
-        "It was a Friday night in Mirpur, the biryani was done, my cousin was arguing about a Bangladesh chase target, and I opened 899OK to punt ৳300 on the next over. That was seven months ago. I'm still here. This page is me writing down what I've learned — the good, the mildly annoying, and the stuff nobody else bothers explaining."
+      "content": [
+        {
+          "type": "title",
+          "h1": "899OK — Bangladesh's Everyday Casino & Cricket Book"
+        },
+        {
+          "type": "text",
+          "text": "It was a Friday night in Mirpur, the biryani was done, my cousin was arguing about a Bangladesh chase target, and I opened 899OK to punt ৳300 on the next over. That was seven months ago. I'm still here. This page is me writing down what I've learned — the good, the mildly annoying, and the stuff nobody else bothers explaining."
+        }
       ]
     },
     {
       "type": "toc",
-      "heading": "What's on This Page",
-      "items": [
-        "Why 899OK Actually Works for Me",
-        "Cricket Betting & Live Casino",
-        "Welcome Bonus — No Fluff",
-        "bKash, Nagad, Rocket Payments",
-        "The 899OK Mobile Experience",
-        "Signing Up in Under 3 Minutes",
-        "Is 899OK Safe to Play?",
-        "Common Questions"
+      "content": [
+        {
+          "type": "title",
+          "h2": "What's on This Page"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Why 899OK Actually Works for Me",
+            "Cricket Betting & Live Casino",
+            "Welcome Bonus — No Fluff",
+            "bKash, Nagad, Rocket Payments",
+            "The 899OK Mobile Experience",
+            "Signing Up in Under 3 Minutes",
+            "Is 899OK Safe to Play?",
+            "Common Questions"
+          ]
+        }
       ]
     },
     {
@@ -28,8 +42,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "Why 899OK Actually Works for Me"
+          "h2": "Why 899OK Actually Works for Me"
         },
         {
           "type": "text",
@@ -56,8 +69,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "Cricket Betting & Live Casino at 899OK"
+          "h2": "Cricket Betting & Live Casino at 899OK"
         },
         {
           "type": "text",
@@ -107,8 +119,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "899OK Welcome Bonus — The Real Terms"
+          "h2": "899OK Welcome Bonus — The Real Terms"
         },
         {
           "type": "text",
@@ -164,8 +175,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "Payments — bKash, Nagad, Rocket"
+          "h2": "Payments — bKash, Nagad, Rocket"
         },
         {
           "type": "text",
@@ -242,8 +252,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "The 899OK Mobile Experience"
+          "h2": "The 899OK Mobile Experience"
         },
         {
           "type": "text",
@@ -268,8 +277,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "Signing Up at 899OK in Under 3 Minutes"
+          "h2": "Signing Up at 899OK in Under 3 Minutes"
         },
         {
           "type": "text",
@@ -296,8 +304,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "Is 899OK Safe to Play?"
+          "h2": "Is 899OK Safe to Play?"
         },
         {
           "type": "text",
@@ -319,8 +326,7 @@
         },
         {
           "type": "title",
-          "tag": "h3",
-          "text": "What 899OK can't do for you:"
+          "h3": "What 899OK can't do for you:"
         },
         {
           "type": "list",
@@ -350,8 +356,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "My Honest Take on 899OK"
+          "h2": "My Honest Take on 899OK"
         },
         {
           "type": "text",
@@ -369,39 +374,54 @@
     },
     {
       "type": "links",
-      "heading": "899OK — More Pages"
+      "content": [
+        {
+          "type": "title",
+          "h2": "899OK — More Pages"
+        }
+      ]
     },
     {
       "type": "faq",
-      "heading": "899OK FAQ — Payments, Safety, Signup",
-      "items": [
+      "content": [
         {
-          "q": "Is 899OK legit in Bangladesh?",
-          "a": "Yes, in practice. 899OK operates under a Curacao licence and accepts Bangladesh players openly. Bangladesh has no domestic online gambling licence, so all sites operating here are offshore — that's just the reality of the market."
+          "type": "title",
+          "h2": "899OK FAQ — Payments, Safety, Signup"
         },
         {
-          "q": "How fast are bKash withdrawals?",
-          "a": "Usually 10–20 minutes. Official window is 24 hours, but every bKash cashout I've made cleared inside 20 minutes. Larger amounts may need a quick verification call."
+          "type": "toggle",
+          "title": "Is 899OK legit in Bangladesh?",
+          "text": "Yes, in practice. 899OK operates under a Curacao licence and accepts Bangladesh players openly. Bangladesh has no domestic online gambling licence, so all sites operating here are offshore — that's just the reality of the market."
         },
         {
-          "q": "What's the minimum deposit at 899OK?",
-          "a": "৳100 via bKash or Nagad, ৳200 via Rocket. To activate the welcome bonus you need a minimum ৳500 first deposit."
+          "type": "toggle",
+          "title": "How fast are bKash withdrawals?",
+          "text": "Usually 10–20 minutes. Official window is 24 hours, but every bKash cashout I've made cleared inside 20 minutes. Larger amounts may need a quick verification call."
         },
         {
-          "q": "Does 899OK have an iPhone app?",
-          "a": "No. Apple doesn't list gambling apps for Bangladesh in the App Store. iPhone users open the site in Safari — it works fine and you can add it to your home screen for one-tap access."
+          "type": "toggle",
+          "title": "What's the minimum deposit at 899OK?",
+          "text": "৳100 via bKash or Nagad, ৳200 via Rocket. To activate the welcome bonus you need a minimum ৳500 first deposit."
         },
         {
-          "q": "What documents does KYC need?",
-          "a": "NID front and back, plus a selfie holding it. Sometimes a bKash statement if the name needs cross-checking. Only required before your first withdrawal, not at signup."
+          "type": "toggle",
+          "title": "Does 899OK have an iPhone app?",
+          "text": "No. Apple doesn't list gambling apps for Bangladesh in the App Store. iPhone users open the site in Safari — it works fine and you can add it to your home screen for one-tap access."
         },
         {
-          "q": "Can I bet on BPL at 899OK?",
-          "a": "Yes, with deep markets. During BPL you get match odds, top batter, top bowler, session runs, over bands, method of dismissal — usually 30+ markets per match, with live betting during play."
+          "type": "toggle",
+          "title": "What documents does KYC need?",
+          "text": "NID front and back, plus a selfie holding it. Sometimes a bKash statement if the name needs cross-checking. Only required before your first withdrawal, not at signup."
         },
         {
-          "q": "I'm brand new — where do I start?",
-          "a": "Register in 2 minutes, deposit ৳500 via bKash, and your 100% match up to ৳12,000 plus 80 free spins on Gates of Olympus credit instantly. Start small on slots to test the flow."
+          "type": "toggle",
+          "title": "Can I bet on BPL at 899OK?",
+          "text": "Yes, with deep markets. During BPL you get match odds, top batter, top bowler, session runs, over bands, method of dismissal — usually 30+ markets per match, with live betting during play."
+        },
+        {
+          "type": "toggle",
+          "title": "I'm brand new — where do I start?",
+          "text": "Register in 2 minutes, deposit ৳500 via bKash, and your 100% match up to ৳12,000 plus 80 free spins on Gates of Olympus credit instantly. Start small on slots to test the flow."
         }
       ]
     }

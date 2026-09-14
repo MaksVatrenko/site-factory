@@ -4,23 +4,37 @@
   "blocks": [
     {
       "type": "hero",
-      "heading": "899OK Betting — Cricket & Sports for Bangladesh Punters",
-      "paragraphs": [
-        "I've tried a bunch of sites over the years — some paid slow, some had thin cricket markets, some just felt sketchy. 899OK is the one my group chat keeps coming back to when there's a BPL or IPL match on. The odds hold up, cash-out actually fires when you tap it, and my bKash withdrawal usually lands before the innings break ends."
+      "content": [
+        {
+          "type": "title",
+          "h1": "899OK Betting — Cricket & Sports for Bangladesh Punters"
+        },
+        {
+          "type": "text",
+          "text": "I've tried a bunch of sites over the years — some paid slow, some had thin cricket markets, some just felt sketchy. 899OK is the one my group chat keeps coming back to when there's a BPL or IPL match on. The odds hold up, cash-out actually fires when you tap it, and my bKash withdrawal usually lands before the innings break ends."
+        }
       ]
     },
     {
       "type": "toc",
-      "heading": "What's on This Page",
-      "items": [
-        "Cricket Betting Markets",
-        "Football & Other Sports",
-        "Live In-Play Betting",
-        "Reading the Odds",
-        "Placing Your First Bet",
-        "Withdrawals & Payouts",
-        "My Betting Rhythm",
-        "Betting FAQ"
+      "content": [
+        {
+          "type": "title",
+          "h2": "What's on This Page"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Cricket Betting Markets",
+            "Football & Other Sports",
+            "Live In-Play Betting",
+            "Reading the Odds",
+            "Placing Your First Bet",
+            "Withdrawals & Payouts",
+            "My Betting Rhythm",
+            "Betting FAQ"
+          ]
+        }
       ]
     },
     {
@@ -28,8 +42,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "Cricket Betting Markets at 899OK"
+          "h2": "Cricket Betting Markets at 899OK"
         },
         {
           "type": "text",
@@ -121,8 +134,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "Football & Other Sports on 899OK"
+          "h2": "Football & Other Sports on 899OK"
         },
         {
           "type": "text",
@@ -143,8 +155,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "Live In-Play Betting at 899OK"
+          "h2": "Live In-Play Betting at 899OK"
         },
         {
           "type": "text",
@@ -165,8 +176,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "Reading 899OK Odds"
+          "h2": "Reading 899OK Odds"
         },
         {
           "type": "text",
@@ -183,8 +193,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "Placing Your First Bet on 899OK"
+          "h2": "Placing Your First Bet on 899OK"
         },
         {
           "type": "text",
@@ -207,8 +216,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "899OK Withdrawals & Payout Speed"
+          "h2": "899OK Withdrawals & Payout Speed"
         },
         {
           "type": "table",
@@ -269,8 +277,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "My Personal Betting Rhythm on 899OK"
+          "h2": "My Personal Betting Rhythm on 899OK"
         },
         {
           "type": "text",
@@ -303,8 +310,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "My Verdict on 899OK Betting After a Full Season"
+          "h2": "My Verdict on 899OK Betting After a Full Season"
         },
         {
           "type": "text",
@@ -322,39 +328,54 @@
     },
     {
       "type": "links",
-      "heading": "899OK — More Pages"
+      "content": [
+        {
+          "type": "title",
+          "h2": "899OK — More Pages"
+        }
+      ]
     },
     {
       "type": "faq",
-      "heading": "899OK Betting FAQ — Odds, Cash-out & Payouts",
-      "items": [
+      "content": [
         {
-          "q": "Is cricket betting on 899OK legal in Bangladesh?",
-          "a": "It's a grey area. Online sports betting isn't explicitly regulated for individuals in Bangladesh. Millions bet through international platforms like 899OK. Use payment methods in your own name and keep records clean."
+          "type": "title",
+          "h2": "899OK Betting FAQ — Odds, Cash-out & Payouts"
         },
         {
-          "q": "What's the minimum bet at 899OK?",
-          "a": "৳20 on most pre-match cricket and football markets. Some in-play markets go as low as ৳10."
+          "type": "toggle",
+          "title": "Is cricket betting on 899OK legal in Bangladesh?",
+          "text": "It's a grey area. Online sports betting isn't explicitly regulated for individuals in Bangladesh. Millions bet through international platforms like 899OK. Use payment methods in your own name and keep records clean."
         },
         {
-          "q": "Can I watch live matches on 899OK?",
-          "a": "On selected fixtures. IPL, BPL, most Bangladesh internationals and Premier League football usually carry a live stream."
+          "type": "toggle",
+          "title": "What's the minimum bet at 899OK?",
+          "text": "৳20 on most pre-match cricket and football markets. Some in-play markets go as low as ৳10."
         },
         {
-          "q": "What is cash-out and when should I use it?",
-          "a": "Cash-out settles your bet early for less than the maximum win but locks in profit (or cuts losses). Use it when the live picture is turning against your original prediction."
+          "type": "toggle",
+          "title": "Can I watch live matches on 899OK?",
+          "text": "On selected fixtures. IPL, BPL, most Bangladesh internationals and Premier League football usually carry a live stream."
         },
         {
-          "q": "Where do I bet on Aviator or slots?",
-          "a": "Those aren't in the sportsbook. Aviator sits in the instant games section, live tables are in the casino lobby, and slots live on the slots page."
+          "type": "toggle",
+          "title": "What is cash-out and when should I use it?",
+          "text": "Cash-out settles your bet early for less than the maximum win but locks in profit (or cuts losses). Use it when the live picture is turning against your original prediction."
         },
         {
-          "q": "I've never bet online — where do I start on 899OK?",
-          "a": "Register in about two minutes, deposit ৳500 via bKash, then place a single ৳50 cricket bet just to see the slip and settlement flow."
+          "type": "toggle",
+          "title": "Where do I bet on Aviator or slots?",
+          "text": "Those aren't in the sportsbook. Aviator sits in the instant games section, live tables are in the casino lobby, and slots live on the slots page."
         },
         {
-          "q": "Does 899OK offer accumulator bonuses?",
-          "a": "Yes. 4+ leg accumulators get a returns boost, and bigger multi-selections get a higher percentage."
+          "type": "toggle",
+          "title": "I've never bet online — where do I start on 899OK?",
+          "text": "Register in about two minutes, deposit ৳500 via bKash, then place a single ৳50 cricket bet just to see the slip and settlement flow."
+        },
+        {
+          "type": "toggle",
+          "title": "Does 899OK offer accumulator bonuses?",
+          "text": "Yes. 4+ leg accumulators get a returns boost, and bigger multi-selections get a higher percentage."
         }
       ]
     }

@@ -4,24 +4,41 @@
   "blocks": [
     {
       "type": "hero",
-      "heading": "899OK Bonus Offers That Actually Pay Out",
-      "paragraphs": [
-        "I've been burned by casino bonuses before. Big banner numbers, tiny withdrawal amounts. So when I signed up at 899OK, I tested every offer with my own bKash deposits before writing any of this.",
-        "Here's what I found: the welcome match is genuinely one of the better ones in Bangladesh right now, the cashback is a quiet winner, and the reload deals stack up nicely if you play weekends."
+      "content": [
+        {
+          "type": "title",
+          "h1": "899OK Bonus Offers That Actually Pay Out"
+        },
+        {
+          "type": "text",
+          "text": "I've been burned by casino bonuses before. Big banner numbers, tiny withdrawal amounts. So when I signed up at 899OK, I tested every offer with my own bKash deposits before writing any of this."
+        },
+        {
+          "type": "text",
+          "text": "Here's what I found: the welcome match is genuinely one of the better ones in Bangladesh right now, the cashback is a quiet winner, and the reload deals stack up nicely if you play weekends."
+        }
       ]
     },
     {
       "type": "toc",
-      "heading": "What's on This Page",
-      "items": [
-        "Welcome Bonus Breakdown",
-        "Reload & Deposit Deals",
-        "Free Spins on Slots",
-        "Weekly Cashback",
-        "Sports Betting Boosts",
-        "Wagering Rules",
-        "How to Claim",
-        "Common Questions"
+      "content": [
+        {
+          "type": "title",
+          "h2": "What's on This Page"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Welcome Bonus Breakdown",
+            "Reload & Deposit Deals",
+            "Free Spins on Slots",
+            "Weekly Cashback",
+            "Sports Betting Boosts",
+            "Wagering Rules",
+            "How to Claim",
+            "Common Questions"
+          ]
+        }
       ]
     },
     {
@@ -29,8 +46,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "899OK Welcome Bonus — The Full Terms"
+          "h2": "899OK Welcome Bonus — The Full Terms"
         },
         {
           "type": "text",
@@ -105,8 +121,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "899OK Reload & Deposit Bonuses"
+          "h2": "899OK Reload & Deposit Bonuses"
         },
         {
           "type": "text",
@@ -162,8 +177,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "Free Spins Offers at 899OK"
+          "h2": "Free Spins Offers at 899OK"
         },
         {
           "type": "text",
@@ -184,8 +198,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "899OK Weekly Cashback & Rebates"
+          "h2": "899OK Weekly Cashback & Rebates"
         },
         {
           "type": "text",
@@ -245,8 +258,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "899OK Sports Betting Bonuses"
+          "h2": "899OK Sports Betting Bonuses"
         },
         {
           "type": "text",
@@ -305,8 +317,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "899OK Wagering Requirements Explained"
+          "h2": "899OK Wagering Requirements Explained"
         },
         {
           "type": "text",
@@ -360,8 +371,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "How to Claim Your 899OK Bonus — Step by Step"
+          "h2": "How to Claim Your 899OK Bonus — Step by Step"
         },
         {
           "type": "text",
@@ -398,8 +408,7 @@
       "content": [
         {
           "type": "title",
-          "tag": "h2",
-          "text": "899OK Bonuses — My Honest Take"
+          "h2": "899OK Bonuses — My Honest Take"
         },
         {
           "type": "text",
@@ -417,39 +426,54 @@
     },
     {
       "type": "links",
-      "heading": "899OK — More Pages"
+      "content": [
+        {
+          "type": "title",
+          "h2": "899OK — More Pages"
+        }
+      ]
     },
     {
       "type": "faq",
-      "heading": "899OK Bonus FAQ",
-      "items": [
+      "content": [
         {
-          "q": "What's the best bonus at 899OK for a new player?",
-          "a": "The welcome bonus, no question. 100% match up to ৳20,000 plus 150 free spins at 18x wagering is one of the strongest opening offers in Bangladesh."
+          "type": "title",
+          "h2": "899OK Bonus FAQ"
         },
         {
-          "q": "Can I withdraw my welcome bonus without playing through the wagering?",
-          "a": "No. Your original deposit is withdrawable anytime, but the bonus itself and any winnings from it are locked until you complete 18x wagering."
+          "type": "toggle",
+          "title": "What's the best bonus at 899OK for a new player?",
+          "text": "The welcome bonus, no question. 100% match up to ৳20,000 plus 150 free spins at 18x wagering is one of the strongest opening offers in Bangladesh."
         },
         {
-          "q": "What happens if I don't finish wagering in 21 days?",
-          "a": "The bonus and any winnings from it expire. Your original deposit and any cash balance you've built stay safe."
+          "type": "toggle",
+          "title": "Can I withdraw my welcome bonus without playing through the wagering?",
+          "text": "No. Your original deposit is withdrawable anytime, but the bonus itself and any winnings from it are locked until you complete 18x wagering."
         },
         {
-          "q": "Can I use multiple 899OK bonuses at the same time?",
-          "a": "No — one active bonus per account at a time. Cashback is separate and always runs in the background."
+          "type": "toggle",
+          "title": "What happens if I don't finish wagering in 21 days?",
+          "text": "The bonus and any winnings from it expire. Your original deposit and any cash balance you've built stay safe."
         },
         {
-          "q": "How does the 899OK cashback actually pay out?",
-          "a": "Straight to your withdrawable cash balance every Monday between 10am and midday Bangladesh time. No wagering, no strings."
+          "type": "toggle",
+          "title": "Can I use multiple 899OK bonuses at the same time?",
+          "text": "No — one active bonus per account at a time. Cashback is separate and always runs in the background."
         },
         {
-          "q": "Do accumulator boosts still pay if I cash out early?",
-          "a": "No. Cashing out before all selections settle voids the boost. All legs must complete and win at odds of 1.40 or higher."
+          "type": "toggle",
+          "title": "How does the 899OK cashback actually pay out?",
+          "text": "Straight to your withdrawable cash balance every Monday between 10am and midday Bangladesh time. No wagering, no strings."
         },
         {
-          "q": "Is there a special bonus for downloading the 899OK app?",
-          "a": "Yes — a ৳300 free bet lands for first-time app installs, no deposit needed. Stacks with the welcome bonus on your first deposit."
+          "type": "toggle",
+          "title": "Do accumulator boosts still pay if I cash out early?",
+          "text": "No. Cashing out before all selections settle voids the boost. All legs must complete and win at odds of 1.40 or higher."
+        },
+        {
+          "type": "toggle",
+          "title": "Is there a special bonus for downloading the 899OK app?",
+          "text": "Yes — a ৳300 free bet lands for first-time app installs, no deposit needed. Stacks with the welcome bonus on your first deposit."
         }
       ]
     }

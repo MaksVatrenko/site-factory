@@ -107,7 +107,7 @@ describe('review template: resilience to unusual content shapes', () => {
     const dir = buildSingleBlockPage([
       {
         type: 'section',
-        props: { content: [{ type: 'title', tag: 'h2', text: 'Just a heading, nothing else' }] },
+        props: { content: [{ type: 'title', h2: 'Just a heading, nothing else' }] },
       },
     ]);
     try {
@@ -129,19 +129,43 @@ describe('review template: resilience to unusual content shapes', () => {
     // nothing here depends on what came before or after it in the list.
     const dir = buildSingleBlockPage(
       [
-        { type: 'faq', props: { heading: 'FAQ first', items: [{ q: 'Q?', a: 'A.' }] } },
-        { type: 'links', props: { heading: 'Links second' } },
+        {
+          type: 'faq',
+          props: {
+            content: [
+              { type: 'title', h2: 'FAQ first' },
+              { type: 'toggle', title: 'Q?', text: 'A.' },
+            ],
+          },
+        },
+        { type: 'links', props: { content: [{ type: 'title', h2: 'Links second' }] } },
         {
           type: 'section',
           props: {
             content: [
-              { type: 'title', tag: 'h2', text: 'Section third' },
+              { type: 'title', h2: 'Section third' },
               { type: 'text', text: 'Body text for section third.' },
             ],
           },
         },
-        { type: 'toc', props: { heading: 'TOC fourth', items: ['Section third'] } },
-        { type: 'hero', props: { heading: 'Hero last', paragraphs: ['Lead text.'] } },
+        {
+          type: 'toc',
+          props: {
+            content: [
+              { type: 'title', h2: 'TOC fourth' },
+              { type: 'list', items: ['Section third'] },
+            ],
+          },
+        },
+        {
+          type: 'hero',
+          props: {
+            content: [
+              { type: 'title', h1: 'Hero last' },
+              { type: 'text', text: 'Lead text.' },
+            ],
+          },
+        },
       ],
       { nav: [{ label: 'Casino', href: '/casino' }, { label: 'Slots', href: '/slots' }] },
     );
@@ -190,12 +214,12 @@ describe('review template: a section renders its content array in exactly the gi
         type: 'section',
         props: {
           content: [
-            { type: 'title', tag: 'h2', text: 'First Heading' },
+            { type: 'title', h2: 'First Heading' },
             { type: 'text', text: 'Paragraph before the table.' },
             { type: 'table', columns: ['A', 'B'], rows: [['1', '2']] },
             { type: 'text', text: 'Paragraph after the table.' },
-            { type: 'title', tag: 'h2', text: 'Second Heading Right After' },
-            { type: 'title', tag: 'h4', text: 'A Chosen Heading Level' },
+            { type: 'title', h2: 'Second Heading Right After' },
+            { type: 'title', h4: 'A Chosen Heading Level' },
             { type: 'list', items: ['Item one', 'Item two'] },
           ],
         },
@@ -231,18 +255,73 @@ describe('review template: a section renders its content array in exactly the gi
     }
   });
 
-  it('falls back to h2 for a tag outside h2-h6, and never emits a second h1', () => {
+  it('keeps one h1 per page: the first stays, a later one becomes h2', () => {
     const dir = buildSingleBlockPage([
-      { type: 'section', props: { content: [{ type: 'title', tag: 'h1', text: 'Not A Real H1' }] } },
+      { type: 'hero', props: { content: [{ type: 'title', h1: 'The Page Title' }] } },
+      { type: 'section', props: { content: [{ type: 'title', h1: 'Not A Second H1' }] } },
     ]);
     try {
-      const { outDir } = buildSite({
+      const { outDir, log } = buildSite({
         outDir: join('output', 'test-review-title-h1-guard'),
         env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'dark' },
       });
       const html = readOutput(outDir);
-      expect(html).toMatch(/<h2[^>]*>Not A Real H1<\/h2>/);
-      expect(html).not.toMatch(/<h1[^>]*>Not A Real H1<\/h1>/);
+      expect(html.match(/<h1\b/g)).toHaveLength(1);
+      expect(html).toMatch(/<h1[^>]*>The Page Title<\/h1>/);
+      expect(html).toMatch(/<h2[^>]*>Not A Second H1<\/h2>/);
+      expect(log).toContain('второй h1');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('renders a toggle as a native disclosure in an ordinary section', () => {
+    const dir = buildSingleBlockPage([
+      {
+        type: 'section',
+        props: {
+          content: [
+            { type: 'title', h2: 'Not an FAQ' },
+            { type: 'toggle', title: 'Can a toggle live here?', text: 'Yes, [anywhere](/casino).' },
+          ],
+        },
+      },
+    ]);
+    try {
+      const { outDir } = buildSite({
+        outDir: join('output', 'test-review-toggle'),
+        env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'dark' },
+      });
+      const html = readOutput(outDir);
+      expect(html).toMatch(/<details[^>]*class="rtoggle"/);
+      expect(html).toMatch(/<summary[^>]*>Can a toggle live here\?<\/summary>/);
+      expect(html).toMatch(/<a[^>]*href="\/casino"[^>]*>anywhere<\/a>/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('shows a block type it has no shell for as an ordinary section', () => {
+    const dir = buildSingleBlockPage([
+      {
+        type: 'promo',
+        props: {
+          content: [
+            { type: 'title', h2: 'Promo Heading' },
+            { type: 'text', text: 'Promo body.' },
+          ],
+        },
+      },
+    ]);
+    try {
+      const { outDir, log } = buildSite({
+        outDir: join('output', 'test-review-unknown-block'),
+        env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'dark' },
+      });
+      const html = readOutput(outDir);
+      expect(html).toContain('Promo Heading');
+      expect(html).toContain('Promo body.');
+      expect(log).toContain('«promo» — выведен как обычная секция');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -256,7 +335,7 @@ describe('review template: links inside body text, and card sets', () => {
         type: 'section',
         props: {
           content: [
-            { type: 'title', tag: 'h2', text: 'Linked Section' },
+            { type: 'title', h2: 'Linked Section' },
             { type: 'text', text: 'Open the [full lobby](/casino) tonight.' },
             { type: 'list', items: ['Try the [Andar Bahar table](/casino)'] },
             {
@@ -295,7 +374,7 @@ describe('review template: links inside body text, and card sets', () => {
         type: 'section',
         props: {
           content: [
-            { type: 'title', tag: 'h2', text: 'Unsafe' },
+            { type: 'title', h2: 'Unsafe' },
             { type: 'text', text: 'Tap [here](javascript:alert) to win.' },
           ],
         },
@@ -323,7 +402,7 @@ describe('review template: links inside body text, and card sets', () => {
         type: 'section',
         props: {
           content: [
-            { type: 'title', tag: 'h2', text: 'Two Ways In' },
+            { type: 'title', h2: 'Two Ways In' },
             {
               type: 'cards',
               items: [

@@ -88,33 +88,62 @@ describe('engine build', () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+});
 
-  it('survives a broken content folder', () => {
-    const broken = buildSite({ site: 'broken', outDir: join('output', 'test-broken') });
-    const html = readOutput(broken.outDir, join('sloppy', 'index.html'));
-    expect(html).toContain('Text still renders after every broken entry above it');
-    expect(html).toContain('only a question');
-    expect(broken.log).toContain('carousel');
-    // sloppy.json still carries "slug": "sloppy//" — ignored now, and the log says so.
-    expect(broken.log).toContain('поле slug больше не используется');
-    // The element mechanism drops a content type the template does not declare support for
-    // exactly like an unsupported block type -- named in the log, never thrown (see
-    // src/components/ElementRenderer.astro).
-    expect(broken.log).toContain('quote');
+// data/sites/broken is a site folder broken in every way the content format allows. It must still
+// build; everything that could be shown is shown, and everything that could not is named in the log.
+describe('a content folder broken in every way the format allows', () => {
+  let html;
+  let log;
+
+  beforeAll(() => {
+    const built = buildSite({ site: 'broken', outDir: join('output', 'test-broken') });
+    html = readOutput(built.outDir, join('sloppy', 'index.html'));
+    log = built.log;
   });
 
-  it('drops orphaned markup for empty collections and bad headings', () => {
-    const broken = buildSite({ site: 'broken', outDir: join('output', 'test-broken') });
-    const html = readOutput(broken.outDir, join('sloppy', 'index.html'));
+  it('still builds the page, down to the last entry', () => {
+    expect(html).toContain('Text still renders after every broken entry above it');
+    expect(html).toContain('only a question');
+  });
+
+  it('shows an unknown block type as an ordinary section', () => {
+    expect(html).toContain('An unknown block type still shows its content');
+    expect(log).toContain('«carousel» — выведен как обычная секция');
+  });
+
+  it('names an element type the template does not declare instead of throwing', () => {
+    expect(log).toContain('quote');
+  });
+
+  it('reports a slug left in the file, which no longer decides anything', () => {
+    expect(log).toContain('поле slug больше не используется');
+  });
+
+  it('reports what a block written the old way leaves behind', () => {
+    expect(html).not.toContain('Old-style heading nobody reads');
+    expect(log).toContain('поля heading, paragraphs не используются');
+  });
+
+  it('drops a title with no heading key, and takes the first of several', () => {
+    expect(html).not.toContain('Old-style title with no heading key');
+    expect(log).toContain('нет ключа h1–h6');
+    expect(html).toMatch(/<h2[^>]*>First heading key wins<\/h2>/);
+    expect(html).not.toContain('Second key ignored');
+  });
+
+  it('keeps one h1 on the page', () => {
+    expect(html.match(/<h1\b/g)).toHaveLength(1);
+    expect(html).toMatch(/<h1[^>]*>The one real h1<\/h1>/);
+    expect(html).toMatch(/<h2[^>]*>A second h1 becomes h2<\/h2>/);
+    expect(log).toContain('второй h1');
+  });
+
+  it('leaves no orphaned markup behind', () => {
     expect(html).not.toContain('[object Object]');
-    expect(html).not.toContain('Still nothing to show');
     expect(html).not.toMatch(/<ul[^>]*>\s*<\/ul>/);
     expect(html).not.toMatch(/<table[^>]*>\s*<\/table>/);
     expect(html).not.toMatch(/<p>\s*<\/p>/);
-    // A `title` element whose tag is not one of h2-h6 falls back to h2 instead of faking the
-    // page's own h1 (see templates/review/elements/title.astro).
-    expect(html).toMatch(/<h2[^>]*>A content file cannot fake an h1<\/h2>/);
-    expect(html).not.toMatch(/<h1[^>]*>A content file cannot fake an h1<\/h1>/);
     // A `list` whose `items` is a single string is coerced into a one-item list, not dropped.
     expect(html).toContain('Coerced into a single list item');
   });
@@ -142,8 +171,8 @@ describe('the header marks the page you are on', () => {
       brand: { name: 'Trailing' },
       nav: [{ label: 'Casino', href: '/casino/' }],
       pages: [
-        { slug: '/', meta: {}, blocks: [{ type: 'hero', props: { heading: 'Home' } }] },
-        { slug: '/casino', meta: {}, blocks: [{ type: 'hero', props: { heading: 'Casino' } }] },
+        { slug: '/', meta: {}, blocks: [{ type: 'hero', props: { content: [{ type: 'title', h1: 'Home' }] } }] },
+        { slug: '/casino', meta: {}, blocks: [{ type: 'hero', props: { content: [{ type: 'title', h1: 'Casino' }] } }] },
       ],
     });
     try {
@@ -174,7 +203,7 @@ describe('brand logo copied from the public folder', () => {
       // reason a real site needs one to see its own logo appear.
       brand: { name: 'Has Logo', logo: 'images/logo.svg' },
       nav: [{ label: 'Home', href: '/' }],
-      pages: [{ slug: '/', meta: {}, blocks: [{ type: 'hero', props: { heading: 'Hero' } }] }],
+      pages: [{ slug: '/', meta: {}, blocks: [{ type: 'hero', props: { content: [{ type: 'title', h1: 'Hero' }] } }] }],
     });
     outDir = buildSite({
       outDir: join('output', 'test-logo-present'),
@@ -201,7 +230,7 @@ describe('a logo the public folder does not actually contain', () => {
     try {
       writeSiteDirFromContent(dir, {
         brand: { name: 'No Logo Here', logo: 'images/missing.svg' },
-        pages: [{ slug: '/', meta: {}, blocks: [{ type: 'hero', props: { heading: 'Hero' } }] }],
+        pages: [{ slug: '/', meta: {}, blocks: [{ type: 'hero', props: { content: [{ type: 'title', h1: 'Hero' }] } }] }],
       });
       const built = buildSite({ outDir: join('output', 'test-missing-logo'), env: { SITE_DIR: dir } });
       const html = readOutput(built.outDir);

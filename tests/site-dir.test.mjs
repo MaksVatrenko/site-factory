@@ -244,7 +244,7 @@ describe('a folder with no site.json is still a usable site', () => {
       writeJson(dir, 'home.json', {
         title: 'Only Page, No Settings',
         description: 'A folder with no site.json at all.',
-        blocks: [{ type: 'hero', heading: 'Hello' }],
+        blocks: [{ type: 'hero', content: [{ type: 'title', h1: 'Hello' }] }],
       });
       const { outDir } = buildSite({
         outDir: join('output', 'test-site-dir-no-settings'),
@@ -291,52 +291,56 @@ describe('a malformed nav in site.json does not throw', () => {
 });
 
 describe('a page whose blocks are reordered or partially stripped still builds', () => {
-  it('renders what a supported block can show and drops the rest, in whatever order they arrive', () => {
+  it('renders every block in the order it arrives, and shows an unknown block type as a section', () => {
     const dir = makeSiteDir();
     try {
       writeJson(dir, 'site.json', { brand: { name: 'Reorder' } });
       writeJson(dir, 'home.json', {
         title: 'Home',
         description: 'd',
-        blocks: [{ type: 'hero', heading: 'Home hero' }],
+        blocks: [{ type: 'hero', content: [{ type: 'title', h1: 'Home hero' }] }],
       });
       writeJson(dir, 'mixed.json', {
         title: 'Mixed',
         description: 'd',
-        // Deliberately out of the "natural" hero-first order, missing fields a client rearranging
-        // this by hand would plausibly leave out, and one block type ("cards") the review template
-        // does not declare at all.
+        // Out of the "natural" hero-first order, with a stripped answer, and a block type
+        // ("gallery") the review template has no shell for.
         blocks: [
           {
             type: 'faq',
-            heading: 'Frequently Asked',
-            items: [
-              { q: 'Does this survive reordering?', a: 'Yes.' },
-              { q: 'What about a stripped answer?' },
+            content: [
+              { type: 'title', h2: 'Frequently Asked' },
+              { type: 'toggle', title: 'Does this survive reordering?', text: 'Yes.' },
+              { type: 'toggle', title: 'What about a stripped answer?' },
             ],
           },
-          { type: 'cards', heading: 'Not a block review declares', items: [] },
+          { type: 'gallery', content: [{ type: 'text', text: 'Shown as an ordinary section' }] },
           {
             type: 'section',
-            content: [{ type: 'title', tag: 'h2', text: 'A stripped section with nothing else' }],
+            content: [{ type: 'title', h2: 'A stripped section with nothing else' }],
           },
-          { type: 'hero', heading: 'Reordered hero' },
+          { type: 'hero', content: [{ type: 'title', h1: 'Reordered hero' }] },
         ],
       });
       const { outDir, log } = buildSite({
         outDir: join('output', 'test-site-dir-reordered-blocks'),
         env: { SITE_DIR: dir },
       });
-      expect(existsSync(join(outDir, 'mixed', 'index.html'))).toBe(true);
       const html = readOutput(outDir, join('mixed', 'index.html'));
-      expect(html).toContain('Frequently Asked');
       expect(html).toContain('Does this survive reordering?');
-      // A block reduced to just a heading still renders — a stripped block is not a crash.
-      expect(html).toContain('A stripped section with nothing else');
-      // "cards" is not a block the review template declares — dropped exactly like any other
-      // unsupported block type, wherever it sits in the list, not a crash.
-      expect(html).not.toContain('Not a block review declares');
-      expect(log).toContain('cards');
+      expect(html).toContain('What about a stripped answer?');
+      expect(log).toContain('«gallery» — выведен как обычная секция');
+
+      const order = [
+        'Frequently Asked',
+        'Shown as an ordinary section',
+        'A stripped section with nothing else',
+        'Reordered hero',
+      ].map((needle) => html.indexOf(needle));
+      expect(order.every((position) => position > -1)).toBe(true);
+      for (let i = 1; i < order.length; i += 1) {
+        expect(order[i]).toBeGreaterThan(order[i - 1]);
+      }
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

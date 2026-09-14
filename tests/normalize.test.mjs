@@ -22,22 +22,41 @@ describe('normalizeSite', () => {
     expect(site.pages).toHaveLength(1);
   });
 
-  it('gives every block a props object', () => {
+  it('gives every block a props object holding its content', () => {
     const { site } = normalizeSite(
       { pages: [{ blocks: [{ type: 'hero' }] }] },
       { supportedBlocks: BLOCKS },
     );
-    expect(site.pages[0].blocks[0].props).toEqual({});
+    expect(site.pages[0].blocks[0].props).toEqual({ content: [] });
   });
 
-  it('drops blocks the template does not support', () => {
+  it('renders a block type the template does not know as an ordinary section', () => {
     const { site, warnings } = normalizeSite(
-      { pages: [{ blocks: [{ type: 'hero' }, { type: 'carousel' }] }] },
+      {
+        pages: [
+          {
+            blocks: [
+              { type: 'hero' },
+              { type: 'carousel', props: { content: [{ type: 'text', text: 'Kept' }] } },
+            ],
+          },
+        ],
+      },
       { supportedBlocks: BLOCKS },
     );
-    const types = site.pages[0].blocks.map((b) => b.type);
-    expect(types).toContain('hero');
-    expect(types).not.toContain('carousel');
+    expect(site.pages[0].blocks[1]).toEqual({
+      type: 'section',
+      props: { content: [{ type: 'text', text: 'Kept' }] },
+    });
+    expect(warnings.join(' ')).toContain('«carousel» — выведен как обычная секция');
+  });
+
+  it('drops an unknown block type when the template has no section to fall back on', () => {
+    const { site, warnings } = normalizeSite(
+      { pages: [{ blocks: [{ type: 'hero' }, { type: 'carousel' }] }] },
+      { supportedBlocks: ['hero'] },
+    );
+    expect(site.pages[0].blocks.map((b) => b.type)).toEqual(['hero']);
     expect(warnings.join(' ')).toContain('carousel');
   });
 
@@ -848,5 +867,89 @@ describe('normalizeSite: shared settings for folder-based sites (nav, footer, br
       { supportedBlocks: BLOCKS },
     );
     expect(site.footer.payments).toEqual(['bKash', 'Nagad']);
+  });
+});
+
+// Block content goes through src/lib/content.mjs (see tests/content.test.mjs for its own rules);
+// these only pin that normalizeSite actually hands every page to it, with the page's slug and a
+// registry built once for the whole site.
+describe('normalizeSite: block content', () => {
+  it("brings every block's content into the shape templates render", () => {
+    const { site } = normalizeSite(
+      {
+        pages: [
+          {
+            slug: '/',
+            blocks: [{ type: 'section', props: { content: [{ type: 'title', h1: 'Heading' }] } }],
+          },
+        ],
+      },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(site.pages[0].blocks[0].props.content).toEqual([
+      { type: 'title', tag: 'h1', text: 'Heading' },
+    ]);
+  });
+
+  it('keeps one h1 per page, naming the page in the warning', () => {
+    const { site, warnings } = normalizeSite(
+      {
+        pages: [
+          {
+            slug: '/',
+            blocks: [
+              { type: 'hero', props: { content: [{ type: 'title', h1: 'First' }] } },
+              { type: 'section', props: { content: [{ type: 'title', h1: 'Second' }] } },
+            ],
+          },
+        ],
+      },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(site.pages[0].blocks[1].props.content[0].tag).toBe('h2');
+    expect(warnings).toContain('/: второй h1 на странице стал h2: «Second»');
+  });
+
+  it('resolves pictures through the registry and the file check it is given', () => {
+    const { site, warnings } = normalizeSite(
+      {
+        pages: [
+          {
+            slug: '/',
+            blocks: [
+              {
+                type: 'section',
+                props: {
+                  content: [{ type: 'title', h1: 'Page' }, { image: 'main' }, { image: 'gone' }],
+                },
+              },
+            ],
+          },
+        ],
+      },
+      {
+        supportedBlocks: BLOCKS,
+        images: {
+          main: { src: '/images/main.webp', alt: 'Main' },
+          gone: { src: '/images/gone.webp', alt: 'Gone' },
+        },
+        imageFileExists: (src) => src === '/images/main.webp',
+      },
+    );
+    expect(site.pages[0].blocks[0].props.content).toEqual([
+      { type: 'title', tag: 'h1', text: 'Page' },
+      { type: 'image', image: { src: '/images/main.webp', alt: 'Main' } },
+    ]);
+    expect(warnings).toContain(
+      '/: файл картинки «gone» не найден: public/images/gone.webp — не выводится',
+    );
+  });
+
+  it('reports a registry in the wrong shape once, not once per page', () => {
+    const { warnings } = normalizeSite(
+      { pages: [{ slug: '/' }, { slug: '/a' }] },
+      { supportedBlocks: BLOCKS, images: 'nope' },
+    );
+    expect(warnings.filter((warning) => warning.includes('images.json'))).toHaveLength(1);
   });
 });

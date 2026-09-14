@@ -1,29 +1,20 @@
 ---
-import { asRecords, asText } from '../../_shared/props.mjs';
-import Heading from '../Heading.astro';
+import { asEntries, asText } from '../../_shared/props.mjs';
+import Content from '../Content.astro';
 
-const { heading, items, anchor } = Astro.props;
-const title = asText(heading);
-const questions = asRecords(items)
-  .map((item) => ({ q: asText(item.q), a: asText(item.a) }))
-  .filter((entry) => entry.q !== '' || entry.a !== '');
-
+// An FAQ is an ordinary block whose content is mostly toggles (elements/toggle.astro carries their
+// look). The type stays separate so structured FAQ data for search engines can be added here later
+// without touching any other block.
+const { content, anchor, templateId } = Astro.props;
+const entries = asEntries(content);
 const anchorId = asText(anchor);
 const idAttrs = anchorId ? { id: anchorId } : {};
 ---
 
-{questions.length > 0 && (
+{entries.length > 0 && (
   <section class="faq section" {...idAttrs}>
     <div class="container faq__inner">
-      {title && <Heading text={title} />}
-      <div class="faq__list">
-        {questions.map((item) => (
-          <details class="faq__item">
-            {item.q && <summary class="faq__question">{item.q}</summary>}
-            {item.a && <p class="faq__answer">{item.a}</p>}
-          </details>
-        ))}
-      </div>
+      <Content content={entries} templateId={templateId} />
     </div>
   </section>
 )}
@@ -33,84 +24,14 @@ const idAttrs = anchorId ? { id: anchorId } : {};
     scroll-margin-top: 5.5rem;
   }
 
-  .faq__list {
-    margin-top: 1.75rem;
+  /* Questions sit closer together than ordinary section elements, so they read as one list; the
+     heading keeps the usual distance from the first of them. */
+  .faq__inner {
     display: grid;
     gap: 0.75rem;
   }
 
-  .faq__item {
-    padding: 1.1rem 1.4rem;
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-sm);
-    /* Lets the height below animate to and from `auto`, which is what an answer of unknown length
-       has to resolve to. Inherited, so declaring it here reaches ::details-content without
-       switching the behaviour on for the whole document. */
-    interpolate-size: allow-keywords;
-  }
-
-  /* The answer slides open instead of appearing whole. Done entirely by the browser: the details
-     element's own content box is a pseudo-element that can be transitioned, so this needs no
-     script and no wrapper div. Where the pseudo-element is not supported the answer simply appears
-     as it did before -- nothing breaks, the motion is just missing.
-
-     content-visibility has to travel with the height: the browser hides the content the moment the
-     element closes, and without carrying that change through the transition the answer would
-     vanish before it finished collapsing. */
-  .faq__item::details-content {
-    block-size: 0;
-    overflow: hidden;
-    transition:
-      block-size 0.35s ease,
-      content-visibility 0.35s allow-discrete;
-  }
-
-  .faq__item[open]::details-content {
-    block-size: auto;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .faq__item::details-content {
-      transition: none;
-    }
-  }
-
-  .faq__question {
-    cursor: pointer;
-    list-style: none;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    color: var(--text-primary);
-    font-weight: 650;
-  }
-
-  .faq__question::-webkit-details-marker {
-    display: none;
-  }
-
-  /* Same CSS-only chevron technique as the "links" block's arrow (right + bottom border,
-     rotated), pointing down while closed and flipped to point up once expanded -- no JS, no
-     emoji, just the details/summary open state driving a CSS transform. */
-  .faq__question::after {
-    content: '';
-    flex-shrink: 0;
-    width: 0.5rem;
-    height: 0.5rem;
-    border-right: 2px solid var(--text-tertiary);
-    border-bottom: 2px solid var(--text-tertiary);
-    transform: rotate(45deg);
-    transition: transform 0.35s ease;
-  }
-
-  .faq__item[open] .faq__question::after {
-    transform: rotate(-135deg);
-  }
-
-  .faq__answer {
-    margin-top: 0.85rem;
-    color: var(--text-secondary);
+  .faq__inner > :global(.rheading) {
+    margin-bottom: 1rem;
   }
 </style>

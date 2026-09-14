@@ -1,13 +1,15 @@
 ---
-import { asRecords, asText } from '../../_shared/props.mjs';
-import Heading from '../Heading.astro';
+import { asEntries, asRecords, asText } from '../../_shared/props.mjs';
+import Content from '../Content.astro';
 
-const { heading, site, anchor } = Astro.props;
-const title = asText(heading);
+// The "other pages" grid. Its links come from site.nav, not from the content — the menu already
+// lists every page — so the content only carries what goes above the grid, normally a title. With no
+// menu there is nothing for the block to be about, so it renders nothing at all.
+const { content, site, anchor, templateId } = Astro.props;
+const entries = asEntries(content);
 
-// site.nav is already normalized by the engine (see src/lib/normalize.mjs) into a clean list of
-// { label, href } strings, but every template treats `site` the same defensive way it treats its
-// own block props — never assume it stays that shape forever.
+// site.nav is already normalized by the engine, but every template treats `site` the same defensive
+// way it treats its own props — never assume it stays that shape forever.
 const navItems = asRecords(site?.nav)
   .map((item) => ({ label: asText(item.label), href: asText(item.href) }))
   .filter((item) => item.label !== '' && item.href !== '');
@@ -18,8 +20,8 @@ const idAttrs = anchorId ? { id: anchorId } : {};
 
 {navItems.length > 0 && (
   <section class="links section" {...idAttrs}>
-    <div class="container">
-      {title && <Heading text={title} />}
+    <div class="container links__inner">
+      <Content content={entries} templateId={templateId} />
       <div class="links__grid">
         {navItems.map((item) => (
           <a class="links__card" href={item.href}>
@@ -33,8 +35,13 @@ const idAttrs = anchorId ? { id: anchorId } : {};
 )}
 
 <style>
+  .links__inner {
+    display: grid;
+    gap: 1.1rem;
+  }
+
   .links__grid {
-    margin-top: 1.75rem;
+    margin-top: 0.65rem;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
     gap: 1rem;

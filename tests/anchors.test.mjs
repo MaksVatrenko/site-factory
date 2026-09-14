@@ -12,16 +12,23 @@ function section(text, extra = []) {
   return { type: 'section', props: { content: [{ type: 'title', tag: 'h2', text }, ...extra] } };
 }
 
+// A table of contents is the first `list` in a toc block's content now; the pairs linkAnchors
+// makes land beside it as `tocLinks`.
+function toc(items, heading) {
+  const title = heading ? [{ type: 'title', tag: 'h2', text: heading }] : [];
+  return { type: 'toc', props: { content: [...title, { type: 'list', items }] } };
+}
+
 describe('linkAnchors', () => {
   it('pairs contents entries with the sections that follow, by position', () => {
     const result = linkAnchors(
       page(
-        { type: 'toc', props: { items: ['Первый пункт', 'Второй пункт'] } },
+        toc(['Первый пункт', 'Второй пункт']),
         section('Why It Works'),
         section('How To Start'),
       ),
     );
-    expect(result.blocks[0].props.items).toEqual([
+    expect(result.blocks[0].props.tocLinks).toEqual([
       { label: 'Первый пункт', anchor: 'why-it-works' },
       { label: 'Второй пункт', anchor: 'how-to-start' },
     ]);
@@ -31,12 +38,12 @@ describe('linkAnchors', () => {
     // This is the real case: the spreadsheet paraphrases, so matching on text found nothing.
     const result = linkAnchors(
       page(
-        { type: 'toc', props: { items: ['Welcome Bonus — No Fluff'] } },
+        toc(['Welcome Bonus — No Fluff']),
         section('899OK Welcome Bonus — The Real Terms'),
       ),
     );
-    expect(result.blocks[0].props.items[0].anchor).toBe(result.blocks[1].props.anchor);
-    expect(result.blocks[0].props.items[0].anchor).not.toBe('');
+    expect(result.blocks[0].props.tocLinks[0].anchor).toBe(result.blocks[1].props.anchor);
+    expect(result.blocks[0].props.tocLinks[0].anchor).not.toBe('');
   });
 
   it('never starts an anchor with a digit', () => {
@@ -54,15 +61,15 @@ describe('linkAnchors', () => {
   it('leaves an entry without a section unlinked rather than pointing it nowhere', () => {
     const result = linkAnchors(
       page(
-        { type: 'toc', props: { items: ['Есть раздел', 'Раздела нет'] } },
+        toc(['Есть раздел', 'Раздела нет']),
         section('Only One'),
       ),
     );
-    expect(result.blocks[0].props.items[1].anchor).toBe('');
+    expect(result.blocks[0].props.tocLinks[1].anchor).toBe('');
   });
 
   it('does not anchor the contents block itself', () => {
-    const result = linkAnchors(page({ type: 'toc', props: { heading: 'Содержание', items: [] } }));
+    const result = linkAnchors(page(toc([], 'Содержание')));
     expect(result.blocks[0].props.anchor).toBeUndefined();
   });
 
@@ -85,11 +92,48 @@ describe('linkAnchors', () => {
     expect(result.blocks[0].props.anchor).toBe('real-heading');
   });
 
+  it('anchors every kind of block by the first title in its content', () => {
+    const titled = (type, text) => ({
+      type,
+      props: { content: [{ type: 'title', tag: 'h2', text }] },
+    });
+    const result = linkAnchors(
+      page(titled('hero', 'Welcome'), titled('faq', 'Questions'), titled('links', 'More Pages')),
+    );
+    expect(result.blocks.map((block) => block.props.anchor)).toEqual([
+      'welcome',
+      'questions',
+      'more-pages',
+    ]);
+  });
+
+  it('takes the first list of a toc as its entries, wherever it sits', () => {
+    const result = linkAnchors(
+      page(
+        {
+          type: 'toc',
+          props: {
+            content: [
+              { type: 'text', text: 'Intro' },
+              { type: 'list', items: ['Only'] },
+              { type: 'list', items: ['Ignored'] },
+            ],
+          },
+        },
+        section('Target'),
+      ),
+    );
+    expect(result.blocks[0].props.tocLinks).toEqual([{ label: 'Only', anchor: 'target' }]);
+  });
+
   it('survives malformed input', () => {
     expect(() => linkAnchors({})).not.toThrow();
     expect(() => linkAnchors({ blocks: 'nonsense' })).not.toThrow();
     expect(() => linkAnchors({ blocks: [null, 42, { type: 'toc' }] })).not.toThrow();
-    expect(() => linkAnchors({ blocks: [{ type: 'toc', props: { items: 'строка' } }] })).not.toThrow();
+    expect(() =>
+      linkAnchors({ blocks: [{ type: 'toc', props: { content: [{ type: 'list', items: 'строка' }] } }] }),
+    ).not.toThrow();
+    expect(() => linkAnchors({ blocks: [{ type: 'toc', props: { content: 'x' } }] })).not.toThrow();
     // A section whose `content` is not even an array, or whose entries are not usable title
     // records -- both must be swallowed the same way any other malformed content shape is.
     expect(() =>

@@ -1,4 +1,6 @@
 import { isReservedOutputName } from './reserved-output-names.mjs';
+import { createImageResolver } from './images.mjs';
+import { normalizePageContent } from './content.mjs';
 
 const RTL_LANGUAGES = new Set(['ar', 'fa', 'he', 'ur']);
 const DEFAULT_BRAND = 'Site';
@@ -393,6 +395,12 @@ function buildFooter(raw, warnings) {
 
 export function normalizeSite(raw, options = {}) {
   const warnings = [];
+  // Built once per site, so a registry in the wrong shape is reported once rather than once for
+  // every page that names a picture. Whether a picture's file exists is asked through
+  // `imageFileExists`, which a real build supplies (see site-context.mjs) — this function stays
+  // free of the filesystem, exactly as it does for slugs.
+  const images = createImageResolver(options.images, { fileExists: options.imageFileExists });
+  warnings.push(...images.warnings);
   const overrides = options.overrides || {};
   const supported = Array.isArray(options.supportedBlocks)
     ? new Set(options.supportedBlocks)
@@ -488,14 +496,22 @@ export function normalizeSite(raw, options = {}) {
         warnings.push(`${slug}: пропущен блок — это не объект`);
         continue;
       }
-      const type = toText(candidate.type, '');
+      let type = toText(candidate.type, '');
       if (type === '') {
         warnings.push(`${slug}: пропущен блок без поля type`);
         continue;
       }
+      // Every block is one shape now — a type and a content list — so a type this template has no
+      // shell for can still show its content as an ordinary section instead of vanishing. Only a
+      // template that has no section either leaves nothing to fall back on.
       if (supported && !supported.has(type)) {
-        warnings.push(`${slug}: шаблон не поддерживает блок «${type}» — пропущен`);
-        continue;
+        if (supported.has('section')) {
+          warnings.push(`${slug}: шаблон не знает блок «${type}» — выведен как обычная секция`);
+          type = 'section';
+        } else {
+          warnings.push(`${slug}: шаблон не поддерживает блок «${type}» — пропущен`);
+          continue;
+        }
       }
       blocks.push({
         type,
@@ -503,9 +519,13 @@ export function normalizeSite(raw, options = {}) {
       });
     }
 
+    const content = normalizePageContent(blocks, { slug, resolveImage: images.resolve });
+    warnings.push(...content.warnings);
+    const pageBlocks = content.blocks;
+
     const canRenderFooter = !supported || supported.has('footer');
-    if (canRenderFooter && !blocks.some((block) => block.type === 'footer')) {
-      blocks.push({ type: 'footer', props: {} });
+    if (canRenderFooter && !pageBlocks.some((block) => block.type === 'footer')) {
+      pageBlocks.push({ type: 'footer', props: {} });
     }
 
     normalizedPages.push({
@@ -514,7 +534,7 @@ export function normalizeSite(raw, options = {}) {
         title: toText(meta.title, brand.name),
         description: toText(meta.description, ''),
       },
-      blocks,
+      blocks: pageBlocks,
     });
   });
 
