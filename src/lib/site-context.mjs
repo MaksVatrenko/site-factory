@@ -58,7 +58,8 @@ export function loadContext(root = process.cwd()) {
   if (!dir) {
     throw new Error('[factory] SITE_DIR не задан: укажите папку с сайтом (site.json и файлы страниц)');
   }
-  const raw = loadSiteDirInput(dir);
+  // `images` is read here too, but only wired into the normalizer once pictures are rendered.
+  const { input: raw, warnings: folderWarnings } = loadSiteDirInput(dir);
 
   const template = loadTemplate(process.env.TEMPLATE || '', root);
   const missing = missingBlockFiles(template, root);
@@ -134,7 +135,7 @@ export function loadContext(root = process.cwd()) {
 
   const scheme = readScheme(process.env.SCHEME || site.style || template.defaultScheme, root);
 
-  for (const warning of warnings) console.warn(`[factory] ${warning}`);
+  for (const warning of [...folderWarnings, ...warnings]) console.warn(`[factory] ${warning}`);
   if (scheme.fellBack) {
     console.warn(`[factory] Схема не найдена, взята «${scheme.id}»`);
   }

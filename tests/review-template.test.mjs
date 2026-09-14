@@ -95,7 +95,6 @@ function buildSingleBlockPage(blocks, { nav } = {}) {
   writeFileSync(
     join(dir, 'home.json'),
     JSON.stringify({
-      slug: '/',
       title: 'Fixture',
       blocks: blocks.map(({ type, props }) => ({ type, ...props })),
     }),

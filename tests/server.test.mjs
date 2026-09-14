@@ -118,14 +118,13 @@ function schemeIdsOnDisk() {
 }
 
 // Same "read the filesystem independently" principle as the two helpers above, applied to a site
-// folder under data/sites: the page count is every *.json file except site.json — the exact same
-// definition loadSiteDirInput itself uses for a page file (see src/lib/site-dir.mjs) — and the
-// brand name is whatever that site's own site.json declares. Computed here from scratch so the
-// assertions below actually check the /api/sites route against real content on disk, not against
-// the same function the route calls internally.
+// folder under data/sites: the page count is every *.json file in the folder except the two
+// service files, site.json and images.json — spelled out here rather than imported from
+// src/lib/site-dir.mjs, so the assertions below check the /api/sites route against content on disk,
+// not against the same rule the route itself calls.
 function pageCountOnDisk(siteId) {
   return readdirSync(join('data', 'sites', siteId)).filter(
-    (name) => name.endsWith('.json') && name !== 'site.json',
+    (name) => name.endsWith('.json') && name !== 'site.json' && name !== 'images.json',
   ).length;
 }
 
@@ -156,6 +155,23 @@ describe('factory API', () => {
       expect(byId[siteId], `expected ${siteId} in /api/sites`).toBeTruthy();
       expect(byId[siteId].pages).toBe(pageCountOnDisk(siteId));
       expect(byId[siteId].brand).toBe(siteBrandOnDisk(siteId));
+    }
+  });
+
+  it('does not count images.json as a page', async () => {
+    const siteId = 'images-count-fixture';
+    const siteDir = join('data', 'sites', siteId);
+    mkdirSync(siteDir, { recursive: true });
+    writeFileSync(join(siteDir, 'home.json'), JSON.stringify({ title: 'Home', blocks: [] }));
+    writeFileSync(
+      join(siteDir, 'images.json'),
+      JSON.stringify({ main: { src: '/images/main.webp', alt: 'Main' } }),
+    );
+    try {
+      const data = await fetch(`${base}/api/sites`).then((r) => r.json());
+      expect(data.sites.find((site) => site.id === siteId)?.pages).toBe(1);
+    } finally {
+      rmSync(siteDir, { recursive: true, force: true });
     }
   });
 
@@ -472,7 +488,7 @@ describe('site, template and scheme are validated against the real lists, not re
     mkdirSync(siteDir, { recursive: true });
     writeFileSync(
       join(siteDir, 'home.json'),
-      JSON.stringify({ slug: '/', title: 'Fixture Site Content', blocks: [] }),
+      JSON.stringify({ title: 'Fixture Site Content', blocks: [] }),
     );
 
     try {

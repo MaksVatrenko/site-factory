@@ -46,7 +46,7 @@ describe('final-fix-6, F4: buildProber resolves an absolute OUT_DIR instead of n
     );
     writeFileSync(
       join(contentDir, 'home.json'),
-      JSON.stringify({ slug: '/', title: 'F4 Home', blocks: [] }),
+      JSON.stringify({ title: 'F4 Home', blocks: [] }),
     );
 
     const savedEnv = {};
