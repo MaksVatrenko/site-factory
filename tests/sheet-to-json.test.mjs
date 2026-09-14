@@ -5,7 +5,7 @@ function section(...content) {
   return { blocks: [{ type: 'section', content }] };
 }
 
-const title = (tag, text) => ({ type: 'title', tag, text });
+const title = (tag, text) => ({ type: 'title', [tag]: text });
 const text = (value) => ({ type: 'text', text: value });
 
 describe('classify: the trailing run of h3 subsections becomes a card set', () => {
@@ -103,6 +103,84 @@ describe('classify: the trailing run of h3 subsections becomes a card set', () =
       'h3,Is there an app?',
       ',Android only.',
     ].join('\n');
-    expect(sheetToPage(csv, '/').blocks[0].type).toBe('faq');
+    expect(sheetToPage(csv).blocks[0].type).toBe('faq');
+  });
+});
+
+describe('sheetToPage: the page format it writes', () => {
+  it('writes no slug — the file name is the address now', () => {
+    const page = sheetToPage('title,Casino\ndescription,About the casino\nh1,Welcome');
+    expect(page).not.toHaveProperty('slug');
+    expect(page.title).toBe('Casino');
+    expect(page.description).toBe('About the casino');
+  });
+
+  it('builds the hero as content, keeping paragraphs and lists in the order they were written', () => {
+    const csv = [
+      'h1,Welcome',
+      ',First paragraph.',
+      ',Here is what I noticed:',
+      ',Fast payouts',
+      ',Live tables',
+      ',Closing paragraph.',
+    ].join('\n');
+    expect(sheetToPage(csv).blocks[0]).toEqual({
+      type: 'hero',
+      content: [
+        { type: 'title', h1: 'Welcome' },
+        { type: 'text', text: 'First paragraph.' },
+        { type: 'text', text: 'Here is what I noticed:' },
+        { type: 'list', items: ['Fast payouts', 'Live tables'] },
+        { type: 'text', text: 'Closing paragraph.' },
+      ],
+    });
+  });
+
+  it('writes section headings with the tag as the key', () => {
+    const csv = ['h2,Payments', ',Deposits are instant.', 'h3,bKash', ',Fast.'].join('\n');
+    const titles = sheetToPage(csv).blocks[0].content.filter((entry) => entry.type === 'title');
+    expect(titles).toEqual([
+      { type: 'title', h2: 'Payments' },
+      { type: 'title', h3: 'bKash' },
+    ]);
+  });
+
+  it('turns an FAQ into toggles', () => {
+    const csv = [
+      'h2,FAQ',
+      'h3,Is it legit?',
+      ',Yes.',
+      'h3,How fast?',
+      ',Minutes.',
+      'h3,Is there an app?',
+      ',Android only.',
+    ].join('\n');
+    expect(sheetToPage(csv).blocks[0]).toEqual({
+      type: 'faq',
+      content: [
+        { type: 'title', h2: 'FAQ' },
+        { type: 'toggle', title: 'Is it legit?', text: 'Yes.' },
+        { type: 'toggle', title: 'How fast?', text: 'Minutes.' },
+        { type: 'toggle', title: 'Is there an app?', text: 'Android only.' },
+      ],
+    });
+  });
+
+  it('turns a table of contents into a title and a list', () => {
+    const csv = ['h2,On this page', ',🎰 Casino', ',🏏 Cricket'].join('\n');
+    expect(sheetToPage(csv).blocks[0]).toEqual({
+      type: 'toc',
+      content: [
+        { type: 'title', h2: 'On this page' },
+        { type: 'list', items: ['Casino', 'Cricket'] },
+      ],
+    });
+  });
+
+  it('turns a heading with nothing under it into the other-pages block', () => {
+    expect(sheetToPage('h2,More pages').blocks[0]).toEqual({
+      type: 'links',
+      content: [{ type: 'title', h2: 'More pages' }],
+    });
   });
 });
