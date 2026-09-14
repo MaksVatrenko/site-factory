@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildSite, readOutput } from './helpers/build.mjs';
@@ -444,5 +444,82 @@ describe('review template: links inside body text, and card sets', () => {
     // same left edge as every other section heading.
     expect(html).toMatch(/<h2[^>]*class="rheading"[^>]*>What&#39;s on This Page<\/h2>/);
     expect(card[0]).not.toContain('<h2');
+  });
+});
+
+describe('review template: pictures from images.json', () => {
+  // A single-page site with three real picture files in its public folder and a registry naming
+  // them — the shape a real site folder has once it carries pictures.
+  function buildWithPictures(blocks, outName) {
+    const dir = buildSingleBlockPage(blocks);
+    const publicDir = join(dir, 'public');
+    mkdirSync(join(publicDir, 'images'), { recursive: true });
+    for (const name of ['hero.webp', 'section.webp', 'card.webp']) {
+      writeFileSync(join(publicDir, 'images', name), 'not really a picture');
+    }
+    writeFileSync(
+      join(dir, 'images.json'),
+      JSON.stringify({
+        hero: { src: '/images/hero.webp', alt: 'Hero picture', width: 1200, height: 600 },
+        section: { src: '/images/section.webp', alt: 'Section picture' },
+        card: { src: '/images/card.webp', alt: 'Card picture' },
+      }),
+    );
+    try {
+      return buildSite({
+        outDir: join('output', outName),
+        env: { SITE_DIR: dir, PUBLIC_DIR: publicDir, TEMPLATE: 'review', SCHEME: 'dark' },
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  it('loads a picture in a section lazily, and one in the hero at once', () => {
+    const { outDir } = buildWithPictures(
+      [
+        { type: 'hero', props: { content: [{ type: 'title', h1: 'Pictures' }, { image: 'hero' }] } },
+        { type: 'section', props: { content: [{ type: 'title', h2: 'Below' }, { image: 'section' }] } },
+      ],
+      'test-review-pictures',
+    );
+    const html = readOutput(outDir);
+    const hero = html.match(/<img[^>]*src="\/images\/hero\.webp"[^>]*>/)?.[0] ?? '';
+    const section = html.match(/<img[^>]*src="\/images\/section\.webp"[^>]*>/)?.[0] ?? '';
+    expect(hero).toContain('alt="Hero picture"');
+    expect(hero).toContain('loading="eager"');
+    expect(hero).toContain('fetchpriority="high"');
+    expect(hero).toContain('width="1200"');
+    expect(section).toContain('alt="Section picture"');
+    expect(section).toContain('loading="lazy"');
+    expect(section).not.toContain('fetchpriority');
+    expect(existsSync(join(outDir, 'images', 'hero.webp'))).toBe(true);
+  });
+
+  it('renders the picture of a card', () => {
+    const { outDir } = buildWithPictures(
+      [
+        {
+          type: 'section',
+          props: {
+            content: [
+              { type: 'title', h1: 'Cards' },
+              { type: 'cards', items: [{ title: 'With picture', text: 'A', image: 'card' }] },
+            ],
+          },
+        },
+      ],
+      'test-review-card-picture',
+    );
+    expect(readOutput(outDir)).toMatch(/<img[^>]*src="\/images\/card\.webp"[^>]*alt="Card picture"/);
+  });
+
+  it('leaves out a picture it cannot find, and says so in the log', () => {
+    const { outDir, log } = buildWithPictures(
+      [{ type: 'section', props: { content: [{ type: 'title', h1: 'Gap' }, { image: 'nowhere' }] } }],
+      'test-review-missing-picture',
+    );
+    expect(readOutput(outDir)).not.toMatch(/<img\b/);
+    expect(log).toContain('картинки «nowhere» нет в images.json');
   });
 });

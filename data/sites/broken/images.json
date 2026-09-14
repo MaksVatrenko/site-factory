@@ -1,0 +1,7 @@
+{
+  "missing-file": { "src": "/images/missing.webp", "alt": "A file that is not in public" },
+  "no-src": { "alt": "A record with no src" },
+  "no-alt": { "src": "https://example.com/picture.webp" },
+  "script": { "src": "javascript:alert(1)", "alt": "Not a picture" },
+  "not-an-object": "just a string"
+}

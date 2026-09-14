@@ -393,6 +393,18 @@ function buildFooter(raw, warnings) {
   };
 }
 
+// The logo is a picture from images.json like any other, named in site.json — "brand.logo": "main".
+// One that does not resolve is dropped with a warning instead of shipping as a broken image in the
+// header of every page. Its alt text falls back to the brand name in the layout, so a logo with no
+// alt of its own is not worth a warning.
+function resolveLogo(value, images, warnings) {
+  const name = toText(value, '');
+  if (name === '') return null;
+  const { image, problem } = images.resolve(name);
+  if (!image) warnings.push(`Логотип: ${problem} — не выводится`);
+  return image;
+}
+
 export function normalizeSite(raw, options = {}) {
   const warnings = [];
   // Built once per site, so a registry in the wrong shape is reported once rather than once for
@@ -415,7 +427,7 @@ export function normalizeSite(raw, options = {}) {
   const brandInput = isPlainObject(input.brand) ? input.brand : {};
   const brand = {
     name: pickOverride(overrides.brand, brandInput.name, DEFAULT_BRAND),
-    logo: toText(brandInput.logo, ''),
+    logo: resolveLogo(brandInput.logo, images, warnings),
     tagline: toText(brandInput.tagline, ''),
   };
 

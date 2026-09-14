@@ -953,3 +953,26 @@ describe('normalizeSite: block content', () => {
     expect(warnings.filter((warning) => warning.includes('images.json'))).toHaveLength(1);
   });
 });
+
+describe('normalizeSite: the logo is a picture from the registry', () => {
+  it('resolves the logo named in site.json through the same registry as the pages', () => {
+    const { site } = normalizeSite(
+      { brand: { name: 'Acme', logo: 'mark' } },
+      { supportedBlocks: BLOCKS, images: { mark: { src: '/images/mark.svg', alt: 'Acme mark' } } },
+    );
+    expect(site.brand.logo).toEqual({ src: '/images/mark.svg', alt: 'Acme mark' });
+  });
+
+  it('drops a logo that does not resolve, with a warning', () => {
+    const { site, warnings } = normalizeSite(
+      { brand: { name: 'Acme', logo: 'mark' } },
+      { supportedBlocks: BLOCKS },
+    );
+    expect(site.brand.logo).toBeNull();
+    expect(warnings).toContain('Логотип: картинки «mark» нет в images.json — не выводится');
+  });
+
+  it('has no logo when site.json names none', () => {
+    expect(normalizeSite({}, { supportedBlocks: BLOCKS }).site.brand.logo).toBeNull();
+  });
+});

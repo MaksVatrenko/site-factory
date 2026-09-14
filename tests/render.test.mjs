@@ -147,6 +147,19 @@ describe('a content folder broken in every way the format allows', () => {
     // A `list` whose `items` is a single string is coerced into a one-item list, not dropped.
     expect(html).toContain('Coerced into a single list item');
   });
+
+  it('shows a picture it can find and names every one it cannot', () => {
+    expect(html).toMatch(/<img[^>]*src="https:\/\/example\.com\/picture\.webp"/);
+    expect(log).toContain('у картинки «no-alt» нет alt');
+    expect(log).toContain('картинки «not-in-registry» нет в images.json');
+    expect(log).toContain('файл картинки «missing-file» не найден');
+    expect(log).toContain('у картинки «no-src» в images.json нет src');
+    expect(log).toContain('у картинки «script» недопустимый src');
+    expect(log).toContain('поле image должно быть именем картинки');
+    expect(log).toContain('images.json: запись «not-an-object» не объект');
+    expect(html).not.toContain('javascript:');
+    expect(html).not.toContain('/images/missing.webp');
+  });
 });
 
 describe('the header marks the page you are on', () => {
@@ -188,7 +201,7 @@ describe('the header marks the page you are on', () => {
   });
 });
 
-describe('brand logo copied from the public folder', () => {
+describe('brand logo, named in site.json and found through images.json', () => {
   let dir;
   let outDir;
 
@@ -198,13 +211,24 @@ describe('brand logo copied from the public folder', () => {
     mkdirSync(join(publicDir, 'images'), { recursive: true });
     writeFileSync(join(publicDir, 'images', 'logo.svg'), '<svg/>');
     writeSiteDirFromContent(dir, {
-      // The logo renders in the site header, and the header only renders at all when there is a
-      // nav to show (see Base.astro's `showHeader`) — a nav entry is required here for the same
-      // reason a real site needs one to see its own logo appear.
-      brand: { name: 'Has Logo', logo: 'images/logo.svg' },
+      // The logo renders in the header, and the header renders only when there is a nav to show
+      // (see Base.astro's `showHeader`) — so a nav entry is needed to see the logo at all.
+      brand: { name: 'Has Logo', logo: 'logo' },
       nav: [{ label: 'Home', href: '/' }],
-      pages: [{ slug: '/', meta: {}, blocks: [{ type: 'hero', props: { content: [{ type: 'title', h1: 'Hero' }] } }] }],
+      pages: [
+        {
+          slug: '/',
+          meta: {},
+          blocks: [{ type: 'hero', props: { content: [{ type: 'title', h1: 'Hero' }] } }],
+        },
+      ],
     });
+    writeFileSync(
+      join(dir, 'images.json'),
+      JSON.stringify({
+        logo: { src: '/images/logo.svg', alt: 'Has Logo mark', width: 120, height: 36 },
+      }),
+    );
     outDir = buildSite({
       outDir: join('output', 'test-logo-present'),
       env: { SITE_DIR: dir, PUBLIC_DIR: publicDir },
@@ -215,8 +239,10 @@ describe('brand logo copied from the public folder', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it('keeps a logo the public folder does contain', () => {
-    expect(readOutput(outDir)).toContain('images/logo.svg');
+  it('puts the logo in the header with the alt text from images.json', () => {
+    expect(readOutput(outDir)).toMatch(
+      /<img[^>]*src="\/images\/logo\.svg"[^>]*alt="Has Logo mark"[^>]*width="120"/,
+    );
   });
 
   it('copies the logo file into the output', () => {
@@ -224,18 +250,28 @@ describe('brand logo copied from the public folder', () => {
   });
 });
 
-describe('a logo the public folder does not actually contain', () => {
+describe('a logo that does not resolve', () => {
   it('is dropped, with a warning in the log', () => {
     const dir = mkdtempSync(join(tmpdir(), 'site-factory-logo-missing-'));
     try {
       writeSiteDirFromContent(dir, {
-        brand: { name: 'No Logo Here', logo: 'images/missing.svg' },
-        pages: [{ slug: '/', meta: {}, blocks: [{ type: 'hero', props: { content: [{ type: 'title', h1: 'Hero' }] } }] }],
+        brand: { name: 'No Logo Here', logo: 'missing' },
+        nav: [{ label: 'Home', href: '/' }],
+        pages: [
+          {
+            slug: '/',
+            meta: {},
+            blocks: [{ type: 'hero', props: { content: [{ type: 'title', h1: 'Hero' }] } }],
+          },
+        ],
       });
+      writeFileSync(
+        join(dir, 'images.json'),
+        JSON.stringify({ missing: { src: '/images/missing.svg', alt: 'Missing' } }),
+      );
       const built = buildSite({ outDir: join('output', 'test-missing-logo'), env: { SITE_DIR: dir } });
-      const html = readOutput(built.outDir);
-      expect(html).not.toContain('images/missing.svg');
-      expect(built.log).toContain('Логотип');
+      expect(readOutput(built.outDir)).not.toContain('/images/missing.svg');
+      expect(built.log).toContain('Логотип: файл картинки «missing» не найден');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

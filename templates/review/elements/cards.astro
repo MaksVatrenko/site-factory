@@ -11,7 +11,8 @@ import RichText from '../RichText.astro';
 // a styled <p> would take it out of the page outline for anything reading the structure.
 const ALLOWED_TAGS = new Set(['h3', 'h4', 'h5', 'h6']);
 
-const { items } = Astro.props;
+const { items, context } = Astro.props;
+const eager = Boolean(context?.eagerImages);
 const cards = asRecords(items)
   .map((item) => ({
     title: asText(item.title),
@@ -21,8 +22,9 @@ const cards = asRecords(items)
     lines: asList(item.text)
       .map((line) => asText(line))
       .filter((line) => line !== ''),
+    image: asText(item.image?.src) ? item.image : null,
   }))
-  .filter((card) => card.title !== '' || card.lines.length > 0);
+  .filter((card) => card.title !== '' || card.lines.length > 0 || card.image);
 ---
 
 {cards.length > 0 && (
@@ -31,6 +33,17 @@ const cards = asRecords(items)
       const Tag = card.tag;
       return (
         <div class="rcards__item">
+          {card.image && (
+            <img
+              class="rcards__image"
+              src={card.image.src}
+              alt={card.image.alt}
+              width={card.image.width}
+              height={card.image.height}
+              loading={eager ? 'eager' : 'lazy'}
+              decoding="async"
+            />
+          )}
           {card.title && <Tag class="rcards__title">{card.title}</Tag>}
           {card.lines.map((line) => (
             <p class="rcards__text"><RichText text={line} /></p>
@@ -76,6 +89,12 @@ const cards = asRecords(items)
     .rcards__item:hover {
       transform: none;
     }
+  }
+
+  .rcards__image {
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius-sm);
   }
 
   .rcards__title {

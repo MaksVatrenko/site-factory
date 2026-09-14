@@ -65,7 +65,12 @@ const showFooter =
         <div class="container site-header__inner">
           <a class="site-header__brand" href="/">
             {site.brand.logo ? (
-              <img src={site.brand.logo} alt={site.brand.name} />
+              <img
+                src={site.brand.logo.src}
+                alt={site.brand.logo.alt || site.brand.name}
+                width={site.brand.logo.width}
+                height={site.brand.logo.height}
+              />
             ) : (
               <span>{site.brand.name}</span>
             )}

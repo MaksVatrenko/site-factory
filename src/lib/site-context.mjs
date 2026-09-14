@@ -58,8 +58,7 @@ export function loadContext(root = process.cwd()) {
   if (!dir) {
     throw new Error('[factory] SITE_DIR не задан: укажите папку с сайтом (site.json и файлы страниц)');
   }
-  // `images` is read here too, but only wired into the normalizer once pictures are rendered.
-  const { input: raw, warnings: folderWarnings } = loadSiteDirInput(dir);
+  const { input: raw, images, warnings: folderWarnings } = loadSiteDirInput(dir);
 
   const template = loadTemplate(process.env.TEMPLATE || '', root);
   const missing = missingBlockFiles(template, root);
@@ -105,6 +104,7 @@ export function loadContext(root = process.cwd()) {
     console.warn('[factory] Проверка слагов через файловую систему недоступна — слаги разрешаются без неё');
   }
 
+  const publicDir = resolvePublicDir(root);
   const { site, warnings } = normalizeSite(raw, {
     supportedBlocks: template.blocks,
     overrides: {
@@ -115,19 +115,12 @@ export function loadContext(root = process.cwd()) {
       partnerUrl: process.env.PARTNER_URL || '',
     },
     prober: prober ? prober.tryClaim : undefined,
+    images,
+    // A picture named in the content but absent from the public folder would ship as a broken
+    // image — the content and the public folder are separate deliveries and drift apart easily. The
+    // normalizer asks this for every local picture, the logo included, and drops the ones missing.
+    imageFileExists: (src) => existsSync(join(publicDir, src)),
   });
-
-  // A logo named in the content but absent from the public folder would ship a broken image on
-  // every page of a live site, and nobody would notice until they opened it. The content is
-  // author-supplied and the public folder is a separate delivery, so the two drift apart easily —
-  // drop the reference and say so, the same way an unsupported block is dropped.
-  if (site.brand.logo !== '') {
-    const publicDir = resolvePublicDir(root);
-    if (!existsSync(join(publicDir, site.brand.logo))) {
-      warnings.push(`Логотип «${site.brand.logo}» не найден в папке public — не выводится`);
-      site.brand.logo = '';
-    }
-  }
 
   // Anchors are resolved once the page is otherwise final, because linking a table of contents to
   // its sections needs the whole page in view — a block component only ever sees itself.

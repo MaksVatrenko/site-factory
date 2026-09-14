@@ -28,6 +28,12 @@
         { "type": "title", "h2": "   " },
         { "type": "list", "items": "Coerced into a single list item" },
         { "type": "table", "columns": ["A", "B"], "rows": [] },
+        { "image": "not-in-registry" },
+        { "image": "missing-file" },
+        { "image": "no-src" },
+        { "image": "script" },
+        { "type": "image", "image": "no-alt" },
+        { "image": 42 },
         { "type": "text", "text": "Text still renders after every broken entry above it" }
       ]
     },
