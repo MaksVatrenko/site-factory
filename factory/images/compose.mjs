@@ -8,6 +8,9 @@ export const SQUARE_SIZE = 512;
 // does not crowd a small favicon.
 const SQUARE_LOGO_MAX_WIDTH = 0.8;
 const SQUARE_LOGO_MAX_HEIGHT = 0.6;
+// A pixel this faint is background noise, not a mark RemBG actually kept — real lettering left
+// behind is fully opaque (alpha 255) well before it is anywhere near this dim.
+const VISIBLE_ALPHA_THRESHOLD = 16;
 
 // RemBG keeps the whole canvas and only makes the background transparent, so the lettering sits in
 // a wide empty margin; shown as is, the header would draw it tiny. Trimming leaves the lettering
@@ -16,6 +19,16 @@ const SQUARE_LOGO_MAX_HEIGHT = 0.6;
 // back too: the square is drawn from it, at full resolution.
 export async function makeHeaderLogo(cutoutPng) {
   const trimmed = await sharp(cutoutPng).trim().png().toBuffer();
+  // RemBG can erase everything — a wordmark it could not tell from its own plain background — and
+  // still answer with a normal-looking, fully transparent PNG. trim() has nothing to crop then, so
+  // it keeps the whole blank canvas instead of throwing (verified directly against this project's
+  // sharp 0.35.4). Left unchecked, that blank canvas would be saved as a real header logo and a
+  // bare gradient square, and images.json would then hold both entries, so no later build would
+  // ever retry (see generateLogo in logo.mjs). Caught here, before either file is ever written.
+  const alpha = await sharp(trimmed).ensureAlpha().extractChannel('alpha').stats();
+  if (alpha.channels[0].max < VISIBLE_ALPHA_THRESHOLD) {
+    throw new Error('после удаления фона на картинке ничего не осталось');
+  }
   const { data, info } = await sharp(trimmed)
     .resize({ height: HEADER_LOGO_HEIGHT, withoutEnlargement: true })
     .webp({ quality: 90 })

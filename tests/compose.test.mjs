@@ -37,6 +37,19 @@ describe('makeHeaderLogo', () => {
     const logo = await makeHeaderLogo(await cutout({ mark: [300, 100] }));
     expect([logo.width, logo.height]).toEqual([300, 100]);
   });
+
+  // I2: RemBG can erase everything — a wordmark it could not tell from its own background — and
+  // return a fully transparent PNG the same shape a real cutout would have. trim() has nothing to
+  // crop and keeps the whole, still-blank, canvas instead of throwing, so an invisible header logo
+  // and a bare gradient square would otherwise be written and recorded as if the logo had worked.
+  it('throws when nothing survives background removal', async () => {
+    const blank = await sharp({
+      create: { width: 1536, height: 768, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
+    })
+      .png()
+      .toBuffer();
+    await expect(makeHeaderLogo(blank)).rejects.toThrow(/после удаления фона на картинке ничего не осталось/);
+  });
 });
 
 describe('makeSquareLogo', () => {

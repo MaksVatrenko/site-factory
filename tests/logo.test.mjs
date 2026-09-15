@@ -199,6 +199,31 @@ describe('generateLogo', () => {
     expect(lines.at(-1)).toMatch(/^Логотип: Runware отклонил запрос \(400: failed with 400\) — пропущен, потрачено \$0\.0900$/);
   });
 
+  // I2: RemBG can answer 200 with a normal-looking, fully transparent PNG — a wordmark it could
+  // not tell apart from its own plain background — instead of failing outright. Both requests are
+  // paid for either way, so the cost is still reported, but nothing usable came out of them: no
+  // header logo, no square, and no images.json entries for either, so the next build still tries
+  // to make the logo (a half-written pair of entries would stop that from ever happening again).
+  it('writes nothing when RemBG erases the whole wordmark, but still reports what was spent', async () => {
+    const siteDir = writeSite({ site: { brand: { name: 'Blank' } } });
+    const blank = await sharp({
+      create: { width: 1536, height: 768, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
+    })
+      .png()
+      .toBuffer();
+    const { fetchFn } = fakeRunware({ cutout: blank });
+    const { summary, lines } = await run(siteDir, { fetchFn });
+    expect(summary.generated).toBe(false);
+    // 0.09 + 0.001 is not exactly 0.091 in floating point, so the sum is compared, not matched.
+    expect(summary.cost).toBeCloseTo(0.091, 10);
+    expect(existsSync(join(siteDir, 'images.json'))).toBe(false);
+    expect(existsSync(join(siteDir, 'public', 'images', 'logo.webp'))).toBe(false);
+    expect(existsSync(join(siteDir, 'public', 'images', 'logo-square.png'))).toBe(false);
+    expect(lines.at(-1)).toMatch(
+      /^Логотип: после удаления фона на картинке ничего не осталось — пропущен, потрачено \$0\.0910$/,
+    );
+  });
+
   it('never puts the key into a log line', async () => {
     const siteDir = writeSite({ site: { brand: { name: 'Leak' } } });
     const { fetchFn } = fakeRunware({ cutout: await cutoutPng(), fail: { imageInference: 401 } });
