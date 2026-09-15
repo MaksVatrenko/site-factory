@@ -1,8 +1,9 @@
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadSiteDirInput } from '../../src/lib/site-dir.mjs';
 import { createPromptPicker, fillBrand, loadPromptFile } from './prompts.mjs';
 import { generateImage, RunwareError } from './runware.mjs';
+import { addEntries, readRegistry, uniqueFileName, writeUniqueFile } from './registry.mjs';
 
 // Fills in the pictures a site's content asks for but its images.json does not have yet: each
 // missing name gets one picture from a random prompt, saved under public/images, with its entry
@@ -12,7 +13,6 @@ import { generateImage, RunwareError } from './runware.mjs';
 // It never throws. Every problem becomes a line in the log and the site builds anyway: a picture
 // that did not appear is dropped from the page with a warning, the same as any unknown name.
 
-const IMAGES_FILE = 'images.json';
 const IMAGES_URL_DIR = '/images';
 // After these, every further request would fail exactly the same way.
 const STOPPING_KINDS = new Set(['auth', 'balance']);
@@ -92,71 +92,6 @@ export function fileBaseFor(name) {
 export function altFor(name, brand) {
   const words = name.replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
   return [brand, words].filter(Boolean).join(' ');
-}
-
-function uniqueFileName(imagesDir, base, taken) {
-  let candidate = `${base}.webp`;
-  let number = 2;
-  while (taken.has(candidate) || existsSync(join(imagesDir, candidate))) {
-    candidate = `${base}-${number}.webp`;
-    number += 1;
-  }
-  taken.add(candidate);
-  return candidate;
-}
-
-// A name reserved by uniqueFileName lives only in this run's memory (`taken`), so it does not
-// stop a second run of the factory for the same site — a second build under a different domain,
-// or the CLI alongside the form — from creating that exact file while this run is still waiting
-// on Runware. `wx` makes the write itself the real check: it fails with EEXIST rather than
-// silently overwriting a file someone else just claimed, and only then is the next free name
-// tried. A bounded number of attempts, not an unbounded loop: past that, something other than an
-// ordinary name clash is going on, and it is treated as any other write failure.
-const MAX_WRITE_ATTEMPTS = 5;
-
-function writeUniqueFile(imagesDir, fileName, base, taken, bytes) {
-  let candidate = fileName;
-  for (let attempt = 0; attempt < MAX_WRITE_ATTEMPTS; attempt += 1) {
-    const target = join(imagesDir, candidate);
-    try {
-      writeFileSync(target, bytes, { flag: 'wx' });
-      return candidate;
-    } catch (error) {
-      // `wx` reports EEXIST for a directory sitting at that path too, not only for a file a
-      // concurrent run wrote there first — and a directory blocking the name is a write failure
-      // like any other (what a plain write would have reported as EISDIR), not a clash worth
-      // trying another name for.
-      const blockedByDirectory = error.code === 'EEXIST' && statSync(target).isDirectory();
-      if (error.code !== 'EEXIST' || blockedByDirectory) throw error;
-      candidate = uniqueFileName(imagesDir, base, taken);
-    }
-  }
-  throw new Error(`не удалось подобрать свободное имя файла для «${base}»`);
-}
-
-// Throws on a file that is not a JSON object: writing our entry into it would mean replacing the
-// owner's file with one we made up.
-// The try/catch covers a file that breaks while a run is in progress (addToRegistry re-reads it);
-// loadSiteDirInput has already refused one broken from the start.
-function readRegistry(siteDir) {
-  const path = join(siteDir, IMAGES_FILE);
-  if (!existsSync(path)) return {};
-  let raw;
-  try {
-    raw = JSON.parse(readFileSync(path, 'utf8'));
-  } catch (error) {
-    throw new Error(`images.json сайта не читается как JSON (${error.message})`);
-  }
-  if (!isPlainObject(raw)) throw new Error('images.json сайта должен быть объектом');
-  return raw;
-}
-
-// Read, add, write — synchronously, so two pictures finishing at once cannot interleave and lose
-// one another's entry.
-function addToRegistry(siteDir, name, entry) {
-  const registry = readRegistry(siteDir);
-  registry[name] = entry;
-  writeFileSync(join(siteDir, IMAGES_FILE), `${JSON.stringify(registry, null, 2)}\n`);
 }
 
 const formatSeconds = (ms) => `${(ms / 1000).toFixed(1)} с`;
@@ -275,11 +210,13 @@ export async function generateMissingImages({
         );
         paidCost = cost;
         const savedFileName = writeUniqueFile(imagesDir, fileName, base, takenFiles, bytes);
-        addToRegistry(siteDir, name, {
-          src: `${IMAGES_URL_DIR}/${savedFileName}`,
-          alt: altFor(name, resolvedBrand),
-          width: promptSet.width,
-          height: promptSet.height,
+        addEntries(siteDir, {
+          [name]: {
+            src: `${IMAGES_URL_DIR}/${savedFileName}`,
+            alt: altFor(name, resolvedBrand),
+            width: promptSet.width,
+            height: promptSet.height,
+          },
         });
         summary.generated.push(name);
         if (typeof cost === 'number') summary.cost += cost;
