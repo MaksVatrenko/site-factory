@@ -3,10 +3,13 @@ import sharp from 'sharp';
 import { HEADER_LOGO_HEIGHT, SQUARE_SIZE, makeHeaderLogo, makeSquareLogo } from '../factory/images/compose.mjs';
 
 // What RemBG hands back: an opaque mark in the middle of a transparent canvas.
+// Real lettering leaves transparent pixels inside its bounding box (between and around letters).
+// A fully opaque rectangle would leave no transparent pixels after trim, causing WebP to drop the alpha channel.
+// So the fixture adds rounded corners, keeping transparent corner pixels like real lettering does.
 async function cutout({ canvas = [1536, 768], mark = [900, 300], colour = '#ffb800' } = {}) {
   const [markWidth, markHeight] = mark;
   const svg = Buffer.from(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${markWidth}" height="${markHeight}"><rect width="100%" height="100%" fill="${colour}"/></svg>`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${markWidth}" height="${markHeight}"><rect width="100%" height="100%" rx="24" fill="${colour}"/></svg>`,
   );
   return sharp({ create: { width: canvas[0], height: canvas[1], channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
     .composite([{ input: svg, gravity: 'centre' }])
