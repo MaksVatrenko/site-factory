@@ -65,6 +65,11 @@ describe('service files are not pages', () => {
     expect(isPageFileName('images.json')).toBe(false);
     expect(isPageFileName('notes.txt')).toBe(false);
   });
+
+  it('does not treat a file named only ".json" as a page', () => {
+    // Its name without the extension is empty, and an empty name would become "/" — the home page.
+    expect(isPageFileName('.json')).toBe(false);
+  });
 });
 
 describe('loadSiteDirInput', () => {
@@ -96,6 +101,18 @@ describe('loadSiteDirInput', () => {
       const { input, images } = loadSiteDirInput(dir);
       expect(input.pages).toHaveLength(1);
       expect(images).toEqual(registry);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps the home page when a file named only ".json" sits beside home.json', () => {
+    // A dot-file is hidden in Finder, so nobody would see why the home page had moved.
+    const dir = writeFolder({ '.json': { title: 'Nameless' }, 'home.json': { title: 'Home' } });
+    try {
+      const { input, warnings } = loadSiteDirInput(dir);
+      expect(input.pages.map((page) => [page.slug, page.meta.title])).toEqual([['/', 'Home']]);
+      expect(warnings).toEqual([]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

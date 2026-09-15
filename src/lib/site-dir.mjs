@@ -14,8 +14,15 @@ function isPlainObject(value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+// A file named only ".json" is not a page: its name without the extension is empty, and an empty
+// name would become "/" — taking the home page from home.json, and from a dot-file Finder hides.
 export function isPageFileName(name) {
-  return typeof name === 'string' && name.endsWith('.json') && !SERVICE_FILE_NAMES.includes(name);
+  return (
+    typeof name === 'string' &&
+    name.endsWith('.json') &&
+    name !== '.json' &&
+    !SERVICE_FILE_NAMES.includes(name)
+  );
 }
 
 // A page's address is its file name: casino.json is /casino. home.json is the site root, matched
