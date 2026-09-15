@@ -73,6 +73,8 @@ function uniqueFileName(imagesDir, base, taken) {
 
 // Throws on a file that is not a JSON object: writing our entry into it would mean replacing the
 // owner's file with one we made up.
+// The try/catch covers a file that breaks while a run is in progress (addToRegistry re-reads it);
+// loadSiteDirInput has already refused one broken from the start.
 function readRegistry(siteDir) {
   const path = join(siteDir, IMAGES_FILE);
   if (!existsSync(path)) return {};

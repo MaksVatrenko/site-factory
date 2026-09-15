@@ -188,7 +188,56 @@ describe('generateMissingImages', () => {
     const { lines } = await run(siteDir, { fetchFn });
     expect(tasks).toHaveLength(0);
     expect(readFileSync(join(siteDir, 'images.json'), 'utf8')).toBe('{ not json');
-    expect(lines.join('\n')).toContain('images.json');
+    expect(lines[0]).toMatch(/^Картинки: не удалось прочитать сайт.*images\.json/);
+  });
+
+  it('refuses valid JSON that is not an object', async () => {
+    const siteDir = writeSite({ blocks: heroWith({ image: 'hero' }), images: '[]' });
+    const { fetchFn, tasks } = fakeRunware();
+    const { lines } = await run(siteDir, { fetchFn });
+    expect(tasks).toHaveLength(0);
+    expect(readFileSync(join(siteDir, 'images.json'), 'utf8')).toBe('[]');
+    expect(lines.join('\n')).toContain('images.json сайта должен быть объектом');
+  });
+
+  it('handles images.json broken during the run', async () => {
+    const siteDir = writeSite({ blocks: heroWith({ image: 'hero' }) });
+    const fetchFn = async (_url, init) => {
+      const [task] = JSON.parse(init.body);
+      // Break the images.json while answering the request
+      writeFileSync(join(siteDir, 'images.json'), '{ broken mid-run');
+      return new Response(
+        JSON.stringify({ data: [{ taskUUID: task.taskUUID, imageBase64Data: Buffer.from('webp-1').toString('base64'), cost: 0.0017 }] }),
+        { status: 200 },
+      );
+    };
+    const { summary, lines } = await run(siteDir, { fetchFn });
+    expect(summary.generated).toEqual([]);
+    expect(summary.skipped).toEqual(['hero']);
+    expect(readFileSync(join(siteDir, 'images.json'), 'utf8')).toBe('{ broken mid-run');
+    expect(lines.some((line) => line.startsWith('Картинка hero: images.json сайта не читается как JSON'))).toBe(true);
+  });
+
+  it('respects concurrency limit with multiple images', async () => {
+    const siteDir = writeSite({ blocks: heroWith({ image: 'a' }, { image: 'b' }, { image: 'c' }) });
+    let inFlight = 0;
+    let peak = 0;
+    const fetchFn = async (_url, init) => {
+      inFlight += 1;
+      peak = Math.max(peak, inFlight);
+      const [task] = JSON.parse(init.body);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      inFlight -= 1;
+      return new Response(
+        JSON.stringify({ data: [{ taskUUID: task.taskUUID, imageBase64Data: Buffer.from('webp-x').toString('base64'), cost: 0.0017 }] }),
+        { status: 200 },
+      );
+    };
+    const { summary, lines } = await run(siteDir, { fetchFn, config: { ...CONFIG, concurrency: 2 } });
+    expect(peak).toBe(2);
+    expect(summary.generated.sort()).toEqual(['a', 'b', 'c']);
+    const registry = readRegistry(siteDir);
+    expect(['a', 'b', 'c'].every((name) => Object.hasOwn(registry, name))).toBe(true);
   });
 
   it('skips generation with a message when there is no key', async () => {
