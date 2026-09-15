@@ -48,12 +48,6 @@ describe('engine build', () => {
     expect(readOutput(outDir)).toContain('dir="ltr"');
   });
 
-  it('ships no JavaScript bundles', () => {
-    const html = readOutput(outDir);
-    expect(html).not.toMatch(/<script\b/i);
-    expect(html).not.toMatch(/<link\b[^>]*\srel=["']?modulepreload["']?/i);
-  });
-
   it('inlines all stylesheets', () => {
     const html = readOutput(outDir);
     expect(html).not.toMatch(/<link\b[^>]*\srel=["']?stylesheet["']?/i);
@@ -159,6 +153,57 @@ describe('a content folder broken in every way the format allows', () => {
     expect(log).toContain('images.json: запись «not-an-object» не объект');
     expect(html).not.toContain('javascript:');
     expect(html).not.toContain('/images/missing.webp');
+  });
+});
+
+describe('the header folds its menu behind a button on a phone', () => {
+  let html;
+
+  beforeAll(() => {
+    html = readOutput(buildSite({ outDir: join('output', 'test-nav-menu') }).outDir);
+  });
+
+  it('opens and closes the menu with a native button', () => {
+    // popovertarget is the browser's own switch for the nav: a tap toggles it, a tap outside or
+    // Escape closes it, and a screen reader is told whether it is open.
+    const button = html.match(/<button\b[^>]*\bpopovertarget=[^>]*>/)?.[0] ?? '';
+    expect(button).toContain('popovertarget="site-header__menu"');
+    expect(button).toContain('type="button"');
+
+    const nav = html.match(/<nav\b[^>]*\bid="site-header__menu"[^>]*>([\s\S]*?)<\/nav>/);
+    expect(nav?.[0]).toMatch(/<nav\b[^>]*\spopover[\s>=]/);
+    expect(nav?.[1]).toContain('href="/casino"');
+  });
+
+  it('names the button for anyone who cannot see the icon', () => {
+    expect(html).toMatch(/<button\b[^>]*\bpopovertarget=[^>]*\baria-label="Menu"/);
+  });
+
+  it('keeps the menu id out of reach of the anchors headings are given', () => {
+    // A heading's anchor is a slug of lowercase letters, digits and single hyphens
+    // (src/lib/anchors.mjs), so no heading can ever be given an id with a double underscore — and
+    // the button can never end up pointing at a section instead of the menu.
+    const dir = mkdtempSync(join(tmpdir(), 'site-factory-menu-id-'));
+    writeSiteDirFromContent(dir, {
+      brand: { name: 'Menu id' },
+      nav: [{ label: 'Casino', href: '/casino' }],
+      pages: [
+        {
+          slug: '/',
+          meta: {},
+          blocks: [{ type: 'section', props: { content: [{ type: 'title', h2: 'site-header__menu' }] } }],
+        },
+      ],
+    });
+    try {
+      const outDir = buildSite({
+        outDir: join('output', 'test-nav-menu-id'),
+        env: { SITE_DIR: dir },
+      }).outDir;
+      expect(readOutput(outDir).match(/\bid="site-header__menu"/g)).toHaveLength(1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

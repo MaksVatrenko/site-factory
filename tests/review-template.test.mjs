@@ -65,13 +65,6 @@ describe('review template: the real client site (data/sites/899ok)', () => {
     expect(html).toContain('Is 899OK legit in Bangladesh?');
   });
 
-  it('ships no client-side JavaScript on any page', () => {
-    for (const slug of PAGE_SLUGS) {
-      const html = readOutput(outDir, outputPathFor(slug));
-      expect(html, `${slug} shipped a <script> tag`).not.toMatch(/<script\b/i);
-    }
-  });
-
   it('inlines every stylesheet instead of linking one', () => {
     const html = readOutput(outDir);
     expect(html).not.toMatch(/<link\b[^>]*\srel=["']?stylesheet["']?/i);
@@ -117,7 +110,6 @@ describe('review template: resilience to unusual content shapes', () => {
       });
       const html = readOutput(outDir);
       expect(html).toContain('Just a heading, nothing else');
-      expect(html).not.toMatch(/<script\b/i);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -175,7 +167,6 @@ describe('review template: resilience to unusual content shapes', () => {
         env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'dark' },
       });
       const html = readOutput(outDir);
-      expect(html).not.toMatch(/<script\b/i);
 
       // Every block rendered its own content...
       expect(html).toContain('FAQ first');

@@ -22,6 +22,11 @@ const canonical = pageUrl(resolveOrigin(Astro.site, site.domain), page.slug);
 // those older examples keep building with no header or footer at all, unchanged.
 const showHeader = site.nav.length > 0;
 
+// The id the menu button opens. A heading's anchor is a slug of lowercase letters, digits and
+// single hyphens (src/lib/anchors.mjs), so an id with a double underscore is one no section can
+// ever be given — the button cannot end up opening a section instead of the menu.
+const MENU_ID = 'site-header__menu';
+
 // Trailing slashes are the only difference the same page can legitimately spell two ways: a slug
 // written "/casino/" and a nav href written "/casino" are one page, and comparing the raw strings
 // would leave the menu unmarked on exactly the sites whose content is written that way.
@@ -75,7 +80,13 @@ const showFooter =
               <span>{site.brand.name}</span>
             )}
           </a>
-          <nav class="site-header__nav" aria-label="Primary">
+          <!-- Opens and closes the menu on a phone. popovertarget is the browser's own switch: a tap
+               toggles the nav, a tap outside or Escape closes it, and a screen reader is told
+               whether it is open — all without a line of script. Hidden on wider screens. -->
+          <button class="site-header__toggle" type="button" popovertarget={MENU_ID} aria-label="Menu">
+            <span class="site-header__toggle-bars" aria-hidden="true"></span>
+          </button>
+          <nav id={MENU_ID} class="site-header__nav" aria-label="Primary" popover>
             {site.nav.map((item) => {
               const isActive = activePath !== '' && normalizePath(item.href) === activePath;
               return (
@@ -145,6 +156,8 @@ const showFooter =
 
 <style>
   .site-header {
+    /* On a phone the bar is held to this height, so the menu can open exactly beneath it. */
+    --header-height: 4rem;
     position: sticky;
     top: 0;
     z-index: 20;
@@ -174,12 +187,25 @@ const showFooter =
     width: auto;
   }
 
+  /* The nav is a popover — what the menu button opens on a phone (see the phone rules below).
+     Everywhere else, and in a browser too old to know popovers, it is simply the row of links, so
+     the browser's own popover look (hidden, framed, fixed in the middle of the screen) is undone
+     here, and the phone rules bring back only the parts they want. */
   .site-header__nav {
+    position: static;
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     gap: 0.5rem 1.5rem;
     flex: 1 1 auto;
+    width: auto;
+    height: auto;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    overflow: visible;
+    background: none;
+    color: inherit;
   }
 
   .site-header__nav a {
@@ -196,6 +222,201 @@ const showFooter =
      cannot see the colour. */
   .site-header__nav a.is-active {
     color: var(--accent-primary);
+  }
+
+  /* The menu button, drawn only where the menu is folded away (the phone rules below). */
+  .site-header__toggle {
+    display: none;
+    flex-shrink: 0;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition:
+      border-color 0.2s ease,
+      color 0.2s ease;
+  }
+
+  .site-header__toggle:hover,
+  .site-header__toggle:focus-visible {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+  }
+
+  .site-header__toggle:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+  }
+
+  /* Three bars drawn in CSS: the span is the middle one, its ::before and ::after the outer two.
+     While the menu is open they fold into a cross — the middle bar fades, the outer two slide to
+     the middle and turn 45° each way. */
+  .site-header__toggle-bars,
+  .site-header__toggle-bars::before,
+  .site-header__toggle-bars::after {
+    display: block;
+    width: 1.25rem;
+    height: 2px;
+    border-radius: 2px;
+    background-color: currentColor;
+    transition:
+      transform 0.3s ease,
+      background-color 0.3s ease;
+  }
+
+  .site-header__toggle-bars {
+    position: relative;
+  }
+
+  .site-header__toggle-bars::before,
+  .site-header__toggle-bars::after {
+    content: '';
+    position: absolute;
+    left: 0;
+  }
+
+  .site-header__toggle-bars::before {
+    transform: translateY(-6px) rotate(0);
+  }
+
+  .site-header__toggle-bars::after {
+    transform: translateY(6px) rotate(0);
+  }
+
+  .site-header__inner:has(.site-header__nav:popover-open) .site-header__toggle-bars {
+    background-color: transparent;
+  }
+
+  .site-header__inner:has(.site-header__nav:popover-open) .site-header__toggle-bars::before {
+    transform: translateY(0) rotate(45deg);
+  }
+
+  .site-header__inner:has(.site-header__nav:popover-open) .site-header__toggle-bars::after {
+    transform: translateY(0) rotate(-45deg);
+  }
+
+  /* On a phone the row of links would wrap into a block of its own under the brand, taller than
+     the page's first line of content. Here it folds behind the button and opens as a panel beneath
+     the bar. Only in a browser that knows popovers: anywhere else the button could not open
+     anything, so it stays hidden and the links stay a row, as they always were. */
+  @media (width < 48rem) {
+    @supports selector(:popover-open) {
+      .site-header__inner {
+        flex-wrap: nowrap;
+        min-height: var(--header-height);
+        padding-block: 0;
+      }
+
+      /* A long brand name gives way to the button rather than pushing it off the screen. */
+      .site-header__brand {
+        min-width: 0;
+      }
+
+      .site-header__brand span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .site-header__toggle {
+        display: grid;
+      }
+
+      /* The panel spans the screen right under the bar, with the same background and the same
+         hairline on top, so it reads as the bar unfolding. A menu longer than the screen scrolls
+         inside the panel. It fades and drops in rather than appearing whole; a browser without
+         these transitions just shows it at once. */
+      .site-header__nav {
+        position: fixed;
+        inset: var(--header-height) 0 auto;
+        max-height: calc(100dvh - var(--header-height));
+        overflow-y: auto;
+        flex-direction: column;
+        flex-wrap: nowrap;
+        gap: 0;
+        padding: 0.25rem 1.25rem 0.75rem;
+        background: var(--bg-secondary);
+        border-top: 1px solid var(--border-subtle);
+        border-bottom: 1px solid var(--border-default);
+        box-shadow: 0 1.5rem 3rem rgb(0 0 0 / 0.35);
+        opacity: 0;
+        translate: 0 -0.5rem;
+        transition:
+          opacity 0.25s ease,
+          translate 0.25s ease,
+          display 0.25s allow-discrete,
+          overlay 0.25s allow-discrete;
+      }
+
+      .site-header__nav:not(:popover-open) {
+        display: none;
+      }
+
+      .site-header__nav:popover-open {
+        opacity: 1;
+        translate: 0;
+      }
+
+      @starting-style {
+        .site-header__nav:popover-open {
+          opacity: 0;
+          translate: 0 -0.5rem;
+        }
+      }
+
+      .site-header__nav a {
+        padding-block: 0.85rem;
+        border-bottom: 1px solid var(--border-subtle);
+        font-size: 1.05rem;
+      }
+
+      .site-header__nav a:last-child {
+        border-bottom: 0;
+      }
+
+      /* The page under the open menu dims — but not the bar, so the button that closes it stays in
+         plain sight. The height repeats as a fallback because older engines let ::backdrop inherit
+         nothing, custom properties included. */
+      .site-header__nav::backdrop {
+        top: var(--header-height, 4rem);
+        background-color: rgb(0 0 0 / 0);
+        transition:
+          background-color 0.25s ease,
+          display 0.25s allow-discrete,
+          overlay 0.25s allow-discrete;
+      }
+
+      .site-header__nav:popover-open::backdrop {
+        background-color: rgb(0 0 0 / 0.55);
+      }
+
+      @starting-style {
+        .site-header__nav:popover-open::backdrop {
+          background-color: rgb(0 0 0 / 0);
+        }
+      }
+
+      /* The page behind an open menu stays put instead of scrolling under the finger. */
+      :global(body:has(.site-header__nav:popover-open)) {
+        overflow: hidden;
+      }
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .site-header__toggle,
+    .site-header__toggle-bars,
+    .site-header__toggle-bars::before,
+    .site-header__toggle-bars::after,
+    .site-header__nav,
+    .site-header__nav::backdrop {
+      transition: none;
+    }
   }
 
   .site-footer {
