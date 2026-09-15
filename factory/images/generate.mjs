@@ -4,6 +4,7 @@ import { loadSiteDirInput } from '../../src/lib/site-dir.mjs';
 import { createPromptPicker, fillBrand, loadPromptFile } from './prompts.mjs';
 import { generateImage, RunwareError } from './runware.mjs';
 import { addEntries, readRegistry, uniqueFileName, writeUniqueFile } from './registry.mjs';
+import { LOGO_NAME, SQUARE_NAME } from './logo.mjs';
 
 // Fills in the pictures a site's content asks for but its images.json does not have yet: each
 // missing name gets one picture from a random prompt, saved under public/images, with its entry
@@ -16,6 +17,14 @@ import { addEntries, readRegistry, uniqueFileName, writeUniqueFile } from './reg
 const IMAGES_URL_DIR = '/images';
 // After these, every further request would fail exactly the same way.
 const STOPPING_KINDS = new Set(['auth', 'balance']);
+
+// 'logo' and 'logo-square' are made by the logo step (factory/images/logo.mjs), before this one
+// runs, from a model chosen for lettering — never from a random picture prompt. A photo generated
+// here under either name would land in the header or the schema.org square in its place, and its
+// mere presence in images.json would stop the logo step from ever trying again (it only acts on a
+// name that is still missing). The constants are imported from logo.mjs itself so the two steps
+// can never drift apart on which names are reserved.
+const RESERVED_FOR_LOGO = new Set([LOGO_NAME, SQUARE_NAME]);
 
 function isPlainObject(value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -135,10 +144,18 @@ export async function generateMissingImages({
   // it sets the object's prototype instead, so the entry would never actually land in
   // images.json and this name would be regenerated, and paid for, on every future build. Skip it
   // outright, before anything else runs or costs money.
-  const missing = rawMissing.filter((name) => name !== '__proto__');
-  if (rawMissing.length !== missing.length) {
+  const withoutProto = rawMissing.filter((name) => name !== '__proto__');
+  if (rawMissing.length !== withoutProto.length) {
     summary.skipped.push('__proto__');
     log('Картинка __proto__: такое имя нельзя записать в images.json — пропущена');
+  }
+
+  // See RESERVED_FOR_LOGO above: these two names belong to the logo step, never to this one.
+  const missing = withoutProto.filter((name) => !RESERVED_FOR_LOGO.has(name));
+  for (const name of withoutProto) {
+    if (!RESERVED_FOR_LOGO.has(name)) continue;
+    summary.skipped.push(name);
+    log(`Картинка ${name}: это имя зарезервировано за логотипом — пропущена`);
   }
   if (missing.length === 0) return summary;
 

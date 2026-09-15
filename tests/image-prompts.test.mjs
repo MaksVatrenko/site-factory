@@ -82,4 +82,13 @@ describe('fillBrand', () => {
   it('leaves no double space behind when there is no brand', () => {
     expect(fillBrand('the {brand} casino hall', '')).toBe('the casino hall');
   });
+
+  // M2: replaceAll('{brand}', brand) treats a string replacement's own $-patterns as live —
+  // $$ collapses to a literal $, and $& re-inserts the whole matched "{brand}" text — so a brand
+  // that happens to contain one of these corrupts the prompt instead of being dropped in as plain
+  // text. A function replacer's return value is always used literally, with no such patterns.
+  it('treats a $ in the brand as plain text, not a replacement pattern', () => {
+    expect(fillBrand('{brand} logo', 'Win$$')).toBe('Win$$ logo');
+    expect(fillBrand('a {brand} sign', 'A$&B')).toBe('a A$&B sign');
+  });
 });

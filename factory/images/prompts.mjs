@@ -60,5 +60,9 @@ export function createPromptPicker(prompts, random = Math.random) {
 }
 
 export function fillBrand(prompt, brand) {
-  return prompt.replaceAll('{brand}', brand).replace(/\s{2,}/g, ' ').trim();
+  // A string replacement in replaceAll interprets $-patterns of its own ($$ -> literal $, $& ->
+  // the whole match, ...), so a brand containing one would corrupt the prompt: "Win$$" loses a
+  // dollar, and "A$&B" re-inserts the literal text "{brand}". A function replacer's return value
+  // is always used as-is, with no such patterns, so the brand is inserted as plain text (M2).
+  return prompt.replaceAll('{brand}', () => brand).replace(/\s{2,}/g, ' ').trim();
 }

@@ -441,6 +441,28 @@ describe('generateMissingImages', () => {
     expect(Object.hasOwn(registry, '__proto__')).toBe(false);
   });
 
+  // M1: 'logo' and 'logo-square' are made by the logo step (factory/images/logo.mjs) from a model
+  // chosen for lettering, before this step ever runs — never from a random picture prompt. A photo
+  // generated here under either name would land in the header or the schema.org square in its
+  // place, and its mere presence in images.json would stop the logo step from ever trying again
+  // (it only acts on a name that is still missing).
+  it('skips markers reserved for the logo step without any request', async () => {
+    const siteDir = writeSite({
+      blocks: heroWith({ image: 'logo' }, { image: 'logo-square' }, { image: 'hero' }),
+    });
+    const { fetchFn, tasks } = fakeRunware();
+    const { summary, lines } = await run(siteDir, { fetchFn });
+    expect(tasks).toHaveLength(1);
+    expect(summary.generated).toEqual(['hero']);
+    expect(summary.skipped).toEqual(['logo', 'logo-square']);
+    expect(lines).toContain('Картинка logo: это имя зарезервировано за логотипом — пропущена');
+    expect(lines).toContain('Картинка logo-square: это имя зарезервировано за логотипом — пропущена');
+    const registry = readRegistry(siteDir);
+    expect(Object.hasOwn(registry, 'hero')).toBe(true);
+    expect(Object.hasOwn(registry, 'logo')).toBe(false);
+    expect(Object.hasOwn(registry, 'logo-square')).toBe(false);
+  });
+
   // M5: creating public/images can fail for reasons that have nothing to do with Runware — e.g.
   // `public` already exists as a plain file. Money must not be spent on a picture that was never
   // going to be savable in the first place.
