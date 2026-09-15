@@ -11,7 +11,8 @@
     "build:site": "astro build",
     "test": "vitest run",
     "check:matrix": "node scripts/check-matrix.mjs",
-    "import:sheet": "node scripts/import-sheet.mjs"
+    "import:sheet": "node scripts/import-sheet.mjs",
+    "generate:images": "node scripts/generate-images.mjs"
   },
   "dependencies": {
     "archiver": "^8.0.0",

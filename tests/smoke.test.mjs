@@ -12,7 +12,7 @@ describe('project skeleton', () => {
   it('declares the expected scripts', () => {
     const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
     expect(Object.keys(pkg.scripts)).toEqual(
-      expect.arrayContaining(['dev', 'test', 'build:site', 'check:matrix']),
+      expect.arrayContaining(['dev', 'test', 'build:site', 'check:matrix', 'generate:images']),
     );
     expect(pkg.type).toBe('module');
   });
