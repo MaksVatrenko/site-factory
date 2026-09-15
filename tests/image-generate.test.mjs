@@ -1,6 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import {
-  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -156,6 +155,41 @@ describe('collectImageNames', () => {
                 { image: 'kept' },
               ],
             },
+          },
+        ],
+      },
+    ];
+    expect(collectImageNames(pages)).toEqual(['kept']);
+  });
+
+  // normalizeSite (src/lib/normalize.mjs) drops every block whose `type` is missing or blank
+  // before the engine ever renders it, the same test as here (`typeof … === 'string' && …trim()
+  // !== ''`). A block without a usable `type` never reaches the page the visitor builds, so its
+  // markers must not be paid for.
+  it('does not collect a marker on a block with no usable type', () => {
+    const pages = [
+      {
+        blocks: [
+          { props: { content: [{ image: 'typeless' }] } },
+          { type: '   ', props: { content: [{ image: 'blank-type' }] } },
+          { type: 'hero', props: { content: [{ image: 'kept' }] } },
+        ],
+      },
+    ];
+    expect(collectImageNames(pages)).toEqual(['kept']);
+  });
+
+  // content.mjs's own entries loop (line ~120) skips any `content` entry that is not a plain
+  // object before it ever looks at it — an array entry is never resolved, so it must not be
+  // collected either, even though the walk does recurse into arrays nested deeper (e.g. a card's
+  // `items`).
+  it('does not collect a marker inside a content entry that is itself an array', () => {
+    const pages = [
+      {
+        blocks: [
+          {
+            type: 'hero',
+            props: { content: [[{ image: 'in-array' }], { image: 'kept' }] },
           },
         ],
       },
@@ -329,7 +363,7 @@ describe('generateMissingImages', () => {
     expect(tasks).toHaveLength(0);
     expect(summary.skipped).toEqual(['hero']);
     expect(lines).toEqual([
-      'Картинки: ключ Runware в .env записан неверно (пробелы или переносы строк внутри) — пропущено 1: hero',
+      'Картинки: ключ Runware в .env записан неверно (недопустимые символы (пробелы, переносы строк, не-ASCII)) — пропущено 1: hero',
     ]);
     expect(existsSync(join(siteDir, 'images.json'))).toBe(false);
   });
@@ -423,21 +457,72 @@ describe('generateMissingImages', () => {
 
   // M5: a picture already generated — and billed — must not become free to lose. If saving it
   // fails afterwards, the cost still counts.
+  //
+  // Round 2 fix 2: a chmod-based read-only directory does not fail this for every user — root
+  // ignores write permissions, and chmod is a no-op on Windows. Reserving the target path itself
+  // as a directory fails the write with EISDIR for anyone, and — unlike EEXIST (fix 4 below) —
+  // must not be retried under a different name, since a directory is not a name clash to route
+  // around.
   it('still counts the cost when saving the picture fails after a paid generation', async () => {
     const siteDir = writeSite({ blocks: heroWith({ image: 'hero' }) });
     const imagesDir = join(siteDir, 'public', 'images');
-    mkdirSync(imagesDir, { recursive: true });
-    chmodSync(imagesDir, 0o500);
-    const { fetchFn, tasks } = fakeRunware();
-    try {
-      const { summary, lines } = await run(siteDir, { fetchFn });
-      expect(tasks).toHaveLength(1);
-      expect(summary.generated).toEqual([]);
-      expect(summary.skipped).toEqual(['hero']);
-      expect(summary.cost).toBe(0.0017);
-      expect(lines.some((line) => line.startsWith('Картинка hero:'))).toBe(true);
-    } finally {
-      chmodSync(imagesDir, 0o755);
-    }
+    const fetchFn = async (_url, init) => {
+      const [task] = JSON.parse(init.body);
+      // The worker has already created imagesDir and reserved 'hero.webp' by the time Runware is
+      // asked — reserving that exact path as a directory here simulates the reserved name being
+      // impossible to write to, without touching filesystem permissions.
+      mkdirSync(join(imagesDir, 'hero.webp'), { recursive: true });
+      return new Response(
+        JSON.stringify({
+          data: [
+            {
+              taskUUID: task.taskUUID,
+              imageBase64Data: Buffer.from('webp-1').toString('base64'),
+              cost: 0.0017,
+            },
+          ],
+        }),
+        { status: 200 },
+      );
+    };
+    const { summary, lines } = await run(siteDir, { fetchFn });
+    expect(summary.generated).toEqual([]);
+    expect(summary.skipped).toEqual(['hero']);
+    expect(summary.cost).toBe(0.0017);
+    expect(lines.some((line) => line.startsWith('Картинка hero:'))).toBe(true);
+  });
+
+  // Round 2 fix 4: the reserved file name lives only in this run's memory (`takenFiles`), so a
+  // second run of the factory for the same site — a second build under a different domain, or
+  // the CLI alongside the form — can grab the same name while this run's Runware request is
+  // still in flight. Simulating that by having the fake Runware itself write the reserved file
+  // mid-request: the write must notice, keep that file untouched, and save under the next free
+  // name instead of overwriting it (spec §4.5, "Существующие файлы не перезаписываются").
+  it('retries under a new name when a concurrent run claims the reserved file first', async () => {
+    const siteDir = writeSite({ blocks: heroWith({ image: 'hero' }) });
+    const imagesDir = join(siteDir, 'public', 'images');
+    const fetchFn = async (_url, init) => {
+      const [task] = JSON.parse(init.body);
+      mkdirSync(imagesDir, { recursive: true });
+      writeFileSync(join(imagesDir, 'hero.webp'), 'written by the other run');
+      return new Response(
+        JSON.stringify({
+          data: [
+            {
+              taskUUID: task.taskUUID,
+              imageBase64Data: Buffer.from('webp-1').toString('base64'),
+              cost: 0.0017,
+            },
+          ],
+        }),
+        { status: 200 },
+      );
+    };
+    const { summary } = await run(siteDir, { fetchFn });
+    expect(summary.generated).toEqual(['hero']);
+    expect(summary.skipped).toEqual([]);
+    expect(readFileSync(join(imagesDir, 'hero.webp'), 'utf8')).toBe('written by the other run');
+    expect(readFileSync(join(imagesDir, 'hero-2.webp'), 'utf8')).toBe('webp-1');
+    expect(readRegistry(siteDir).hero.src).toBe('/images/hero-2.webp');
   });
 });

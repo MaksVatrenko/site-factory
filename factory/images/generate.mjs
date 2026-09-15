@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadSiteDirInput } from '../../src/lib/site-dir.mjs';
 import { createPromptPicker, fillBrand, loadPromptFile } from './prompts.mjs';
@@ -26,9 +26,16 @@ function typeOf(entry) {
 }
 
 // Every string an `image` key holds, but only where normalizePageContent in src/lib/content.mjs
-// actually resolves one, so nothing gets paid for that the built page could never show:
+// actually resolves one, so nothing gets paid for that the built page could never show — and
+// only for a block normalizeSite in src/lib/normalize.mjs keeps in the first place:
+//   - never a block whose `type` is missing or blank — normalizeSite drops it before the engine
+//     ever sees it, with the same test used here (a non-blank string);
 //   - only inside a block's props.content entries — never a field on the block itself, which the
 //     engine never even looks at;
+//   - never a `content` entry that is not a plain object — content.mjs's own entries loop skips
+//     it outright, so an array (or any other non-object) sitting directly in `content` is never
+//     resolved, even though the walk below does recurse into arrays nested deeper (a card's
+//     `items`, and the like);
 //   - never on a `content` entry of type 'title' — normalizeTitle only ever reads its h1–h6 key,
 //     it never looks at `image` at all;
 //   - anywhere else inside a content entry, at any depth (a picture element, a card in a list,
@@ -54,10 +61,12 @@ export function collectImageNames(pages) {
     if (!isPlainObject(page)) continue;
     for (const block of Array.isArray(page.blocks) ? page.blocks : []) {
       if (!isPlainObject(block)) continue;
+      if (typeOf(block) === '') continue;
       const props = isPlainObject(block.props) ? block.props : {};
       const entries = Array.isArray(props.content) ? props.content : [];
       for (const entry of entries) {
-        if (isPlainObject(entry) && typeOf(entry) === 'title') continue;
+        if (!isPlainObject(entry)) continue;
+        if (typeOf(entry) === 'title') continue;
         visit(entry);
       }
     }
@@ -94,6 +103,35 @@ function uniqueFileName(imagesDir, base, taken) {
   }
   taken.add(candidate);
   return candidate;
+}
+
+// A name reserved by uniqueFileName lives only in this run's memory (`taken`), so it does not
+// stop a second run of the factory for the same site — a second build under a different domain,
+// or the CLI alongside the form — from creating that exact file while this run is still waiting
+// on Runware. `wx` makes the write itself the real check: it fails with EEXIST rather than
+// silently overwriting a file someone else just claimed, and only then is the next free name
+// tried. A bounded number of attempts, not an unbounded loop: past that, something other than an
+// ordinary name clash is going on, and it is treated as any other write failure.
+const MAX_WRITE_ATTEMPTS = 5;
+
+function writeUniqueFile(imagesDir, fileName, base, taken, bytes) {
+  let candidate = fileName;
+  for (let attempt = 0; attempt < MAX_WRITE_ATTEMPTS; attempt += 1) {
+    const target = join(imagesDir, candidate);
+    try {
+      writeFileSync(target, bytes, { flag: 'wx' });
+      return candidate;
+    } catch (error) {
+      // `wx` reports EEXIST for a directory sitting at that path too, not only for a file a
+      // concurrent run wrote there first — and a directory blocking the name is a write failure
+      // like any other (what a plain write would have reported as EISDIR), not a clash worth
+      // trying another name for.
+      const blockedByDirectory = error.code === 'EEXIST' && statSync(target).isDirectory();
+      if (error.code !== 'EEXIST' || blockedByDirectory) throw error;
+      candidate = uniqueFileName(imagesDir, base, taken);
+    }
+  }
+  throw new Error(`не удалось подобрать свободное имя файла для «${base}»`);
 }
 
 // Throws on a file that is not a JSON object: writing our entry into it would mean replacing the
@@ -170,11 +208,12 @@ export async function generateMissingImages({
   if (missing.length === 0) return summary;
 
   if (!config?.apiKey) {
-    // A key env.mjs flagged as unusable (space or line break inside it) is a different situation
-    // from no key at all: the owner did set something, it just cannot be sent safely, so this
-    // says so instead of claiming the .env is empty.
+    // A key env.mjs flagged as unusable (a space, line break, or any other non-visible-ASCII
+    // character inside it) is a different situation from no key at all: the owner did set
+    // something, it just cannot be sent safely, so this says so instead of claiming the .env is
+    // empty.
     const reason = config?.apiKeyInvalid
-      ? 'ключ Runware в .env записан неверно (пробелы или переносы строк внутри)'
+      ? 'ключ Runware в .env записан неверно (недопустимые символы (пробелы, переносы строк, не-ASCII))'
       : 'ключ Runware не задан в .env';
     log(`Картинки: ${reason} — пропущено ${missing.length}: ${missing.join(', ')}`);
     summary.skipped = missing;
@@ -206,10 +245,14 @@ export async function generateMissingImages({
       // Reserved before Runware is ever asked for this picture: if the folder cannot even be
       // created (e.g. `public` already exists as a plain file), there is nothing generateImage
       // could produce that this could go on to save, so it is not worth paying for at all.
+      // This reservation only holds within this run (see writeUniqueFile above for the other
+      // half of the guarantee, against a concurrent run).
       let fileName;
+      let base;
       try {
         mkdirSync(imagesDir, { recursive: true });
-        fileName = uniqueFileName(imagesDir, fileBaseFor(name), takenFiles);
+        base = fileBaseFor(name);
+        fileName = uniqueFileName(imagesDir, base, takenFiles);
       } catch (error) {
         summary.skipped.push(name);
         log(`Картинка ${name}: ${error.message} — пропущена`);
@@ -231,9 +274,9 @@ export async function generateMissingImages({
           { config, fetchFn, sleep },
         );
         paidCost = cost;
-        writeFileSync(join(imagesDir, fileName), bytes);
+        const savedFileName = writeUniqueFile(imagesDir, fileName, base, takenFiles, bytes);
         addToRegistry(siteDir, name, {
-          src: `${IMAGES_URL_DIR}/${fileName}`,
+          src: `${IMAGES_URL_DIR}/${savedFileName}`,
           alt: altFor(name, resolvedBrand),
           width: promptSet.width,
           height: promptSet.height,
