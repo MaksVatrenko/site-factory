@@ -1,16 +1,15 @@
 {
-  "width": 1536,
-  "height": 768,
-  "negativePrompt": "misspelled words, extra letters, missing letters, distorted letters, duplicated text, watermark, busy background, scenery",
+  "width": 2048,
+  "height": 2048,
   "prompts": [
-    "a casino logo wordmark that reads \"{brand}\", glossy 3D gold letters with a thin red edge and soft reflections, centered, isolated on a plain white background",
-    "a casino logo wordmark that reads \"{brand}\", aged bronze serif letters on an ornate Victorian steampunk plaque with scrolls and small gears, centered, isolated on a plain white background",
-    "a casino logo wordmark that reads \"{brand}\", bright neon tube letters in pink and cyan with a soft glow, centered, isolated on a plain black background",
-    "a casino logo wordmark that reads \"{brand}\", polished chrome 3D letters with blue highlights, centered, isolated on a plain white background",
-    "a casino logo wordmark that reads \"{brand}\", bold red and gold 3D letters with a small crown above the first letter, centered, isolated on a plain white background",
-    "a casino logo wordmark that reads \"{brand}\", emerald green glass 3D letters with a gold outline, centered, isolated on a plain white background",
-    "a casino logo wordmark that reads \"{brand}\", royal purple 3D letters with a silver bevel and small sparkling stars, centered, isolated on a plain white background",
-    "a casino logo wordmark that reads \"{brand}\", fiery orange 3D letters with flame accents, centered, isolated on a plain white background"
+    "a casino logo wordmark that reads \"{brand}\", spelled exactly as written, no other text, no extra letters, glossy 3D gold letters with a thin red edge and soft reflections, centered, isolated on a plain white background",
+    "a casino logo wordmark that reads \"{brand}\", spelled exactly as written, no other text, no extra letters, aged bronze serif letters on an ornate Victorian steampunk plaque with scrolls and small gears, centered, isolated on a plain white background",
+    "a casino logo wordmark that reads \"{brand}\", spelled exactly as written, no other text, no extra letters, bright neon tube letters in pink and cyan with a soft glow, centered, isolated on a plain black background",
+    "a casino logo wordmark that reads \"{brand}\", spelled exactly as written, no other text, no extra letters, polished chrome 3D letters with blue highlights, centered, isolated on a plain white background",
+    "a casino logo wordmark that reads \"{brand}\", spelled exactly as written, no other text, no extra letters, bold red and gold 3D letters with a small crown above the first letter, centered, isolated on a plain white background",
+    "a casino logo wordmark that reads \"{brand}\", spelled exactly as written, no other text, no extra letters, emerald green glass 3D letters with a gold outline, centered, isolated on a plain white background",
+    "a casino logo wordmark that reads \"{brand}\", spelled exactly as written, no other text, no extra letters, royal purple 3D letters with a silver bevel and small sparkling stars, centered, isolated on a plain white background",
+    "a casino logo wordmark that reads \"{brand}\", spelled exactly as written, no other text, no extra letters, fiery orange 3D letters with flame accents, centered, isolated on a plain white background"
   ],
   "gradients": [
     ["#3b1a8c", "#7b3fe4"],

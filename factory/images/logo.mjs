@@ -135,7 +135,6 @@ export async function generateLogo({
     const artwork = await generateLogoArtwork(
       {
         prompt: fillBrand(promptSet.prompts[promptIndex], resolvedBrand),
-        negativePrompt: promptSet.negativePrompt,
         width: promptSet.width,
         height: promptSet.height,
       },

@@ -145,6 +145,9 @@ export async function generateImage(request, options) {
 // The wordmark comes from a model chosen for rendering text (Ideogram by default). Only the fields
 // such models all accept are sent — no steps or CFGScale, which they manage themselves — and the
 // picture is not downloaded at all: removeBackground takes it straight from Runware by imageUUID.
+// Ideogram 4.0's schema sets additionalProperties: false and has no negativePrompt field, so it is
+// never added to this task — even if a caller's request happens to carry one (see
+// loadLogoPromptFile in logo-prompts.mjs, which now refuses to even load a logo.json that has one).
 export async function generateLogoArtwork(request, options) {
   const task = {
     taskType: 'imageInference',
@@ -157,7 +160,6 @@ export async function generateLogoArtwork(request, options) {
     outputFormat: 'PNG',
     includeCost: true,
   };
-  if (request.negativePrompt) task.negativePrompt = request.negativePrompt;
   const result = await runTask(
     task,
     options,

@@ -248,7 +248,7 @@ describe('generateImage', () => {
 describe('generateLogoArtwork', () => {
   const LOGO_REQUEST = { prompt: 'a wordmark that reads "899OK"', negativePrompt: 'extra letters', width: 1536, height: 768 };
 
-  it('asks the logo model for the wordmark without the quality knobs other models manage themselves', async () => {
+  it('asks the logo model for the wordmark without the quality knobs other models manage themselves, and never with Ideogram\'s rejected negativePrompt', async () => {
     const { fetchFn, calls } = scriptedFetch([
       (task) => jsonResponse(200, { data: [{ taskUUID: task.taskUUID, imageUUID: 'art-1', cost: 0.09 }] }),
     ]);
@@ -260,7 +260,6 @@ describe('generateLogoArtwork', () => {
       taskType: 'imageInference',
       model: 'ideogram:4@0',
       positivePrompt: 'a wordmark that reads "899OK"',
-      negativePrompt: 'extra letters',
       width: 1536,
       height: 768,
       numberResults: 1,
@@ -270,6 +269,10 @@ describe('generateLogoArtwork', () => {
     expect(task).not.toHaveProperty('steps');
     expect(task).not.toHaveProperty('CFGScale');
     expect(task).not.toHaveProperty('outputType');
+    // Ideogram 4.0's schema sets additionalProperties: false and has no negativePrompt at all, so
+    // it must never be forwarded — even though LOGO_REQUEST above still carries one, proving this
+    // is actively stripped rather than merely never having been asked for (finding C1).
+    expect(task).not.toHaveProperty('negativePrompt');
     expect(calls[0].init.headers.Authorization).toBe(`Bearer ${SENTINEL}`);
   });
 
