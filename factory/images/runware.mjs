@@ -41,6 +41,15 @@ async function readJson(response) {
   }
 }
 
+// Runware's own errors[].message is text it composed from our request, and one field of that
+// request is the key — echoed back, it would land straight in the log via a RunwareError's
+// message otherwise. The spec's rule is absolute (no log line ever carries the key), so any
+// occurrence is scrubbed before the message is used, whatever put it there.
+function scrubKey(message, apiKey) {
+  if (!apiKey) return message;
+  return message.split(apiKey).join('***');
+}
+
 export async function generateImage(
   request,
   { config, fetchFn = fetch, sleep = defaultSleep, timeoutMs = DEFAULT_TIMEOUT_MS },
@@ -99,17 +108,15 @@ export async function generateImage(
       continue;
     }
     if (!response.ok) {
-      throw new RunwareError(
-        'rejected',
-        `Runware отклонил запрос (${response.status}: ${firstErrorMessage(payload) || 'без описания'})`,
-      );
+      const detail = scrubKey(firstErrorMessage(payload), config.apiKey) || 'без описания';
+      throw new RunwareError('rejected', `Runware отклонил запрос (${response.status}: ${detail})`);
     }
 
     const result = Array.isArray(payload?.data)
       ? payload.data.find((item) => item?.taskUUID === taskUUID)
       : undefined;
     if (typeof result?.imageBase64Data !== 'string' || result.imageBase64Data === '') {
-      const detail = firstErrorMessage(payload);
+      const detail = scrubKey(firstErrorMessage(payload), config.apiKey);
       throw new RunwareError('rejected', `Runware не вернул картинку${detail ? ` (${detail})` : ''}`);
     }
     return {

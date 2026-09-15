@@ -217,4 +217,28 @@ describe('generateImage', () => {
     expect(error.kind).toBe('unavailable');
     expect(error.message).not.toContain(SENTINEL);
   });
+
+  // Round 2 fix 3: Runware's own errors[].message is echoed back into a 'rejected' failure's
+  // message (a 4xx) and into the "no picture" message (a 200 with no imageBase64Data). The
+  // spec's rule is absolute — the key appears in no log line — so even a message Runware itself
+  // sends back that happens to contain the key must be scrubbed before it is used.
+  it('scrubs the key out of a 4xx error message that echoes it back', async () => {
+    const { fetchFn } = scriptedFetch([
+      () => jsonResponse(400, { errors: [{ code: 'x', message: `bad token ${SENTINEL} used` }] }),
+    ]);
+    const error = await failureOf(generateImage(REQUEST, { config: CONFIG, fetchFn }));
+    expect(error.kind).toBe('rejected');
+    expect(error.message).toContain('***');
+    expect(error.message).not.toContain(SENTINEL);
+  });
+
+  it('scrubs the key out of a "no picture" error message that echoes it back', async () => {
+    const { fetchFn } = scriptedFetch([
+      () => jsonResponse(200, { errors: [{ code: 'x', message: `rejected ${SENTINEL}` }] }),
+    ]);
+    const error = await failureOf(generateImage(REQUEST, { config: CONFIG, fetchFn }));
+    expect(error.kind).toBe('rejected');
+    expect(error.message).toContain('***');
+    expect(error.message).not.toContain(SENTINEL);
+  });
 });
