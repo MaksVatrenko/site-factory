@@ -11,6 +11,10 @@ export const RUNWARE_DEFAULTS = Object.freeze({
   guidance: 2,
   steps: 4,
   concurrency: 1,
+  // The wordmark needs a model that renders text reliably; background removal is a separate,
+  // much cheaper model. Both can be swapped in .env without touching code.
+  logoModel: 'ideogram:4@0',
+  bgModel: 'runware:109@1',
 });
 
 // A missing or unreadable .env is not an error here: without a key, generation reports that it
@@ -53,5 +57,7 @@ export function readRunwareConfig(envFile) {
     guidance: positiveNumber(text('RUNWARE_GUIDANCE'), RUNWARE_DEFAULTS.guidance),
     steps: positiveInteger(text('RUNWARE_STEPS'), RUNWARE_DEFAULTS.steps),
     concurrency: positiveInteger(text('RUNWARE_CONCURRENCY'), RUNWARE_DEFAULTS.concurrency),
+    logoModel: text('RUNWARE_LOGO_MODEL') || RUNWARE_DEFAULTS.logoModel,
+    bgModel: text('RUNWARE_BG_MODEL') || RUNWARE_DEFAULTS.bgModel,
   };
 }

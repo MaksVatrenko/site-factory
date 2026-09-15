@@ -30,6 +30,8 @@ describe('readRunwareConfig', () => {
         'RUNWARE_GUIDANCE=3.5',
         'RUNWARE_STEPS=8',
         'RUNWARE_CONCURRENCY=2',
+        'RUNWARE_LOGO_MODEL=ideogram:9@9',
+        'RUNWARE_BG_MODEL=runware:1@2',
       ].join('\n'),
     );
     expect(readRunwareConfig(file)).toEqual({
@@ -40,6 +42,8 @@ describe('readRunwareConfig', () => {
       guidance: 3.5,
       steps: 8,
       concurrency: 2,
+      logoModel: 'ideogram:9@9',
+      bgModel: 'runware:1@2',
     });
   });
 
@@ -108,6 +112,8 @@ describe('.env.example', () => {
     expect(config.apiKey).toBe('');
     expect(config.steps).toBe(4);
     expect(config.model).toBe('runware:400@6');
+    expect(config.logoModel).toBe('ideogram:4@0');
+    expect(config.bgModel).toBe('runware:109@1');
   });
 
   it('is committed to git while .env itself stays ignored', () => {
