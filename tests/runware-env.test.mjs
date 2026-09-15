@@ -34,6 +34,7 @@ describe('readRunwareConfig', () => {
     );
     expect(readRunwareConfig(file)).toEqual({
       apiKey: SENTINEL,
+      apiKeyInvalid: false,
       apiUrl: 'https://runware.test/v1',
       model: 'runware:1@1',
       guidance: 3.5,
@@ -44,7 +45,11 @@ describe('readRunwareConfig', () => {
 
   it('fills in the defaults for everything the file leaves out', () => {
     const file = writeEnv(`RUNWARE_API_KEY=${SENTINEL}\n`);
-    expect(readRunwareConfig(file)).toEqual({ apiKey: SENTINEL, ...RUNWARE_DEFAULTS });
+    expect(readRunwareConfig(file)).toEqual({
+      apiKey: SENTINEL,
+      apiKeyInvalid: false,
+      ...RUNWARE_DEFAULTS,
+    });
   });
 
   it('falls back to the default for a number that is not a positive number', () => {
@@ -57,7 +62,35 @@ describe('readRunwareConfig', () => {
 
   it('returns an empty key and the defaults when there is no .env at all', () => {
     const config = readRunwareConfig(join(tmpdir(), 'site-factory-no-such-dir', '.env'));
-    expect(config).toEqual({ apiKey: '', ...RUNWARE_DEFAULTS });
+    expect(config).toEqual({ apiKey: '', apiKeyInvalid: false, ...RUNWARE_DEFAULTS });
+  });
+
+  // I2: a key with a space or line break inside it cannot be sent in a Bearer header safely (it
+  // is not entirely visible ASCII), so it must never reach a request — flag it instead of using it.
+  it('refuses a key with an inner space, without using it', () => {
+    const file = writeEnv('RUNWARE_API_KEY=abc def\n');
+    const config = readRunwareConfig(file);
+    expect(config.apiKey).toBe('');
+    expect(config.apiKeyInvalid).toBe(true);
+  });
+
+  it('refuses a key with an inner line break, without using it', () => {
+    const file = writeEnv('RUNWARE_API_KEY="abc\\ndef"\n');
+    const config = readRunwareConfig(file);
+    expect(config.apiKey).toBe('');
+    expect(config.apiKeyInvalid).toBe(true);
+  });
+
+  it('does not flag a key that is entirely visible ASCII', () => {
+    const file = writeEnv(`RUNWARE_API_KEY=${SENTINEL}\n`);
+    expect(readRunwareConfig(file).apiKeyInvalid).toBe(false);
+  });
+
+  it('does not flag a missing key as invalid', () => {
+    const file = writeEnv('');
+    const config = readRunwareConfig(file);
+    expect(config.apiKey).toBe('');
+    expect(config.apiKeyInvalid).toBe(false);
   });
 
   it('never puts anything into process.env', () => {

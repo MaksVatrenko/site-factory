@@ -202,4 +202,19 @@ describe('generateImage', () => {
       expect(error.message).not.toContain(SENTINEL);
     }
   });
+
+  // I2: undici's own error message for a header value containing LF/NUL quotes the whole invalid
+  // header value back — here, the entire "Bearer <key>" the request tried to send. That message
+  // must never be interpolated as-is into the failure this throws.
+  it('never lets a fetch failure message leak the key, even when the message itself holds it', async () => {
+    const headerError = new TypeError(
+      `Headers.append: "Bearer ${SENTINEL}\nx" is an invalid header value.`,
+    );
+    const { fetchFn } = scriptedFetch([headerError]);
+    const error = await failureOf(
+      generateImage(REQUEST, { config: CONFIG, fetchFn, sleep: async () => {} }),
+    );
+    expect(error.kind).toBe('unavailable');
+    expect(error.message).not.toContain(SENTINEL);
+  });
 });

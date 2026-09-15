@@ -34,11 +34,20 @@ function positiveInteger(raw, fallback) {
   return Number.isInteger(number) ? number : fallback;
 }
 
+// A Bearer header value cannot safely carry a space, a line break or any other non-printable
+// character — trying to anyway is exactly what let the raw fetch error leak the key elsewhere
+// (see runware.mjs). Catching that here, once, means every caller gets a clean "no usable key"
+// instead of each having to guard the same thing.
+const VISIBLE_ASCII = /^[\x21-\x7E]+$/;
+
 export function readRunwareConfig(envFile) {
   const values = readEnvFile(envFile);
   const text = (key) => (typeof values[key] === 'string' ? values[key].trim() : '');
+  const rawKey = text('RUNWARE_API_KEY');
+  const apiKeyInvalid = rawKey !== '' && !VISIBLE_ASCII.test(rawKey);
   return {
-    apiKey: text('RUNWARE_API_KEY'),
+    apiKey: apiKeyInvalid ? '' : rawKey,
+    apiKeyInvalid,
     apiUrl: text('RUNWARE_API_URL') || RUNWARE_DEFAULTS.apiUrl,
     model: text('RUNWARE_MODEL') || RUNWARE_DEFAULTS.model,
     guidance: positiveNumber(text('RUNWARE_GUIDANCE'), RUNWARE_DEFAULTS.guidance),

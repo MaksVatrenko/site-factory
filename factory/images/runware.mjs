@@ -77,10 +77,13 @@ export async function generateImage(
         signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (error) {
+      // Never interpolate error.message here: undici's own message for a header value with a
+      // line break or NUL byte quotes the whole invalid header value back, which is the entire
+      // "Bearer <key>" this request tried to send. error?.name (e.g. "TypeError") stays key-free.
       lastProblem =
         error?.name === 'TimeoutError' || error?.name === 'AbortError'
           ? `нет ответа за ${Math.round(timeoutMs / 1000)} с`
-          : `сеть недоступна (${error?.message ?? error})`;
+          : `сеть недоступна (${error?.cause?.code ?? error?.name ?? 'неизвестная ошибка'})`;
       continue;
     }
 
