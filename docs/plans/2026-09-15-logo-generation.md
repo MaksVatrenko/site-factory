@@ -574,7 +574,7 @@ import { HEADER_LOGO_HEIGHT, SQUARE_SIZE, makeHeaderLogo, makeSquareLogo } from 
 async function cutout({ canvas = [1536, 768], mark = [900, 300], colour = '#ffb800' } = {}) {
   const [markWidth, markHeight] = mark;
   const svg = Buffer.from(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${markWidth}" height="${markHeight}"><rect width="100%" height="100%" fill="${colour}"/></svg>`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${markWidth}" height="${markHeight}"><rect width="100%" height="100%" rx="24" fill="${colour}"/></svg>`,
   );
   return sharp({ create: { width: canvas[0], height: canvas[1], channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
     .composite([{ input: svg, gravity: 'centre' }])
@@ -785,7 +785,7 @@ function writeSite({ site, images, files = {} } = {}) {
 }
 
 async function cutoutPng() {
-  const mark = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="200"><rect width="100%" height="100%" fill="#ffb800"/></svg>');
+  const mark = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="200"><rect width="100%" height="100%" rx="24" fill="#ffb800"/></svg>');
   return sharp({ create: { width: 1536, height: 768, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
     .composite([{ input: mark, gravity: 'centre' }])
     .png()
@@ -1362,7 +1362,7 @@ describe('the logo is made before the pictures', () => {
 
   beforeAll(async () => {
     const { default: sharp } = await import('sharp');
-    const mark = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="200"><rect width="100%" height="100%" fill="#ffb800"/></svg>');
+    const mark = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="200"><rect width="100%" height="100%" rx="24" fill="#ffb800"/></svg>');
     cutout = await sharp({ create: { width: 1536, height: 768, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
       .composite([{ input: mark, gravity: 'centre' }])
       .png()
