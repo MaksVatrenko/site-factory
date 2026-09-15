@@ -970,6 +970,85 @@ describe('pictures are generated before the build', () => {
   });
 });
 
+describe('the logo is made before the pictures', () => {
+  const siteId = 'logo-generation-fixture';
+  const siteDir = join('data', 'sites', siteId);
+  const SENTINEL = 'sentinel-runware-key-server-logo-9c1d';
+  let envDir;
+  let logoServer;
+  let logoBase;
+  let cutout;
+
+  beforeAll(async () => {
+    const { default: sharp } = await import('sharp');
+    const mark = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="200"><rect width="100%" height="100%" rx="24" fill="#ffb800"/></svg>');
+    cutout = await sharp({ create: { width: 1536, height: 768, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+      .composite([{ input: mark, gravity: 'centre' }])
+      .png()
+      .toBuffer();
+    mkdirSync(siteDir, { recursive: true });
+    writeFileSync(join(siteDir, 'site.json'), JSON.stringify({ brand: { name: 'Logo Brand' }, nav: [{ label: 'Home', href: '/' }] }));
+    writeFileSync(
+      join(siteDir, 'home.json'),
+      JSON.stringify({ title: 'Logo', blocks: [{ type: 'hero', content: [{ type: 'title', h1: 'Logo' }, { image: 'hero-shot' }] }] }),
+    );
+    envDir = mkdtempSync(join(tmpdir(), 'site-factory-server-logo-env-'));
+    writeFileSync(join(envDir, '.env'), `RUNWARE_API_KEY=${SENTINEL}\n`);
+    const fetchFn = async (_url, init) => {
+      const [task] = JSON.parse(init.body);
+      if (task.taskType === 'removeBackground') {
+        return new Response(JSON.stringify({ data: [{ taskUUID: task.taskUUID, imageBase64Data: cutout.toString('base64'), cost: 0.001 }] }), { status: 200 });
+      }
+      if (task.model === 'ideogram:4@0') {
+        return new Response(JSON.stringify({ data: [{ taskUUID: task.taskUUID, imageUUID: 'art-1', cost: 0.09 }] }), { status: 200 });
+      }
+      return new Response(
+        JSON.stringify({ data: [{ taskUUID: task.taskUUID, imageBase64Data: Buffer.from('fake webp').toString('base64'), cost: 0.001 }] }),
+        { status: 200 },
+      );
+    };
+    logoServer = createApp({ envFile: join(envDir, '.env'), fetchFn }).listen(0);
+    await new Promise((resolve) => logoServer.once('listening', resolve));
+    logoBase = `http://127.0.0.1:${logoServer.address().port}`;
+  });
+
+  afterAll(() => {
+    logoServer?.close();
+    rmSync(siteDir, { recursive: true, force: true });
+    rmSync(envDir, { recursive: true, force: true });
+  });
+
+  it('logs the logo first, then the pictures, then the build — and the page carries all of it', async () => {
+    const domain = 'logo-generation-test.com';
+    rmSync(join('output', domain), { recursive: true, force: true });
+    try {
+      const start = await fetch(`${logoBase}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ site: siteId, domain }),
+      }).then((r) => r.json());
+      const log = await readUntilDone(start.buildId, logoBase);
+      const status = await fetch(`${logoBase}/api/builds/${start.buildId}`).then((r) => r.json());
+      expect(status.status).toBe('ok');
+
+      const logoReady = log.indexOf('Логотип готов');
+      const pictureReady = log.indexOf('Картинка hero-shot готова');
+      expect(logoReady).toBeGreaterThan(-1);
+      expect(logoReady).toBeLessThan(pictureReady);
+      expect(pictureReady).toBeLessThan(log.indexOf('[build]'));
+      expect(log).not.toContain(SENTINEL);
+
+      const html = readFileSync(join('output', domain, 'index.html'), 'utf8');
+      expect(html).toMatch(/<img[^>]*src="\/images\/logo\.webp"/);
+      expect(html).toContain(`<meta property="og:image" content="https://${domain}/images/logo-square.png"`);
+      expect(html).toContain('application/ld+json');
+      expect(existsSync(join('output', domain, 'images', 'logo-square.png'))).toBe(true);
+    } finally {
+      rmSync(join('output', domain), { recursive: true, force: true });
+    }
+  });
+});
+
 describe('startBuild runs a prepare step first', () => {
   it('logs what prepare says before starting Astro, and reads env only then', async () => {
     const fakeChild = new EventEmitter();

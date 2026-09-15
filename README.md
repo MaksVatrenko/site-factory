@@ -62,7 +62,7 @@ npm run import:sheet -- 'https://docs.google.com/spreadsheets/d/19euPy…/edit?g
 Таблица должна быть доступна по ссылке. Что в ней писать — `docs/spreadsheet-format.md`,
 этот документ и передаётся заказчику.
 
-## Картинки
+## Картинки и логотип
 
 Картинку на страницу ставит метка `{ "image": "имя" }`. Если такого имени ещё нет в
 `images.json` сайта, фабрика перед сборкой сама генерирует картинку через Runware:
@@ -82,7 +82,15 @@ cp .env.example .env                 # затем вписать RUNWARE_API_KEY
 npm run generate:images -- 899ok     # только картинки, без сборки
 ```
 
-Подробности — в `docs/specs/2026-09-15-image-generation-design.md`.
+Логотип фабрика делает сама, если в `site.json` нет своего `brand.logo`. Ideogram 4.0 рисует
+название бренда в случайном стиле из `factory/prompts/logo.json`, RemBG убирает фон. Получаются
+две картинки в `images.json`: `logo` для шапки и `logo-square` — квадрат 512×512 на градиенте.
+Квадрат идёт в превью ссылки, в иконку сайта и в разметку schema.org. Чтобы получить другой
+вариант, удалите запись `logo` и соберите сайт заново. Модели задаются в `.env`:
+`RUNWARE_LOGO_MODEL` и `RUNWARE_BG_MODEL`.
+
+Подробности — в `docs/specs/2026-09-15-image-generation-design.md` и
+`docs/specs/2026-09-15-logo-generation-design.md`.
 
 ## Тесты
 

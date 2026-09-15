@@ -12,6 +12,7 @@ import { listSchemes } from '../src/lib/schemes.mjs';
 import { isPageFileName } from '../src/lib/site-dir.mjs';
 import { readRunwareConfig } from './images/env.mjs';
 import { generateMissingImages } from './images/generate.mjs';
+import { generateLogo } from './images/logo.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -22,6 +23,7 @@ const PUBLIC_UI_DIR = join(HERE, 'public');
 const PORT = Number(process.env.PORT || 3002);
 const ENV_FILE = join(ROOT, '.env');
 const IMAGE_PROMPTS_FILE = join(HERE, 'prompts', 'images.json');
+const LOGO_PROMPTS_FILE = join(HERE, 'prompts', 'logo.json');
 
 const builds = new Map();
 
@@ -307,12 +309,14 @@ export function guardArchiveCompleteness(archive, res, expectedEntryCount) {
   });
 }
 
-// envFile, fetchFn and promptFile exist for tests: they let a test app read a temporary .env and
-// answer Runware requests itself, so no test ever sees the owner's real key or spends money.
+// envFile, fetchFn, promptFile and logoPromptFile exist for tests: they let a test app read a
+// temporary .env and answer Runware requests itself, so no test ever sees the owner's real key or
+// spends money.
 export function createApp({
   envFile = ENV_FILE,
   fetchFn = fetch,
   promptFile = IMAGE_PROMPTS_FILE,
+  logoPromptFile = LOGO_PROMPTS_FILE,
 } = {}) {
   const app = express();
   app.use(express.json());
@@ -386,21 +390,17 @@ export function createApp({
     const sitePublic = join(siteDir, 'public');
     const brand = String(body.brand ?? '');
 
-    // Missing pictures are generated first, unless the form asked for a plain rebuild. The .env is
-    // read here, per request, so a key added while the factory is running is picked up without a
-    // restart.
+    // Before the build: the logo first (a site without one gets it), then any missing pictures,
+    // unless the form asked for a plain rebuild. The .env is read here, per request and once for
+    // both steps, so a key added while the factory is running is picked up without a restart.
     const prepare =
       body.skipImages === true
         ? undefined
-        : (log) =>
-            generateMissingImages({
-              siteDir,
-              brand,
-              config: readRunwareConfig(envFile),
-              promptFile,
-              fetchFn,
-              log,
-            });
+        : async (log) => {
+            const config = readRunwareConfig(envFile);
+            await generateLogo({ siteDir, brand, config, promptFile: logoPromptFile, fetchFn, log });
+            await generateMissingImages({ siteDir, brand, config, promptFile, fetchFn, log });
+          };
 
     const build = startBuild({
       domain,

@@ -34,11 +34,18 @@ describe('npm run generate:images', () => {
       join(siteDir, 'home.json'),
       JSON.stringify({ title: 'Home', blocks: [{ type: 'hero', content: [{ image: 'hero' }] }] }),
     );
-    writeFileSync(join(siteDir, 'images.json'), JSON.stringify({ hero: { src: '/images/hero.webp', alt: 'Hero' } }));
+    writeFileSync(
+      join(siteDir, 'images.json'),
+      JSON.stringify({
+        hero: { src: '/images/hero.webp', alt: 'Hero' },
+        logo: { src: '/images/logo.webp', alt: 'X' },
+        'logo-square': { src: '/images/logo-square.png', alt: 'X logo' },
+      }),
+    );
     try {
       const result = runCli(siteId);
       expect(result.status).toBe(0);
-      expect(result.stdout).toContain('все метки уже есть в images.json');
+      expect(result.stdout).toContain('Картинки и логотип: всё уже на месте');
     } finally {
       rmSync(siteDir, { recursive: true, force: true });
     }
@@ -53,7 +60,7 @@ describe('npm run generate:images', () => {
       const result = runCli(siteId);
       expect(result.status).toBe(0);
       expect(result.stdout).toContain('Картинки: не удалось прочитать сайт');
-      expect(result.stdout).not.toContain('все метки уже есть');
+      expect(result.stdout).not.toContain('всё уже на месте');
     } finally {
       rmSync(siteDir, { recursive: true, force: true });
     }
