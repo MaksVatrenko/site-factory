@@ -413,8 +413,22 @@ function resolveLogo(value, images, warnings) {
 // The square version of the logo (a gradient with the logo centred), which the factory generates
 // next to it. It is what search engines, link previews and the browser tab get; absent, the site
 // simply has none of those.
-function resolveSquare(images) {
-  return images.resolve(GENERATED_SQUARE).image ?? null;
+//
+// images.mjs's own classifySrc only checks that an absolute src starts with "http(s)://" — it
+// never parses the rest, so a syntactically broken address (e.g. "https://", with no host) comes
+// back as an ordinary external image. Base.astro turns the square's src into an absolute URL with
+// `new URL(square.src, origin)` for og:image and schema.org, which throws on exactly such a
+// string — and since Base.astro renders for every page, one bad address would fail the whole
+// build. images.json is content like any other picture entry, so it is coerced away here with a
+// warning instead, the same way any other unusable picture field is.
+function resolveSquare(images, warnings) {
+  const { image } = images.resolve(GENERATED_SQUARE);
+  if (!image) return null;
+  if (!URL.canParse(image.src, 'https://example.com/')) {
+    warnings.push(`Квадратный логотип: адрес «${image.src}» не читается как URL — не выводится`);
+    return null;
+  }
+  return image;
 }
 
 export function normalizeSite(raw, options = {}) {
@@ -440,7 +454,7 @@ export function normalizeSite(raw, options = {}) {
   const brand = {
     name: pickOverride(overrides.brand, brandInput.name, DEFAULT_BRAND),
     logo: resolveLogo(brandInput.logo, images, warnings),
-    square: resolveSquare(images),
+    square: resolveSquare(images, warnings),
     tagline: toText(brandInput.tagline, ''),
   };
 

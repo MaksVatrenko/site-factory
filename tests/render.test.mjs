@@ -406,6 +406,65 @@ describe('a site without the square', () => {
   });
 });
 
+// I1: images.mjs's classifySrc only checks that an absolute src starts with "http(s)://" — it
+// never parses the rest — so a square whose src is syntactically broken (e.g. "https://", with no
+// host) used to reach Base.astro as an ordinary image. `new URL(square.src, origin)` there throws
+// for exactly such a string, which fails EVERY page of the build, not just the one with the bad
+// address. images.json is content like any other picture entry, so a bad address must be coerced
+// away with a warning instead — never allowed to take the whole build down with it.
+describe('an already-absolute square src', () => {
+  it('is used as its own address in og:image and the JSON-LD logo, unchanged', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'site-factory-external-square-'));
+    try {
+      writeSiteDirFromContent(dir, {
+        brand: { name: 'External Square' },
+        pages: [{ slug: '/', meta: {}, blocks: [{ type: 'hero', props: { content: [{ type: 'title', h1: 'Hero' }] } }] }],
+      });
+      writeFileSync(
+        join(dir, 'images.json'),
+        JSON.stringify({
+          'logo-square': { src: 'https://cdn.example.com/sq.png', alt: 'External Square logo', width: 512, height: 512 },
+        }),
+      );
+      const html = readOutput(
+        buildSite({ outDir: join('output', 'test-external-square'), env: { SITE_DIR: dir } }).outDir,
+      );
+      expect(html).toMatch(/<meta property="og:image" content="https:\/\/cdn\.example\.com\/sq\.png"/);
+      expect(html).toMatch(/<link rel="icon" type="image\/png" href="https:\/\/cdn\.example\.com\/sq\.png"/);
+      const json = html.match(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/)?.[1];
+      expect(JSON.parse(json).logo).toBe('https://cdn.example.com/sq.png');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('a malformed absolute square src (I1)', () => {
+  it('builds every page with no og:image, icon or JSON-LD, and warns in the log instead of crashing', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'site-factory-bad-square-'));
+    try {
+      writeSiteDirFromContent(dir, {
+        brand: { name: 'Bad Square' },
+        pages: [{ slug: '/', meta: {}, blocks: [{ type: 'hero', props: { content: [{ type: 'title', h1: 'Hero' }] } }] }],
+      });
+      writeFileSync(
+        join(dir, 'images.json'),
+        // "https://" has a scheme but no host at all — new URL() throws on it, unlike a merely
+        // unusual but well-formed address.
+        JSON.stringify({ 'logo-square': { src: 'https://', alt: 'Bad Square logo', width: 512, height: 512 } }),
+      );
+      const { outDir, log } = buildSite({ outDir: join('output', 'test-bad-square'), env: { SITE_DIR: dir } });
+      const html = readOutput(outDir);
+      expect(html).not.toContain('og:image');
+      expect(html).not.toContain('rel="icon"');
+      expect(html).not.toContain('application/ld+json');
+      expect(log).toContain('Квадратный логотип: адрес «https://» не читается как URL — не выводится');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe('percent-encoded slugs', () => {
   it('builds a page for a slug containing a percent-encoded sequence', () => {
     const dir = mkdtempSync(join(tmpdir(), 'site-factory-slug-'));
