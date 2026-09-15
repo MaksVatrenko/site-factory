@@ -22,13 +22,22 @@ if (/[/\\]/.test(site) || site.startsWith('.') || !existsSync(siteDir)) {
   process.exit(1);
 }
 
+// Tests point RUNWARE_ENV_FILE at a nonexistent file so they never read the owner's real key.
+const envFile = process.env.RUNWARE_ENV_FILE ? process.env.RUNWARE_ENV_FILE : join(ROOT, '.env');
+
+let loggedAnything = false;
 const summary = await generateMissingImages({
   siteDir,
-  config: readRunwareConfig(join(ROOT, '.env')),
+  config: readRunwareConfig(envFile),
   promptFile: join(ROOT, 'factory', 'prompts', 'images.json'),
-  log: (line) => console.log(line),
+  log: (line) => {
+    console.log(line);
+    loggedAnything = true;
+  },
 });
 
-if (summary.generated.length === 0 && summary.skipped.length === 0) {
+// generateMissingImages logs nothing only when every picture is already in place. When the site
+// folder cannot be read, it logs an error line and returns empty results.
+if (!loggedAnything) {
   console.log('Картинки: все метки уже есть в images.json');
 }

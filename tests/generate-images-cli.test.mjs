@@ -2,12 +2,14 @@ import { describe, it, expect } from 'vitest';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 
-// These runs only ever reach cases that need no Runware request — a bad folder name, or a site
-// whose pictures are all in place — because the script reads the project's real .env.
+// The script runs against a .env that does not exist, so tests never see the owner's real key
+// and can never reach Runware.
 function runCli(...args) {
   return spawnSync(process.execPath, [join('scripts', 'generate-images.mjs'), ...args], {
     encoding: 'utf8',
+    env: { ...process.env, RUNWARE_ENV_FILE: join(tmpdir(), 'site-factory-no-such-dir', '.env') },
   });
 }
 
@@ -37,6 +39,21 @@ describe('npm run generate:images', () => {
       const result = runCli(siteId);
       expect(result.status).toBe(0);
       expect(result.stdout).toContain('все метки уже есть в images.json');
+    } finally {
+      rmSync(siteDir, { recursive: true, force: true });
+    }
+  });
+
+  it('reports error when site folder has site.json but no page files', () => {
+    const siteId = 'cli-images-unreadable-fixture';
+    const siteDir = join('data', 'sites', siteId);
+    mkdirSync(siteDir, { recursive: true });
+    writeFileSync(join(siteDir, 'site.json'), JSON.stringify({ brand: { name: 'X' } }));
+    try {
+      const result = runCli(siteId);
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain('Картинки: не удалось прочитать сайт');
+      expect(result.stdout).not.toContain('все метки уже есть');
     } finally {
       rmSync(siteDir, { recursive: true, force: true });
     }
