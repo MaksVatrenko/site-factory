@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
-// One picture per request, over Runware's REST API: POST a JSON array holding one imageInference
-// task, with the key in the Authorization header. The picture comes back inside the response as
-// base64 — no second download, and no racing the 7 days a returned URL stays valid.
+// One task per request, over Runware's REST API: POST a JSON array holding one task, with the
+// key in the Authorization header. The result comes back inside the response as base64 or as a
+// reference (imageUUID) — no second download, and no racing the 7 days a returned URL stays valid.
 export const RETRY_DELAYS_MS = Object.freeze([1000, 2000, 4000]);
 const DEFAULT_TIMEOUT_MS = 120_000;
 const OUTPUT_QUALITY = 85;
@@ -50,27 +50,15 @@ function scrubKey(message, apiKey) {
   return message.split(apiKey).join('***');
 }
 
-export async function generateImage(
-  request,
+// One task, one request: sends it, retries what is worth retrying, and returns the answer that
+// carries this task's taskUUID. `hasResult` says whether that answer holds what the caller needs —
+// a picture's bytes, or just its imageUUID — so every task shares the same retry, error and
+// key-scrubbing rules instead of repeating them.
+async function runTask(
+  task,
   { config, fetchFn = fetch, sleep = defaultSleep, timeoutMs = DEFAULT_TIMEOUT_MS },
+  hasResult,
 ) {
-  const taskUUID = randomUUID();
-  const task = {
-    taskType: 'imageInference',
-    taskUUID,
-    model: config.model,
-    positivePrompt: request.prompt,
-    width: request.width,
-    height: request.height,
-    steps: config.steps,
-    CFGScale: config.guidance,
-    numberResults: 1,
-    outputType: 'base64Data',
-    outputFormat: 'WEBP',
-    outputQuality: OUTPUT_QUALITY,
-    includeCost: true,
-  };
-  if (request.negativePrompt) task.negativePrompt = request.negativePrompt;
   const body = JSON.stringify([task]);
 
   let lastProblem = '';
@@ -113,18 +101,83 @@ export async function generateImage(
     }
 
     const result = Array.isArray(payload?.data)
-      ? payload.data.find((item) => item?.taskUUID === taskUUID)
+      ? payload.data.find((item) => item?.taskUUID === task.taskUUID)
       : undefined;
-    if (typeof result?.imageBase64Data !== 'string' || result.imageBase64Data === '') {
+    if (!result || !hasResult(result)) {
       const detail = scrubKey(firstErrorMessage(payload), config.apiKey);
       throw new RunwareError('rejected', `Runware не вернул картинку${detail ? ` (${detail})` : ''}`);
     }
-    return {
-      bytes: Buffer.from(result.imageBase64Data, 'base64'),
-      cost: typeof result.cost === 'number' ? result.cost : undefined,
-      seed: typeof result.seed === 'number' ? result.seed : undefined,
-    };
+    return result;
   }
 
   throw new RunwareError('unavailable', `Runware недоступен: ${lastProblem}`);
+}
+
+const hasImageData = (result) =>
+  typeof result.imageBase64Data === 'string' && result.imageBase64Data !== '';
+const costOf = (result) => (typeof result.cost === 'number' ? result.cost : undefined);
+
+export async function generateImage(request, options) {
+  const task = {
+    taskType: 'imageInference',
+    taskUUID: randomUUID(),
+    model: options.config.model,
+    positivePrompt: request.prompt,
+    width: request.width,
+    height: request.height,
+    steps: options.config.steps,
+    CFGScale: options.config.guidance,
+    numberResults: 1,
+    outputType: 'base64Data',
+    outputFormat: 'WEBP',
+    outputQuality: OUTPUT_QUALITY,
+    includeCost: true,
+  };
+  if (request.negativePrompt) task.negativePrompt = request.negativePrompt;
+  const result = await runTask(task, options, hasImageData);
+  return {
+    bytes: Buffer.from(result.imageBase64Data, 'base64'),
+    cost: costOf(result),
+    seed: typeof result.seed === 'number' ? result.seed : undefined,
+  };
+}
+
+// The wordmark comes from a model chosen for rendering text (Ideogram by default). Only the fields
+// such models all accept are sent — no steps or CFGScale, which they manage themselves — and the
+// picture is not downloaded at all: removeBackground takes it straight from Runware by imageUUID.
+export async function generateLogoArtwork(request, options) {
+  const task = {
+    taskType: 'imageInference',
+    taskUUID: randomUUID(),
+    model: options.config.logoModel,
+    positivePrompt: request.prompt,
+    width: request.width,
+    height: request.height,
+    numberResults: 1,
+    outputFormat: 'PNG',
+    includeCost: true,
+  };
+  if (request.negativePrompt) task.negativePrompt = request.negativePrompt;
+  const result = await runTask(
+    task,
+    options,
+    (answer) => typeof answer.imageUUID === 'string' && answer.imageUUID !== '',
+  );
+  return { imageUUID: result.imageUUID, cost: costOf(result) };
+}
+
+// Cuts the wordmark out of its plain background. The answer is matched by taskUUID like every
+// other: Runware's docs show it named "imageBackgroundRemoval", not the "removeBackground" asked for.
+export async function removeBackground(imageUUID, options) {
+  const task = {
+    taskType: 'removeBackground',
+    taskUUID: randomUUID(),
+    model: options.config.bgModel,
+    inputs: { image: imageUUID },
+    outputType: 'base64Data',
+    outputFormat: 'PNG',
+    includeCost: true,
+  };
+  const result = await runTask(task, options, hasImageData);
+  return { bytes: Buffer.from(result.imageBase64Data, 'base64'), cost: costOf(result) };
 }

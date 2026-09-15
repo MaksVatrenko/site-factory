@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateImage, RETRY_DELAYS_MS, RunwareError } from '../factory/images/runware.mjs';
+import { generateImage, generateLogoArtwork, removeBackground, RETRY_DELAYS_MS, RunwareError } from '../factory/images/runware.mjs';
 
 const SENTINEL = 'sentinel-runware-key-client-9b2c';
 const CONFIG = {
@@ -8,6 +8,8 @@ const CONFIG = {
   model: 'runware:400@6',
   guidance: 2,
   steps: 4,
+  logoModel: 'ideogram:4@0',
+  bgModel: 'runware:109@1',
 };
 const REQUEST = { prompt: 'a roulette wheel', negativePrompt: 'text', width: 1024, height: 576 };
 const IMAGE_BYTES = Buffer.from('fake webp bytes');
@@ -240,5 +242,73 @@ describe('generateImage', () => {
     expect(error.kind).toBe('rejected');
     expect(error.message).toContain('***');
     expect(error.message).not.toContain(SENTINEL);
+  });
+});
+
+describe('generateLogoArtwork', () => {
+  const LOGO_REQUEST = { prompt: 'a wordmark that reads "899OK"', negativePrompt: 'extra letters', width: 1536, height: 768 };
+
+  it('asks the logo model for the wordmark without the quality knobs other models manage themselves', async () => {
+    const { fetchFn, calls } = scriptedFetch([
+      (task) => jsonResponse(200, { data: [{ taskUUID: task.taskUUID, imageUUID: 'art-1', cost: 0.09 }] }),
+    ]);
+    const result = await generateLogoArtwork(LOGO_REQUEST, { config: CONFIG, fetchFn });
+
+    expect(result).toEqual({ imageUUID: 'art-1', cost: 0.09 });
+    const [task] = JSON.parse(calls[0].init.body);
+    expect(task).toMatchObject({
+      taskType: 'imageInference',
+      model: 'ideogram:4@0',
+      positivePrompt: 'a wordmark that reads "899OK"',
+      negativePrompt: 'extra letters',
+      width: 1536,
+      height: 768,
+      numberResults: 1,
+      outputFormat: 'PNG',
+      includeCost: true,
+    });
+    expect(task).not.toHaveProperty('steps');
+    expect(task).not.toHaveProperty('CFGScale');
+    expect(task).not.toHaveProperty('outputType');
+    expect(calls[0].init.headers.Authorization).toBe(`Bearer ${SENTINEL}`);
+  });
+
+  it('refuses an answer without the picture\'s imageUUID', async () => {
+    const { fetchFn } = scriptedFetch([(task) => jsonResponse(200, { data: [{ taskUUID: task.taskUUID }] })]);
+    const error = await failureOf(generateLogoArtwork(LOGO_REQUEST, { config: CONFIG, fetchFn }));
+    expect(error.kind).toBe('rejected');
+  });
+});
+
+describe('removeBackground', () => {
+  it('hands the wordmark over by its imageUUID and returns the transparent PNG', async () => {
+    const png = Buffer.from('fake png with alpha');
+    const { fetchFn, calls } = scriptedFetch([
+      // Runware's docs show the answer to a removeBackground task named differently from the
+      // request, so it is matched by taskUUID alone.
+      (task) =>
+        jsonResponse(200, {
+          data: [{ taskType: 'imageBackgroundRemoval', taskUUID: task.taskUUID, imageBase64Data: png.toString('base64'), cost: 0.001 }],
+        }),
+    ]);
+    const result = await removeBackground('art-1', { config: CONFIG, fetchFn });
+
+    expect(result.bytes.equals(png)).toBe(true);
+    expect(result.cost).toBe(0.001);
+    const [task] = JSON.parse(calls[0].init.body);
+    expect(task).toMatchObject({
+      taskType: 'removeBackground',
+      model: 'runware:109@1',
+      inputs: { image: 'art-1' },
+      outputType: 'base64Data',
+      outputFormat: 'PNG',
+      includeCost: true,
+    });
+  });
+
+  it('reports a refused payment the same way as for pictures', async () => {
+    const { fetchFn } = scriptedFetch([() => jsonResponse(402, { errors: [{ message: 'no money' }] })]);
+    const error = await failureOf(removeBackground('art-1', { config: CONFIG, fetchFn }));
+    expect(error.kind).toBe('balance');
   });
 });
