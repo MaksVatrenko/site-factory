@@ -178,11 +178,26 @@ export function startBuild(options, spawnFn = spawn) {
   builds.set(build.id, build);
 
   const runAstro = () => {
-    const env = typeof options.env === 'function' ? options.env() : options.env;
-    const child = spawnFn(ASTRO_BIN, ['build'], {
-      cwd: ROOT,
-      env: { ...process.env, ...env },
-    });
+    // `options.env()` and `spawnFn` both run synchronously here, and either can throw — e.g.
+    // `spawn` itself throws for an env value containing a NUL byte, and BRAND/GEO/LOCALE/
+    // PARTNER_URL all come straight from the request body. With a `prepare` step, this call sits
+    // inside a `.then()` with nothing after it to catch a synchronous throw, so it would become
+    // an unhandled rejection and kill the whole process; without `prepare`, it would throw out of
+    // `startBuild` itself and leave the build stuck at 'running' forever. Both are treated exactly
+    // like the child's own `error` event below: one log line, and the build is marked 'failed'.
+    let env;
+    let child;
+    try {
+      env = typeof options.env === 'function' ? options.env() : options.env;
+      child = spawnFn(ASTRO_BIN, ['build'], {
+        cwd: ROOT,
+        env: { ...process.env, ...env },
+      });
+    } catch (error) {
+      pushLine(build, `Не удалось запустить сборку: ${error.message}`);
+      finishBuild(build, 'failed');
+      return;
+    }
 
     // stdout and stderr are independent byte streams, so each needs its own splitter/decoder —
     // sharing one would let a partial multi-byte character from one stream get "completed" with

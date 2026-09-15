@@ -1005,6 +1005,40 @@ describe('startBuild runs a prepare step first', () => {
     fakeChild.emit('close', 0);
     expect(build.lines).toEqual(['Подготовка сборки не удалась: boom', 'Готово']);
   });
+
+  // I1: `spawn` throws synchronously for some inputs (e.g. an env value containing a NUL byte —
+  // BRAND/GEO/LOCALE/PARTNER_URL all come straight from the request body). Without a `prepare`
+  // step this used to throw out of `startBuild` itself, leaving the build stuck at 'running'
+  // forever; with one, it became an unhandled rejection that would kill the whole process.
+  it('turns a synchronous spawn failure into a failed build, without a prepare step', () => {
+    const build = startBuild(
+      { domain: '__spawn_throws__', outDir: '/tmp/__spawn_throws__', env: {} },
+      () => {
+        throw new Error('spawn boom');
+      },
+    );
+    expect(build.status).toBe('failed');
+    expect(build.lines).toEqual(['Не удалось запустить сборку: spawn boom']);
+  });
+
+  it('turns a synchronous spawn failure into a failed build, after a prepare step', async () => {
+    const build = startBuild(
+      {
+        domain: '__spawn_throws_prepare__',
+        outDir: '/tmp/__spawn_throws_prepare__',
+        env: {},
+        prepare: async (log) => {
+          log('prepared');
+        },
+      },
+      () => {
+        throw new Error('spawn boom');
+      },
+    );
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(build.status).toBe('failed');
+    expect(build.lines).toEqual(['prepared', 'Не удалось запустить сборку: spawn boom']);
+  });
 });
 
 // These exercise the chunk-decoding and process-handling logic directly rather than through
