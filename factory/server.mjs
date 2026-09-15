@@ -10,6 +10,8 @@ import express from 'express';
 import { listTemplates } from '../src/lib/templates.mjs';
 import { listSchemes } from '../src/lib/schemes.mjs';
 import { isPageFileName } from '../src/lib/site-dir.mjs';
+import { readRunwareConfig } from './images/env.mjs';
+import { generateMissingImages } from './images/generate.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -18,6 +20,8 @@ const OUTPUT_DIR = join(ROOT, 'output');
 const ASTRO_BIN = join(ROOT, 'node_modules', '.bin', 'astro');
 const PUBLIC_UI_DIR = join(HERE, 'public');
 const PORT = Number(process.env.PORT || 3002);
+const ENV_FILE = join(ROOT, '.env');
+const IMAGE_PROMPTS_FILE = join(HERE, 'prompts', 'images.json');
 
 const builds = new Map();
 
@@ -156,6 +160,12 @@ export function createLineSplitter(onLine) {
 // Exported for tests only (it lets tests start a build with a fake spawnFn instead of a real
 // Astro process). It is not a public entry point: the 409 "already running" guard lives in the
 // /api/generate route handler below, not here, so calling this directly skips that check.
+//
+// `options.prepare`, when given, runs first — generating missing pictures — inside this same
+// build record: its lines land in the same log and the domain counts as busy throughout. Whether
+// it succeeds or not, Astro runs after it. `options.env` may be a function, called only once
+// prepare is done, so the build sees what prepare left on disk (a public/ folder that did not
+// exist when the request came in). Without prepare, Astro starts synchronously, exactly as before.
 export function startBuild(options, spawnFn = spawn) {
   const build = {
     id: randomUUID(),
@@ -167,35 +177,47 @@ export function startBuild(options, spawnFn = spawn) {
   };
   builds.set(build.id, build);
 
-  const child = spawnFn(ASTRO_BIN, ['build'], {
-    cwd: ROOT,
-    env: { ...process.env, ...options.env },
-  });
+  const runAstro = () => {
+    const env = typeof options.env === 'function' ? options.env() : options.env;
+    const child = spawnFn(ASTRO_BIN, ['build'], {
+      cwd: ROOT,
+      env: { ...process.env, ...env },
+    });
 
-  // stdout and stderr are independent byte streams, so each needs its own splitter/decoder —
-  // sharing one would let a partial multi-byte character from one stream get "completed" with
-  // bytes from the other.
-  const stdoutSplitter = createLineSplitter((line) => pushLine(build, line));
-  const stderrSplitter = createLineSplitter((line) => pushLine(build, line));
+    // stdout and stderr are independent byte streams, so each needs its own splitter/decoder —
+    // sharing one would let a partial multi-byte character from one stream get "completed" with
+    // bytes from the other.
+    const stdoutSplitter = createLineSplitter((line) => pushLine(build, line));
+    const stderrSplitter = createLineSplitter((line) => pushLine(build, line));
 
-  child.stdout.on('data', stdoutSplitter.write);
-  child.stderr.on('data', stderrSplitter.write);
+    child.stdout.on('data', stdoutSplitter.write);
+    child.stderr.on('data', stderrSplitter.write);
 
-  child.on('error', (error) => {
-    pushLine(build, `Не удалось запустить сборку: ${error.message}`);
-    finishBuild(build, 'failed');
-  });
+    child.on('error', (error) => {
+      pushLine(build, `Не удалось запустить сборку: ${error.message}`);
+      finishBuild(build, 'failed');
+    });
 
-  child.on('close', (code) => {
-    // A failed spawn fires both 'error' and 'close'; the 'error' handler above already
-    // finished and reported the build, so skip the redundant, confusing second report.
-    if (build.status !== 'running') return;
+    child.on('close', (code) => {
+      // A failed spawn fires both 'error' and 'close'; the 'error' handler above already
+      // finished and reported the build, so skip the redundant, confusing second report.
+      if (build.status !== 'running') return;
 
-    stdoutSplitter.flush();
-    stderrSplitter.flush();
-    pushLine(build, code === 0 ? 'Готово' : `Сборка завершилась с кодом ${code}`);
-    finishBuild(build, code === 0 ? 'ok' : 'failed');
-  });
+      stdoutSplitter.flush();
+      stderrSplitter.flush();
+      pushLine(build, code === 0 ? 'Готово' : `Сборка завершилась с кодом ${code}`);
+      finishBuild(build, code === 0 ? 'ok' : 'failed');
+    });
+  };
+
+  if (typeof options.prepare === 'function') {
+    Promise.resolve()
+      .then(() => options.prepare((line) => pushLine(build, line)))
+      .catch((error) => pushLine(build, `Подготовка сборки не удалась: ${error.message}`))
+      .then(runAstro);
+  } else {
+    runAstro();
+  }
 
   return build;
 }
@@ -270,7 +292,13 @@ export function guardArchiveCompleteness(archive, res, expectedEntryCount) {
   });
 }
 
-export function createApp() {
+// envFile, fetchFn and promptFile exist for tests: they let a test app read a temporary .env and
+// answer Runware requests itself, so no test ever sees the owner's real key or spends money.
+export function createApp({
+  envFile = ENV_FILE,
+  fetchFn = fetch,
+  promptFile = IMAGE_PROMPTS_FILE,
+} = {}) {
   const app = express();
   app.use(express.json());
 
@@ -341,11 +369,31 @@ export function createApp() {
 
     const outDir = join(OUTPUT_DIR, domain);
     const sitePublic = join(siteDir, 'public');
+    const brand = String(body.brand ?? '');
+
+    // Missing pictures are generated first, unless the form asked for a plain rebuild. The .env is
+    // read here, per request, so a key added while the factory is running is picked up without a
+    // restart.
+    const prepare =
+      body.skipImages === true
+        ? undefined
+        : (log) =>
+            generateMissingImages({
+              siteDir,
+              brand,
+              config: readRunwareConfig(envFile),
+              promptFile,
+              fetchFn,
+              log,
+            });
 
     const build = startBuild({
       domain,
       outDir,
-      env: {
+      prepare,
+      // A function, so PUBLIC_DIR is decided once generation is done: a site that had no public/
+      // folder before this build may have one now.
+      env: () => ({
         SITE_DIR: siteDir,
         PUBLIC_DIR: existsSync(sitePublic) ? sitePublic : '',
         TEMPLATE: templateInput,
@@ -353,11 +401,11 @@ export function createApp() {
         OUT_DIR: outDir,
         SITE_URL: `https://${domain}`,
         DOMAIN: domain,
-        BRAND: String(body.brand ?? ''),
+        BRAND: brand,
         GEO: String(body.geo ?? ''),
         LOCALE: String(body.locale ?? ''),
         PARTNER_URL: String(body.partnerUrl ?? ''),
-      },
+      }),
     });
 
     res.json({ buildId: build.id, domain, outDir });

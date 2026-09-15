@@ -113,10 +113,12 @@ form.addEventListener('submit', async (event) => {
   submitButton.disabled = true;
   logBox.textContent = '';
   result.hidden = true;
-  setStatus('Собираем…');
+  // FormData reports a checkbox as "on" or leaves it out; the server wants a real boolean.
+  const payload = Object.fromEntries(new FormData(form).entries());
+  payload.skipImages = form.elements.skipImages.checked;
+  setStatus(payload.skipImages ? 'Собираем…' : 'Генерируем картинки и собираем…');
 
   try {
-    const payload = Object.fromEntries(new FormData(form).entries());
     const response = await fetch('/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

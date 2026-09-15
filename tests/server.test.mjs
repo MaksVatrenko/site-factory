@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { EventEmitter } from 'node:events';
 import {
   existsSync,
   mkdirSync,
+  mkdtempSync,
   readdirSync,
   readFileSync,
   rmSync,
@@ -10,6 +11,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
+import { tmpdir } from 'node:os';
 import { ZipArchive } from 'archiver';
 import {
   createApp,
@@ -22,8 +24,15 @@ import {
 let server;
 let base;
 
+// The main test app must never see the owner's real .env or reach Runware: it builds 899ok again
+// and again, and a real key there would spend real money.
+const NO_ENV_FILE = join(tmpdir(), 'site-factory-no-such-dir', '.env');
+const refuseNetwork = async () => {
+  throw new Error('tests must not reach the network');
+};
+
 beforeAll(async () => {
-  server = createApp().listen(0);
+  server = createApp({ envFile: NO_ENV_FILE, fetchFn: refuseNetwork }).listen(0);
   await new Promise((resolve) => server.once('listening', resolve));
   base = `http://127.0.0.1:${server.address().port}`;
 });
@@ -32,8 +41,8 @@ afterAll(() => {
   server?.close();
 });
 
-async function readUntilDone(buildId) {
-  const response = await fetch(`${base}/api/builds/${buildId}/log`);
+async function readUntilDone(buildId, origin = base) {
+  const response = await fetch(`${origin}/api/builds/${buildId}/log`);
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let text = '';
@@ -804,6 +813,197 @@ describe('final-fix-5: a leftover .prerender/ directory is a durable crash signa
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('pictures are generated before the build', () => {
+  const siteId = 'image-generation-fixture';
+  const siteDir = join('data', 'sites', siteId);
+  const SENTINEL = 'sentinel-runware-key-server-4e8b';
+  let envDir;
+  let pictureServer;
+  let pictureBase;
+  let requests;
+  let respond;
+
+  const picture = (task) =>
+    new Response(
+      JSON.stringify({
+        data: [{ taskUUID: task.taskUUID, imageBase64Data: Buffer.from('fake webp').toString('base64'), cost: 0.001 }],
+      }),
+      { status: 200 },
+    );
+
+  function listFilesRecursively(dir) {
+    return readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
+      entry.isDirectory() ? listFilesRecursively(join(dir, entry.name)) : [join(dir, entry.name)],
+    );
+  }
+
+  async function generate(domain, extra = {}) {
+    rmSync(join('output', domain), { recursive: true, force: true });
+    const start = await fetch(`${pictureBase}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ site: siteId, domain, ...extra }),
+    }).then((r) => r.json());
+    const log = await readUntilDone(start.buildId, pictureBase);
+    const status = await fetch(`${pictureBase}/api/builds/${start.buildId}`).then((r) => r.json());
+    return { log, status };
+  }
+
+  beforeAll(async () => {
+    envDir = mkdtempSync(join(tmpdir(), 'site-factory-server-env-'));
+    writeFileSync(join(envDir, '.env'), `RUNWARE_API_KEY=${SENTINEL}\n`);
+    const fetchFn = async (_url, init) => {
+      requests.push(init);
+      return respond(JSON.parse(init.body)[0]);
+    };
+    pictureServer = createApp({ envFile: join(envDir, '.env'), fetchFn }).listen(0);
+    await new Promise((resolve) => pictureServer.once('listening', resolve));
+    pictureBase = `http://127.0.0.1:${pictureServer.address().port}`;
+  });
+
+  // Every test starts from a site whose one picture is missing: no images.json, no public/.
+  beforeEach(() => {
+    rmSync(siteDir, { recursive: true, force: true });
+    mkdirSync(siteDir, { recursive: true });
+    writeFileSync(
+      join(siteDir, 'home.json'),
+      JSON.stringify({
+        title: 'Pictures',
+        blocks: [{ type: 'hero', content: [{ type: 'title', h1: 'Pictures' }, { image: 'hero-shot' }] }],
+      }),
+    );
+    requests = [];
+    respond = picture;
+  });
+
+  afterAll(() => {
+    pictureServer?.close();
+    rmSync(siteDir, { recursive: true, force: true });
+    rmSync(envDir, { recursive: true, force: true });
+  });
+
+  it('generates missing pictures before the build, and the page shows them', async () => {
+    const domain = 'image-generation-test.com';
+    try {
+      const { log, status } = await generate(domain);
+      expect(status.status).toBe('ok');
+      expect(requests).toHaveLength(1);
+      const ready = log.indexOf('Картинка hero-shot готова');
+      expect(ready).toBeGreaterThan(-1);
+      expect(ready).toBeLessThan(log.indexOf('[build]'));
+      // The site had no public/ folder when the request came in; the build must still see the
+      // picture generation just put there.
+      expect(readFileSync(join('output', domain, 'index.html'), 'utf8')).toContain(
+        'src="/images/hero-shot.webp"',
+      );
+    } finally {
+      rmSync(join('output', domain), { recursive: true, force: true });
+    }
+  });
+
+  it('skips generation entirely when asked to', async () => {
+    const domain = 'image-generation-skip-test.com';
+    try {
+      const { log, status } = await generate(domain, { skipImages: true });
+      expect(status.status).toBe('ok');
+      expect(requests).toHaveLength(0);
+      expect(log).not.toContain('Картинк');
+      expect(existsSync(join(siteDir, 'images.json'))).toBe(false);
+    } finally {
+      rmSync(join('output', domain), { recursive: true, force: true });
+    }
+  });
+
+  it('still builds the site when Runware refuses', async () => {
+    const domain = 'image-generation-refused-test.com';
+    respond = () =>
+      new Response(JSON.stringify({ errors: [{ message: 'no money' }] }), { status: 402 });
+    try {
+      const { log, status } = await generate(domain);
+      expect(log).toContain('на счёте Runware недостаточно денег');
+      expect(status.status).toBe('ok');
+      expect(existsSync(join('output', domain, 'index.html'))).toBe(true);
+    } finally {
+      rmSync(join('output', domain), { recursive: true, force: true });
+    }
+  });
+
+  it('keeps the key out of the build process and out of every file of the built site', async () => {
+    const domain = 'image-generation-leak-test.com';
+    try {
+      const { log } = await generate(domain);
+      // The key really was used — so its absence below means something.
+      expect(requests[0].headers.Authorization).toBe(`Bearer ${SENTINEL}`);
+      // The build process gets `{ ...process.env, ...options.env }`: with the key in neither, it
+      // never has it.
+      expect(Object.values(process.env).some((value) => value?.includes(SENTINEL))).toBe(false);
+      expect(log).not.toContain(SENTINEL);
+      for (const file of listFilesRecursively(join('output', domain))) {
+        expect(readFileSync(file).includes(SENTINEL), `${file} holds the key`).toBe(false);
+      }
+    } finally {
+      rmSync(join('output', domain), { recursive: true, force: true });
+    }
+  });
+});
+
+describe('startBuild runs a prepare step first', () => {
+  it('logs what prepare says before starting Astro, and reads env only then', async () => {
+    const fakeChild = new EventEmitter();
+    fakeChild.stdout = new EventEmitter();
+    fakeChild.stderr = new EventEmitter();
+    const order = [];
+    let spawnedEnv;
+    const build = startBuild(
+      {
+        domain: '__prepare_step__',
+        outDir: '/tmp/__prepare_step__',
+        prepare: async (log) => {
+          order.push('prepare');
+          log('prepared');
+        },
+        env: () => {
+          order.push('env');
+          return { MARK: 'late' };
+        },
+      },
+      (_bin, _args, options) => {
+        order.push('spawn');
+        spawnedEnv = options.env;
+        return fakeChild;
+      },
+    );
+
+    expect(build.status).toBe('running');
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(order).toEqual(['prepare', 'env', 'spawn']);
+    expect(spawnedEnv.MARK).toBe('late');
+    fakeChild.emit('close', 0);
+    expect(build.lines).toEqual(['prepared', 'Готово']);
+    expect(build.status).toBe('ok');
+  });
+
+  it('still starts Astro when prepare fails, with the reason in the log', async () => {
+    const fakeChild = new EventEmitter();
+    fakeChild.stdout = new EventEmitter();
+    fakeChild.stderr = new EventEmitter();
+    const build = startBuild(
+      {
+        domain: '__prepare_failure__',
+        outDir: '/tmp/__prepare_failure__',
+        env: {},
+        prepare: async () => {
+          throw new Error('boom');
+        },
+      },
+      () => fakeChild,
+    );
+    await new Promise((resolve) => setImmediate(resolve));
+    fakeChild.emit('close', 0);
+    expect(build.lines).toEqual(['Подготовка сборки не удалась: boom', 'Готово']);
   });
 });
 

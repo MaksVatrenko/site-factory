@@ -114,6 +114,19 @@ select:focus {
   outline-offset: 1px;
 }
 
+/* A checkbox reads as one line with its caption, unlike the stacked text fields above it. */
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--ink);
+}
+
+.check input {
+  margin: 0;
+  padding: 0;
+}
+
 .primary {
   padding: 0.65rem 1.5rem;
   border: 0;
