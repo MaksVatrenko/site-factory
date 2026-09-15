@@ -6,10 +6,12 @@ import { HEADER_LOGO_HEIGHT, SQUARE_SIZE, makeHeaderLogo, makeSquareLogo } from 
 // Real lettering leaves transparent pixels inside its bounding box (between and around letters).
 // A fully opaque rectangle would leave no transparent pixels after trim, causing WebP to drop the alpha channel.
 // So the fixture adds rounded corners, keeping transparent corner pixels like real lettering does.
-async function cutout({ canvas = [1536, 768], mark = [900, 300], colour = '#ffb800' } = {}) {
+// `opacity` defaults to 1 (fill-opacity="1" renders identically to omitting it), so it draws a glow
+// like a real neon logo would leave behind once RemBG only partly trusts a faint mark.
+async function cutout({ canvas = [1536, 768], mark = [900, 300], colour = '#ffb800', opacity = 1 } = {}) {
   const [markWidth, markHeight] = mark;
   const svg = Buffer.from(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${markWidth}" height="${markHeight}"><rect width="100%" height="100%" rx="24" fill="${colour}"/></svg>`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${markWidth}" height="${markHeight}"><rect width="100%" height="100%" rx="24" fill="${colour}" fill-opacity="${opacity}"/></svg>`,
   );
   return sharp({ create: { width: canvas[0], height: canvas[1], channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
     .composite([{ input: svg, gravity: 'centre' }])
@@ -49,6 +51,34 @@ describe('makeHeaderLogo', () => {
       .png()
       .toBuffer();
     await expect(makeHeaderLogo(blank)).rejects.toThrow(/после удаления фона на картинке ничего не осталось/);
+  });
+
+  // I2 fix: a blank canvas is still see-through no matter what colour is hiding underneath its
+  // zero alpha. This pins that RGB down to white — the opposite corner of the colour cube from the
+  // black blank fixture above — so a check that quietly reads RGB instead of alpha cannot pass by
+  // accident.
+  it('throws when the blank canvas left behind happens to be white, not black', async () => {
+    const blank = await sharp({
+      create: { width: 1536, height: 768, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 0 } },
+    })
+      .png()
+      .toBuffer();
+    await expect(makeHeaderLogo(blank)).rejects.toThrow(/после удаления фона на картинке ничего не осталось/);
+  });
+
+  // I2 fix: a wordmark with no red channel at all (black has none) must still be accepted — the
+  // mark is fully opaque, it is only the colour that happens to be red-free.
+  it('accepts an opaque mark that has no red in it at all', async () => {
+    const logo = await makeHeaderLogo(await cutout({ colour: '#000000' }));
+    expect([logo.width, logo.height]).toEqual([432, HEADER_LOGO_HEIGHT]);
+  });
+
+  // I2 fix: RemBG can hand back a mark it only partly trusts — a neon or glow style logo — as
+  // partial opacity rather than a clean cut. A ~30% opaque mark is still a real, visible mark and
+  // must be accepted, not thrown away as if nothing survived.
+  it('accepts a faint ~30% opacity glow', async () => {
+    const logo = await makeHeaderLogo(await cutout({ colour: '#00e5ff', opacity: 0.3 }));
+    expect([logo.width, logo.height]).toEqual([432, HEADER_LOGO_HEIGHT]);
   });
 });
 

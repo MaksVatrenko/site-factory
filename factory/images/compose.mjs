@@ -25,8 +25,16 @@ export async function makeHeaderLogo(cutoutPng) {
   // sharp 0.35.4). Left unchecked, that blank canvas would be saved as a real header logo and a
   // bare gradient square, and images.json would then hold both entries, so no later build would
   // ever retry (see generateLogo in logo.mjs). Caught here, before either file is ever written.
-  const alpha = await sharp(trimmed).ensureAlpha().extractChannel('alpha').stats();
-  if (alpha.channels[0].max < VISIBLE_ALPHA_THRESHOLD) {
+  //
+  // stats() always measures the ORIGINAL input, not the result of any operation chained onto the
+  // same pipeline (ensureAlpha/extractChannel included — see the stats() docs in this project's
+  // node_modules/sharp/dist/input.cjs, "Statistics are derived from the original input image").
+  // Calling it straight after extractChannel('alpha') silently reads channels[0] of `trimmed`
+  // itself, i.e. its RED channel, not alpha — so the extracted alpha band is written out to its own
+  // buffer first, and stats() is called on THAT.
+  const alphaBand = await sharp(trimmed).ensureAlpha().extractChannel('alpha').png().toBuffer();
+  const { channels: [alpha] } = await sharp(alphaBand).stats();
+  if (alpha.max < VISIBLE_ALPHA_THRESHOLD) {
     throw new Error('после удаления фона на картинке ничего не осталось');
   }
   const { data, info } = await sharp(trimmed)
