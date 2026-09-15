@@ -10,7 +10,8 @@ const tableRows = asList(rows)
   .map((row) => asList(row).map((cell) => asText(cell)))
   .filter((row) => row.some((cell) => cell !== ''));
 // A table with columns but no rows (or the reverse) still renders -- an empty table with nothing
-// at all in it does not. See data/sites/broken for the "table with no rows" case this covers.
+// at all in it does not. See tests/fixtures/sites/broken for the "table with no rows" case this
+// covers.
 const hasTable = cols.length > 0 || tableRows.length > 0;
 ---
 
