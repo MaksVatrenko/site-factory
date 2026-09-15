@@ -396,13 +396,25 @@ function buildFooter(raw, warnings) {
 // The logo is a picture from images.json like any other, named in site.json — "brand.logo": "main".
 // One that does not resolve is dropped with a warning instead of shipping as a broken image in the
 // header of every page. Its alt text falls back to the brand name in the layout, so a logo with no
-// alt of its own is not worth a warning.
+// alt of its own is not worth a warning. A site that names no logo gets the one the factory
+// generates under the fixed name "logo" (factory/images/logo.mjs), silently: nothing was asked for,
+// so a missing one is nothing to warn about.
+const GENERATED_LOGO = 'logo';
+const GENERATED_SQUARE = 'logo-square';
+
 function resolveLogo(value, images, warnings) {
   const name = toText(value, '');
-  if (name === '') return null;
+  if (name === '') return images.resolve(GENERATED_LOGO).image ?? null;
   const { image, problem } = images.resolve(name);
   if (!image) warnings.push(`Логотип: ${problem} — не выводится`);
   return image;
+}
+
+// The square version of the logo (a gradient with the logo centred), which the factory generates
+// next to it. It is what search engines, link previews and the browser tab get; absent, the site
+// simply has none of those.
+function resolveSquare(images) {
+  return images.resolve(GENERATED_SQUARE).image ?? null;
 }
 
 export function normalizeSite(raw, options = {}) {
@@ -428,6 +440,7 @@ export function normalizeSite(raw, options = {}) {
   const brand = {
     name: pickOverride(overrides.brand, brandInput.name, DEFAULT_BRAND),
     logo: resolveLogo(brandInput.logo, images, warnings),
+    square: resolveSquare(images),
     tagline: toText(brandInput.tagline, ''),
   };
 

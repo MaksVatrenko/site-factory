@@ -330,6 +330,82 @@ describe('a logo that does not resolve', () => {
   });
 });
 
+describe('the generated logo and its square', () => {
+  let dir;
+  let html;
+
+  beforeAll(() => {
+    dir = mkdtempSync(join(tmpdir(), 'site-factory-square-'));
+    const publicDir = join(dir, 'public');
+    mkdirSync(join(publicDir, 'images'), { recursive: true });
+    writeFileSync(join(publicDir, 'images', 'logo.webp'), 'x');
+    writeFileSync(join(publicDir, 'images', 'logo-square.png'), 'x');
+    writeSiteDirFromContent(dir, {
+      // No brand.logo: the engine is to pick up the factory's own "logo" by itself. The "<" in the
+      // name is there to prove the JSON-LD cannot be broken out of.
+      brand: { name: 'Square </script> Brand' },
+      nav: [{ label: 'Home', href: '/' }],
+      pages: [{ slug: '/', meta: {}, blocks: [{ type: 'hero', props: { content: [{ type: 'title', h1: 'Hero' }] } }] }],
+    });
+    writeFileSync(
+      join(dir, 'images.json'),
+      JSON.stringify({
+        logo: { src: '/images/logo.webp', alt: 'Square Brand', width: 432, height: 144 },
+        'logo-square': { src: '/images/logo-square.png', alt: 'Square Brand logo', width: 512, height: 512 },
+      }),
+    );
+    html = readOutput(
+      buildSite({ outDir: join('output', 'test-logo-square'), env: { SITE_DIR: dir, PUBLIC_DIR: publicDir } }).outDir,
+    );
+  });
+
+  afterAll(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('puts the generated logo in the header when site.json names none', () => {
+    expect(html).toMatch(/<img[^>]*src="\/images\/logo\.webp"[^>]*alt="Square Brand"/);
+  });
+
+  it('uses the square as the link preview and the site icon', () => {
+    expect(html).toMatch(/<meta property="og:image" content="https:\/\/example\.com\/images\/logo-square\.png"/);
+    expect(html).toMatch(/<link rel="icon" type="image\/png" href="\/images\/logo-square\.png"/);
+    expect(html).toMatch(/<link rel="apple-touch-icon" href="\/images\/logo-square\.png"/);
+  });
+
+  it('describes the organisation for search engines with absolute addresses', () => {
+    const json = html.match(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/)?.[1];
+    expect(JSON.parse(json)).toEqual({
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      name: 'Square </script> Brand',
+      url: 'https://example.com/',
+      logo: 'https://example.com/images/logo-square.png',
+    });
+    // The brand's own "</script>" must not be able to close the tag early.
+    expect(json).not.toContain('</script>');
+    expect(json).toContain('\\u003c/script>');
+  });
+});
+
+describe('a site without the square', () => {
+  it('adds no preview image, icon or organisation markup', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'site-factory-no-square-'));
+    try {
+      writeSiteDirFromContent(dir, {
+        brand: { name: 'Plain' },
+        pages: [{ slug: '/', meta: {}, blocks: [{ type: 'hero', props: { content: [{ type: 'title', h1: 'Hero' }] } }] }],
+      });
+      const html = readOutput(buildSite({ outDir: join('output', 'test-no-square'), env: { SITE_DIR: dir } }).outDir);
+      expect(html).not.toContain('og:image');
+      expect(html).not.toContain('rel="icon"');
+      expect(html).not.toContain('application/ld+json');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe('percent-encoded slugs', () => {
   it('builds a page for a slug containing a percent-encoded sequence', () => {
     const dir = mkdtempSync(join(tmpdir(), 'site-factory-slug-'));

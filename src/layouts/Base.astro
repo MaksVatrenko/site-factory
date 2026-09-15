@@ -3,7 +3,28 @@ import baseCss from '../../styles/base.css?raw';
 import { resolveOrigin, pageUrl } from '../lib/urls.mjs';
 
 const { site, page, scheme } = Astro.props;
-const canonical = pageUrl(resolveOrigin(Astro.site, site.domain), page.slug);
+const origin = resolveOrigin(Astro.site, site.domain);
+const canonical = pageUrl(origin, page.slug);
+
+// The square logo stands in for the whole site wherever one picture is wanted: the link preview,
+// the browser tab, and the schema.org Organization search engines read. Link previews and
+// structured data need absolute addresses; a src that is already absolute (https://…) stays as it is.
+const square = site.brand.square;
+const squareUrl = square ? new URL(square.src, `${origin}/`).href : '';
+const ICON_TYPES = { '.png': 'image/png', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg' };
+const iconType = square ? ICON_TYPES[(square.src.match(/\.[a-z0-9]+$/i)?.[0] ?? '').toLowerCase()] : undefined;
+// JSON inside a <script> is closed by the first "</script>" it contains, wherever that is — even
+// inside a string. Escaping every "<" as \u003c keeps the brand name (content written by someone
+// else) from ever ending the tag early, and JSON readers decode it back to "<".
+const organizationJson = square
+  ? JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      name: site.brand.name,
+      url: `${origin}/`,
+      logo: squareUrl,
+    }).replace(/</g, '\\u003c')
+  : '';
 
 // Header and footer are rendered here, in the layout every template shares, instead of as block
 // files inside a template folder. Every other piece of markup in this engine is owned by exactly
@@ -62,6 +83,10 @@ const showFooter =
     <meta property="og:title" content={page.meta.title} />
     <meta property="og:type" content="website" />
     <meta property="og:url" content={canonical} />
+    {square && <meta property="og:image" content={squareUrl} />}
+    {square && <link rel="icon" type={iconType} href={square.src} />}
+    {square && <link rel="apple-touch-icon" href={square.src} />}
+    {square && <script type="application/ld+json" is:inline set:html={organizationJson} />}
     <style set:html={`${baseCss}\n${scheme.css}`}></style>
   </head>
   <body>
