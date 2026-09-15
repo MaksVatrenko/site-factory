@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { EventEmitter } from 'node:events';
 import {
+  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -160,7 +161,9 @@ describe('factory API', () => {
     const data = await fetch(`${base}/api/sites`).then((r) => r.json());
     const byId = Object.fromEntries(data.sites.map((site) => [site.id, site]));
 
-    for (const siteId of ['899ok', 'broken']) {
+    // `broken` used to live under data/sites and be listed here too; it moved to
+    // tests/fixtures/sites/broken (finding I3) precisely so it is not a real, listed site.
+    for (const siteId of ['899ok']) {
       expect(byId[siteId], `expected ${siteId} in /api/sites`).toBeTruthy();
       expect(byId[siteId].pages).toBe(pageCountOnDisk(siteId));
       expect(byId[siteId].brand).toBe(siteBrandOnDisk(siteId));
@@ -710,6 +713,23 @@ describe('form values reach the built HTML end to end (M3)', () => {
 // to withhold it — the zip route's job is "was anything actually built", not "is there a page at
 // this one specific path", and the preview route can simply serve whatever page really exists.
 describe('final-fix-5: a successful build with no page at "/" still has a working zip and preview', () => {
+  // The broken fixture lives under tests/fixtures/sites, not data/sites (finding I3), and
+  // /api/generate only ever builds a folder under data/sites — so these tests copy it into a
+  // fixture folder there first, the same way other describes in this file stage their own fixture
+  // sites. This app never sees a real .env and refuses any network call (see NO_ENV_FILE and
+  // refuseNetwork above), so no generation can actually happen for it.
+  const siteId = 'final-fix-5-broken-fixture';
+  const siteDir = join('data', 'sites', siteId);
+
+  beforeAll(() => {
+    rmSync(siteDir, { recursive: true, force: true });
+    cpSync(join('tests', 'fixtures', 'sites', 'broken'), siteDir, { recursive: true });
+  });
+
+  afterAll(() => {
+    rmSync(siteDir, { recursive: true, force: true });
+  });
+
   it('zips a site whose only page is not at the root', async () => {
     const domain = 'no-root-page-zip-test.com';
     rmSync(join('output', domain), { recursive: true, force: true });
@@ -717,7 +737,7 @@ describe('final-fix-5: a successful build with no page at "/" still has a workin
     const start = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ site: 'broken', domain }),
+      body: JSON.stringify({ site: siteId, domain }),
     }).then((r) => r.json());
 
     try {
@@ -745,7 +765,7 @@ describe('final-fix-5: a successful build with no page at "/" still has a workin
     const start = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ site: 'broken', domain }),
+      body: JSON.stringify({ site: siteId, domain }),
     }).then((r) => r.json());
 
     try {

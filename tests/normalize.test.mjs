@@ -71,9 +71,9 @@ describe('normalizeSite', () => {
 
   it('drops a page that is not a plain object, reporting its position', () => {
     // A SITE_DIR page file can parse as valid JSON without being a JSON object at all (a bare
-    // string, a number, an array) — see data/sites/broken/not-an-object.json. Such a page has no
-    // slug, meta or blocks to work with, so it is dropped the same way an unsupported block is,
-    // identified by its position since it has no other identity yet.
+    // string, a number, an array) — see tests/fixtures/sites/broken/not-an-object.json. Such a
+    // page has no slug, meta or blocks to work with, so it is dropped the same way an unsupported
+    // block is, identified by its position since it has no other identity yet.
     const { site, warnings } = normalizeSite(
       { pages: [{ slug: '/', meta: { title: 'Real' } }, 'not an object', 42] },
       { supportedBlocks: BLOCKS },

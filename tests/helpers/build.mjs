@@ -9,17 +9,19 @@ export function buildSite({
   template = 'review',
   scheme = 'dark',
   outDir,
+  siteDir,
   env = {},
 } = {}) {
   const target = outDir || join('output', `test-${site}-${template}-${scheme}`);
   rmSync(target, { recursive: true, force: true });
 
-  const sitePublic = join('data', 'sites', site, 'public');
+  const SITE_DIR = siteDir || join('data', 'sites', site);
+  const sitePublic = join(SITE_DIR, 'public');
   const result = spawnSync(ASTRO_BIN, ['build'], {
     encoding: 'utf8',
     env: {
       ...process.env,
-      SITE_DIR: join('data', 'sites', site),
+      SITE_DIR,
       PUBLIC_DIR: existsSync(sitePublic) ? sitePublic : '',
       TEMPLATE: template,
       SCHEME: scheme,

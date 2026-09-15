@@ -237,9 +237,9 @@ export function startBuild(options, spawnFn = spawn) {
   return build;
 }
 
-// Content is not required to place a page at "/" — the shipped `broken` site's only page is
-// "/sloppy" — so a build can finish cleanly and report success while writing no root index.html
-// at all.
+// Content is not required to place a page at "/" — a site whose only page is not at "/", like
+// the broken test fixture (tests/fixtures/sites/broken, whose only page is "/sloppy") — so a
+// build can finish cleanly and report success while writing no root index.html at all.
 //
 // Rather than assume the root exists, this asks the actual output tree which page does: a
 // breadth-first, alphabetical-at-each-level walk for the first index.html found, mirroring the
@@ -528,9 +528,10 @@ export function createApp({
     archive.finalize();
   });
 
-  // A build with no page at "/" (the shipped `broken` site: its only page is "/sloppy") has
-  // nothing for express.static below to find at the domain's own root, and it has no way to know
-  // which nested page should stand in for it. This runs first and hands it the answer directly:
+  // A build with no page at "/" (a site whose only page is not at "/", like the broken test
+  // fixture, whose only page is "/sloppy") has nothing for express.static below to find at the
+  // domain's own root, and it has no way to know which nested page should stand in for it. This
+  // runs first and hands it the answer directly:
   // when the root index.html is missing but the domain really was built, redirect to whichever
   // page findEntryPageDir finds. A domain that was never built at all, or genuinely has a root
   // page, falls straight through to the static handler exactly as before.

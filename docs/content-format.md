@@ -220,8 +220,8 @@ moysite.com/
 валидным JSON (это касается и `site.json`, и `images.json`), либо в папке нет ни одной страницы. Оба
 случая — ошибка оператора (не туда указали путь или положили битый файл), а не контента.
 
-Пример папки, нарочно собранной из одних ошибок, — `data/sites/broken/`: запустите
-`SITE_DIR=data/sites/broken npm run build:site` и посмотрите на её лог.
+Пример папки, нарочно собранной из одних ошибок, — `tests/fixtures/sites/broken/`: запустите
+`SITE_DIR=tests/fixtures/sites/broken npm run build:site` и посмотрите на её лог.
 
 ## Минимальный рабочий сайт
 

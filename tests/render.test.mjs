@@ -84,14 +84,21 @@ describe('engine build', () => {
   });
 });
 
-// data/sites/broken is a site folder broken in every way the content format allows. It must still
-// build; everything that could be shown is shown, and everything that could not is named in the log.
+// tests/fixtures/sites/broken is a site folder broken in every way the content format allows. It
+// must still build; everything that could be shown is shown, and everything that could not is
+// named in the log. It lives under tests/fixtures rather than data/sites: it is a deliberately
+// broken test fixture, not a real site, and it must never be listed or built by the factory itself
+// (see finding I3).
 describe('a content folder broken in every way the format allows', () => {
   let html;
   let log;
 
   beforeAll(() => {
-    const built = buildSite({ site: 'broken', outDir: join('output', 'test-broken') });
+    const built = buildSite({
+      site: 'broken',
+      siteDir: join('tests', 'fixtures', 'sites', 'broken'),
+      outDir: join('output', 'test-broken'),
+    });
     html = readOutput(built.outDir, join('sloppy', 'index.html'));
     log = built.log;
   });
