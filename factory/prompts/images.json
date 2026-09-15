@@ -1,0 +1,15 @@
+{
+  "width": 1024,
+  "height": 576,
+  "negativePrompt": "text, letters, words, numbers, watermark, logo, signature, blurry, distorted hands",
+  "prompts": [
+    "a luxurious modern casino hall with glowing roulette and card tables, warm golden lighting, cinematic wide shot, photorealistic",
+    "close-up of a roulette wheel spinning with the ball in motion, dramatic lighting, shallow depth of field, photorealistic",
+    "a cricket stadium at night under bright floodlights, packed stands, batsman ready at the crease, cinematic wide shot",
+    "a smartphone lying on a dark table showing a colourful slot game, neon reflections, product photography",
+    "stacks of casino chips and playing cards on green felt, soft spotlight, photorealistic macro shot",
+    "a live dealer at a blackjack table in an elegant casino studio, warm cinematic lighting, photorealistic",
+    "golden coins and gift boxes bursting with light on a dark purple background, festive bonus concept, 3d render",
+    "a cricket ball and bat on fresh green grass at golden hour, stadium lights blurred in the background, photorealistic"
+  ]
+}
