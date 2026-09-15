@@ -23,14 +23,29 @@ const brandLabel = asText(site?.brand?.name);
 )}
 
 <style>
+  /* The first screen is centred as a whole: text is centred in its line, and everything in the grid
+     spans the container, so wide content (cards, a table) keeps its full width. The narrow pieces
+     below are the exception — a brand pill, a heading or a list stretched to full width would read
+     as a stray bar, so they shrink to their content and sit in the middle instead. */
   .hero__inner,
   .hero__content {
     display: grid;
-    justify-items: start;
     gap: 1.25rem;
+    text-align: center;
+  }
+
+  .hero__content > :global(.rheading),
+  .hero__content > :global(ul) {
+    justify-self: center;
+  }
+
+  /* A centred list keeps its items flush with their bullets. */
+  .hero__content > :global(ul) {
+    text-align: left;
   }
 
   .hero__eyebrow {
+    justify-self: center;
     padding: 0.35rem 0.9rem;
     border: 1px solid var(--border-default);
     border-radius: 999px;
@@ -41,12 +56,14 @@ const brandLabel = asText(site?.brand?.name);
     text-transform: uppercase;
   }
 
-  /* The hero's paragraphs read as a lead: larger and quieter than body text, held to a readable
-     measure. They are drawn by the shared text element, so the look is applied from here to
-     whatever paragraphs this block's content holds. */
-  .hero__content :global(p) {
+  /* The hero's own paragraphs read as a lead: larger and quieter than body text, held to a readable
+     measure in the middle of the screen. They are drawn by the shared text element, so the look is
+     applied from here — to direct children only, so a paragraph inside a card or a toggle placed in
+     the hero keeps its own look. */
+  .hero__content > :global(p) {
+    max-width: 42rem;
+    margin-inline: auto;
     color: var(--text-secondary);
     font-size: 1.15rem;
-    max-width: 42rem;
   }
 </style>

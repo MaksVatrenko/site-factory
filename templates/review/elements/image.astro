@@ -25,9 +25,14 @@ const eager = Boolean(context?.eagerImages);
 )}
 
 <style>
+  /* Centred wherever it lands. Auto inline margins do it in every container a block can give it —
+     the grid of a section or of the hero, or ordinary block flow — so no block has to know that it
+     holds a picture. A picture wider than its container still shrinks to fit. */
   .rimage {
+    display: block;
     max-width: 100%;
     height: auto;
+    margin-inline: auto;
     border-radius: var(--radius);
   }
 </style>
