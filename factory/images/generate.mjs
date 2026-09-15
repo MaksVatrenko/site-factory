@@ -21,10 +21,19 @@ function isPlainObject(value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-// Every string an `image` key holds anywhere inside a page's blocks — a picture element, or a card
-// in a list — which is exactly where the engine looks pictures up (resolveNested in
-// src/lib/content.mjs). Names are kept exactly as written, since images.json is matched by that
-// exact key.
+function typeOf(entry) {
+  return typeof entry.type === 'string' ? entry.type.trim() : '';
+}
+
+// Every string an `image` key holds, but only where normalizePageContent in src/lib/content.mjs
+// actually resolves one, so nothing gets paid for that the built page could never show:
+//   - only inside a block's props.content entries — never a field on the block itself, which the
+//     engine never even looks at;
+//   - never on a `content` entry of type 'title' — normalizeTitle only ever reads its h1–h6 key,
+//     it never looks at `image` at all;
+//   - anywhere else inside a content entry, at any depth (a picture element, a card in a list,
+//     …) — exactly what resolveNested walks.
+// Names are kept exactly as written, since images.json is matched by that exact key.
 export function collectImageNames(pages) {
   const names = new Set();
   const visit = (value) => {
@@ -42,16 +51,32 @@ export function collectImageNames(pages) {
     }
   };
   for (const page of Array.isArray(pages) ? pages : []) {
-    if (isPlainObject(page)) visit(page.blocks);
+    if (!isPlainObject(page)) continue;
+    for (const block of Array.isArray(page.blocks) ? page.blocks : []) {
+      if (!isPlainObject(block)) continue;
+      const props = isPlainObject(block.props) ? block.props : {};
+      const entries = Array.isArray(props.content) ? props.content : [];
+      for (const entry of entries) {
+        if (isPlainObject(entry) && typeOf(entry) === 'title') continue;
+        visit(entry);
+      }
+    }
   }
   return [...names];
 }
+
+// Capped, not just sanitised: an unbounded marker name would otherwise become an unbounded file
+// name. The cut can leave a trailing hyphen behind (it lands mid-run of what was a separator), so
+// that gets trimmed again afterwards.
+const MAX_FILE_BASE_LENGTH = 100;
 
 export function fileBaseFor(name) {
   const base = name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .replace(/^-+|-+$/g, '')
+    .slice(0, MAX_FILE_BASE_LENGTH)
+    .replace(/-+$/g, '');
   return base || 'image';
 }
 
@@ -130,11 +155,28 @@ export async function generateMissingImages({
     return summary;
   }
 
-  const missing = collectImageNames(pages).filter((name) => !Object.hasOwn(registry, name));
+  const rawMissing = collectImageNames(pages).filter((name) => !Object.hasOwn(registry, name));
+  if (rawMissing.length === 0) return summary;
+
+  // `registry[name] = entry` on a plain object literal cannot make `__proto__` an own property —
+  // it sets the object's prototype instead, so the entry would never actually land in
+  // images.json and this name would be regenerated, and paid for, on every future build. Skip it
+  // outright, before anything else runs or costs money.
+  const missing = rawMissing.filter((name) => name !== '__proto__');
+  if (rawMissing.length !== missing.length) {
+    summary.skipped.push('__proto__');
+    log('Картинка __proto__: такое имя нельзя записать в images.json — пропущена');
+  }
   if (missing.length === 0) return summary;
 
   if (!config?.apiKey) {
-    log(`Картинки: ключ Runware не задан в .env — пропущено ${missing.length}: ${missing.join(', ')}`);
+    // A key env.mjs flagged as unusable (space or line break inside it) is a different situation
+    // from no key at all: the owner did set something, it just cannot be sent safely, so this
+    // says so instead of claiming the .env is empty.
+    const reason = config?.apiKeyInvalid
+      ? 'ключ Runware в .env записан неверно (пробелы или переносы строк внутри)'
+      : 'ключ Runware не задан в .env';
+    log(`Картинки: ${reason} — пропущено ${missing.length}: ${missing.join(', ')}`);
     summary.skipped = missing;
     return summary;
   }
@@ -160,6 +202,24 @@ export async function generateMissingImages({
     while (queue.length > 0 && !stopped) {
       const name = queue.shift();
       const started = Date.now();
+
+      // Reserved before Runware is ever asked for this picture: if the folder cannot even be
+      // created (e.g. `public` already exists as a plain file), there is nothing generateImage
+      // could produce that this could go on to save, so it is not worth paying for at all.
+      let fileName;
+      try {
+        mkdirSync(imagesDir, { recursive: true });
+        fileName = uniqueFileName(imagesDir, fileBaseFor(name), takenFiles);
+      } catch (error) {
+        summary.skipped.push(name);
+        log(`Картинка ${name}: ${error.message} — пропущена`);
+        continue;
+      }
+
+      // Set once generateImage resolves: Runware has billed for the picture by then, so if
+      // writing the file or images.json afterwards throws, the catch below still counts the cost
+      // even though the picture ends up skipped.
+      let paidCost;
       try {
         const { bytes, cost } = await generateImage(
           {
@@ -170,8 +230,7 @@ export async function generateMissingImages({
           },
           { config, fetchFn, sleep },
         );
-        const fileName = uniqueFileName(imagesDir, fileBaseFor(name), takenFiles);
-        mkdirSync(imagesDir, { recursive: true });
+        paidCost = cost;
         writeFileSync(join(imagesDir, fileName), bytes);
         addToRegistry(siteDir, name, {
           src: `${IMAGES_URL_DIR}/${fileName}`,
@@ -191,6 +250,7 @@ export async function generateMissingImages({
         } else {
           log(`Картинка ${name}: ${error.message} — пропущена`);
         }
+        if (typeof paidCost === 'number') summary.cost += paidCost;
       }
     }
   };
