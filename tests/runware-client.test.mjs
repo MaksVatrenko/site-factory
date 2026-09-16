@@ -9,7 +9,7 @@ const CONFIG = {
   guidance: 2,
   steps: 4,
   logoModel: 'ideogram:4@0',
-  bgModel: 'runware:109@1',
+  bgModel: 'ideogram:remove-background@0',
 };
 const REQUEST = { prompt: 'a roulette wheel', negativePrompt: 'text', width: 1024, height: 576 };
 const IMAGE_BYTES = Buffer.from('fake webp bytes');
@@ -301,7 +301,7 @@ describe('removeBackground', () => {
     const [task] = JSON.parse(calls[0].init.body);
     expect(task).toMatchObject({
       taskType: 'removeBackground',
-      model: 'runware:109@1',
+      model: 'ideogram:remove-background@0',
       inputs: { image: 'art-1' },
       outputType: 'base64Data',
       outputFormat: 'PNG',

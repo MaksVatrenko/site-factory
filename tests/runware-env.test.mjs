@@ -113,7 +113,7 @@ describe('.env.example', () => {
     expect(config.steps).toBe(4);
     expect(config.model).toBe('runware:400@6');
     expect(config.logoModel).toBe('ideogram:4@0');
-    expect(config.bgModel).toBe('runware:109@1');
+    expect(config.bgModel).toBe('ideogram:remove-background@0');
   });
 
   it('is committed to git while .env itself stays ignored', () => {

@@ -11,10 +11,12 @@ export const RUNWARE_DEFAULTS = Object.freeze({
   guidance: 2,
   steps: 4,
   concurrency: 1,
-  // The wordmark needs a model that renders text reliably; background removal is a separate,
-  // much cheaper model. Both can be swapped in .env without touching code.
+  // The wordmark needs a model that renders text reliably. Background removal needs one that
+  // also cuts the counters inside letters: the cheap segmentation model left every one of them
+  // filled with the white background (measured on 899ok, 2026-09-16), which showed up as white
+  // blocks inside 8, 9 and O. Both can be swapped in .env without touching code.
   logoModel: 'ideogram:4@0',
-  bgModel: 'runware:109@1',
+  bgModel: 'ideogram:remove-background@0',
 });
 
 // A missing or unreadable .env is not an error here: without a key, generation reports that it

@@ -12,7 +12,7 @@ const CONFIG = {
   apiUrl: 'https://runware.test/v1',
   model: 'runware:400@6',
   logoModel: 'ideogram:4@0',
-  bgModel: 'runware:109@1',
+  bgModel: 'ideogram:remove-background@0',
   guidance: 2,
   steps: 4,
   concurrency: 1,
