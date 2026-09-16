@@ -40,6 +40,8 @@
             <p class="note">Пустые поля бренда, гео и языка берутся из site.json выбранного сайта</p>
             <label class="check"><input name="skipImages" type="checkbox" /> Без генерации картинок и логотипа</label>
             <p class="note">Иначе перед сборкой делаются логотип, если его нет, и картинки для меток image, которых нет в images.json</p>
+            <label class="check"><input name="regenerateLogo" type="checkbox" /> Перегенерировать логотип заново</label>
+            <p class="note">Нарисует новый логотип, даже если он уже есть — случайный стиль из восьми в logo.json. Примерно $0.07 за сборку</p>
           </fieldset>
 
           <fieldset class="card">

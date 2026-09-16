@@ -389,16 +389,29 @@ export function createApp({
     const outDir = join(OUTPUT_DIR, domain);
     const sitePublic = join(siteDir, 'public');
     const brand = String(body.brand ?? '');
+    // Strictly `true`, exactly like skipImages below: this checkbox spends money, so anything else
+    // that happens to arrive in that field ("on" from a plain form post, 1, "false") means "no".
+    const regenerateLogo = body.regenerateLogo === true;
 
-    // Before the build: the logo first (a site without one gets it), then any missing pictures,
-    // unless the form asked for a plain rebuild. The .env is read here, per request and once for
-    // both steps, so a key added while the factory is running is picked up without a restart.
+    // Before the build: the logo first (a site without one gets it, and `force` draws a new one
+    // over a site that already has it), then any missing pictures — unless the form asked for a
+    // plain rebuild, which skips both steps and so outranks the regenerate checkbox. The .env is
+    // read here, per request and once for both steps, so a key added while the factory is running
+    // is picked up without a restart.
     const prepare =
       body.skipImages === true
         ? undefined
         : async (log) => {
             const config = readRunwareConfig(envFile);
-            await generateLogo({ siteDir, brand, config, promptFile: logoPromptFile, fetchFn, log });
+            await generateLogo({
+              siteDir,
+              brand,
+              config,
+              promptFile: logoPromptFile,
+              fetchFn,
+              force: regenerateLogo,
+              log,
+            });
             await generateMissingImages({ siteDir, brand, config, promptFile, fetchFn, log });
           };
 

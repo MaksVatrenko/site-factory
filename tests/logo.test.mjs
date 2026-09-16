@@ -151,6 +151,57 @@ describe('generateLogo', () => {
     expect(lines).toEqual(['Логотип: квадрат собран из готового логотипа']);
   });
 
+  // The form's "regenerate the logo" checkbox (`force`). It exists because hand-editing
+  // images.json used to be the only way to get a different one.
+  it('draws a new logo on demand, even when both pictures are already recorded', async () => {
+    const siteDir = writeSite({
+      site: { brand: { name: 'Again' } },
+      images: {
+        logo: { src: '/images/logo.webp', alt: 'Again', width: 344, height: 144 },
+        'logo-square': { src: '/images/logo-square.png', alt: 'Again logo', width: 512, height: 512 },
+      },
+      files: { 'logo.webp': 'the logo from last time', 'logo-square.png': 'the square from last time' },
+    });
+    const { fetchFn, tasks } = fakeRunware({ cutout: await cutoutPng() });
+    const { summary, lines } = await run(siteDir, { fetchFn, force: true });
+
+    expect(tasks.map((task) => task.taskType)).toEqual(['imageInference', 'removeBackground']);
+    expect(summary.generated).toBe(true);
+
+    // Nothing already on disk is overwritten, so the new pair takes the next free names and the
+    // registry is repointed at them — the previous files stay byte for byte as they were.
+    const registry = registryOf(siteDir);
+    expect(registry.logo.src).toBe('/images/logo-2.webp');
+    expect(registry['logo-square'].src).toBe('/images/logo-square-2.png');
+    expect(readFileSync(join(siteDir, 'public', 'images', 'logo.webp'), 'utf8')).toBe(
+      'the logo from last time',
+    );
+    expect(lines[0]).toBe('Логотип: делаю заново для «Again»');
+  });
+
+  it('pays for a whole new logo instead of only rebuilding the square', async () => {
+    const logo = await sharp(await cutoutPng()).trim().webp().toBuffer();
+    const siteDir = writeSite({
+      site: { brand: { name: 'Keep' } },
+      images: { logo: { src: '/images/logo.webp', alt: 'Keep' } },
+      files: { 'logo.webp': logo },
+    });
+    const { fetchFn, tasks } = fakeRunware({ cutout: await cutoutPng() });
+    const { lines } = await run(siteDir, { fetchFn, force: true });
+
+    expect(tasks.map((task) => task.taskType)).toEqual(['imageInference', 'removeBackground']);
+    expect(lines).not.toContain('Логотип: квадрат собран из готового логотипа');
+    expect(registryOf(siteDir).logo.src).toBe('/images/logo-2.webp');
+  });
+
+  it('will not regenerate over a logo the site named itself, and says why', async () => {
+    const siteDir = writeSite({ site: { brand: { name: 'Own', logo: 'mine' } } });
+    const { fetchFn, tasks } = fakeRunware({ cutout: await cutoutPng() });
+    const { lines } = await run(siteDir, { fetchFn, force: true });
+    expect(tasks).toHaveLength(0);
+    expect(lines).toEqual(['Логотип: у сайта свой логотип в site.json — перегенерация пропущена']);
+  });
+
   it('cannot rebuild the square from a logo that is not a local file', async () => {
     const siteDir = writeSite({
       site: { brand: { name: 'Remote' } },

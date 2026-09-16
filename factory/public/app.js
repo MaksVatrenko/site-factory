@@ -108,6 +108,18 @@ function followBuild(buildId, domain) {
   });
 }
 
+// «Без генерации картинок и логотипа» пропускает и логотип тоже, так что вместе с ней галочка
+// перегенерации не значит ничего. Форма держит их согласованными сама: включённая галочка,
+// которая заведомо ничего не сделает, читается как поломка, а не как правило.
+const skipImagesField = form.elements.skipImages;
+const regenerateLogoField = form.elements.regenerateLogo;
+function syncRegenerateLogo() {
+  regenerateLogoField.disabled = skipImagesField.checked;
+  if (skipImagesField.checked) regenerateLogoField.checked = false;
+}
+skipImagesField.addEventListener('change', syncRegenerateLogo);
+syncRegenerateLogo();
+
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
   submitButton.disabled = true;
@@ -116,7 +128,14 @@ form.addEventListener('submit', async (event) => {
   // FormData reports a checkbox as "on" or leaves it out; the server wants a real boolean.
   const payload = Object.fromEntries(new FormData(form).entries());
   payload.skipImages = form.elements.skipImages.checked;
-  setStatus(payload.skipImages ? 'Собираем…' : 'Генерируем логотип и картинки, собираем…');
+  payload.regenerateLogo = form.elements.regenerateLogo.checked;
+  setStatus(
+    payload.skipImages
+      ? 'Собираем…'
+      : payload.regenerateLogo
+        ? 'Делаем логотип заново, генерируем картинки, собираем…'
+        : 'Генерируем логотип и картинки, собираем…',
+  );
 
   try {
     const response = await fetch('/api/generate', {

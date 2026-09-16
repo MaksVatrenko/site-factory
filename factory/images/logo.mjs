@@ -7,8 +7,9 @@ import { generateLogoArtwork, removeBackground } from './runware.mjs';
 import { makeHeaderLogo, makeSquareLogo } from './compose.mjs';
 import { addEntries, readRegistry, uniqueFileName, writeUniqueFile } from './registry.mjs';
 
-// Makes a site's logo before its build, when the site has none: the brand name drawn by a model
-// chosen for lettering, its background removed, then trimmed into the header logo and set on a
+// Makes a site's logo before its build, when the site has none — or again from scratch when the
+// form's "regenerate the logo" checkbox asks for it (see `force` below): the brand name drawn by a
+// model chosen for lettering, its background removed, then trimmed into the header logo and set on a
 // gradient square for schema.org, og:image and the favicon (see
 // docs/specs/2026-09-15-logo-generation-design.md). Like the picture step, it never throws — every
 // problem is one log line, and the site builds regardless.
@@ -67,6 +68,10 @@ export async function generateLogo({
   fetchFn = fetch,
   sleep,
   random = Math.random,
+  // The form's "regenerate the logo" checkbox. It only skips the two "already have one" shortcuts
+  // below — everything that guards the money (a brand name, a usable key, a writable folder) is
+  // checked exactly as it is for a first logo.
+  force = false,
   log = () => {},
 }) {
   const summary = { generated: false, cost: 0 };
@@ -76,7 +81,14 @@ export async function generateLogo({
     const { input } = loadSiteDirInput(siteDir);
     const brandInput = isPlainObject(input.brand) ? input.brand : {};
     // A logo the owner named in site.json is theirs; the factory makes one only for a site without.
-    if (textOf(brandInput.logo) !== '') return summary;
+    // That holds even when the form asks to regenerate: the engine prefers brand.logo over the
+    // registry either way (see resolveLogo in src/lib/normalize.mjs), so a paid-for replacement
+    // would never be shown. Only then is it worth a line — a ticked checkbox that does nothing
+    // should say so, rather than leave an empty log behind.
+    if (textOf(brandInput.logo) !== '') {
+      if (force) log('Логотип: у сайта свой логотип в site.json — перегенерация пропущена');
+      return summary;
+    }
     siteBrand = textOf(brandInput.name);
   } catch (error) {
     log(`Логотип: не удалось прочитать сайт — ${error.message}. Пропущен`);
@@ -92,7 +104,10 @@ export async function generateLogo({
   }
 
   const resolvedBrand = textOf(String(brand)) || siteBrand;
-  const hasLogo = Object.hasOwn(registry, LOGO_NAME);
+  // Both shortcuts below hang off `hasLogo`, so clearing it is all `force` needs to do: a site
+  // with both pictures is no longer left alone, and one missing only the square no longer gets
+  // the free rebuild — both fall through to the full paid pipeline instead.
+  const hasLogo = !force && Object.hasOwn(registry, LOGO_NAME);
   if (hasLogo && Object.hasOwn(registry, SQUARE_NAME)) return summary;
   if (hasLogo) {
     await rebuildSquare({ siteDir, registry, brand: resolvedBrand, promptFile, random, log });
@@ -128,7 +143,7 @@ export async function generateLogo({
     return summary;
   }
 
-  log(`Логотип: делаю для «${resolvedBrand}»`);
+  log(`Логотип: делаю${force ? ' заново' : ''} для «${resolvedBrand}»`);
   const started = Date.now();
   const promptIndex = Math.min(Math.floor(random() * promptSet.prompts.length), promptSet.prompts.length - 1);
   try {

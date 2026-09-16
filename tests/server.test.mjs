@@ -1047,6 +1047,33 @@ describe('the logo is made before the pictures', () => {
       rmSync(join('output', domain), { recursive: true, force: true });
     }
   });
+
+  // The form's "regenerate the logo" checkbox, followed from the request body through generateLogo
+  // into the built page. It runs after the test above deliberately: that one leaves this site with
+  // a logo already recorded, which is the only state where the checkbox changes anything.
+  it('draws a new logo when the form asks to regenerate, though the site already has one', async () => {
+    const domain = 'logo-regenerate-test.com';
+    rmSync(join('output', domain), { recursive: true, force: true });
+    const logoSrc = () => JSON.parse(readFileSync(join(siteDir, 'images.json'), 'utf8')).logo.src;
+    // Left behind by the test above — without the checkbox, this build would leave it alone.
+    expect(logoSrc()).toBe('/images/logo.webp');
+
+    try {
+      const start = await fetch(`${logoBase}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ site: siteId, domain, regenerateLogo: true }),
+      }).then((r) => r.json());
+      const log = await readUntilDone(start.buildId, logoBase);
+      expect(log).toContain('Логотип: делаю заново');
+
+      expect(logoSrc()).toBe('/images/logo-2.webp');
+      const html = readFileSync(join('output', domain, 'index.html'), 'utf8');
+      expect(html).toMatch(/<img[^>]*src="\/images\/logo-2\.webp"/);
+    } finally {
+      rmSync(join('output', domain), { recursive: true, force: true });
+    }
+  });
 });
 
 describe('startBuild runs a prepare step first', () => {
