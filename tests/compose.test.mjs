@@ -2,12 +2,12 @@ import { describe, it, expect } from 'vitest';
 import sharp from 'sharp';
 import { HEADER_LOGO_HEIGHT, SQUARE_SIZE, makeHeaderLogo, makeSquareLogo } from '../factory/images/compose.mjs';
 
-// What RemBG hands back: an opaque mark in the middle of a transparent canvas.
+// What the background remover hands back: an opaque mark in the middle of a transparent canvas.
 // Real lettering leaves transparent pixels inside its bounding box (between and around letters).
 // A fully opaque rectangle would leave no transparent pixels after trim, causing WebP to drop the alpha channel.
 // So the fixture adds rounded corners, keeping transparent corner pixels like real lettering does.
 // `opacity` defaults to 1 (fill-opacity="1" renders identically to omitting it), so it draws a glow
-// like a real neon logo would leave behind once RemBG only partly trusts a faint mark.
+// like a real neon logo would leave behind once the remover only partly trusts a faint mark.
 async function cutout({ canvas = [1536, 768], mark = [900, 300], colour = '#ffb800', opacity = 1 } = {}) {
   const [markWidth, markHeight] = mark;
   const svg = Buffer.from(
@@ -40,7 +40,7 @@ describe('makeHeaderLogo', () => {
     expect([logo.width, logo.height]).toEqual([300, 100]);
   });
 
-  // I2: RemBG can erase everything — a wordmark it could not tell from its own background — and
+  // I2: the remover can erase everything — a wordmark it could not tell from its own background — and
   // return a fully transparent PNG the same shape a real cutout would have. trim() has nothing to
   // crop and keeps the whole, still-blank, canvas instead of throwing, so an invisible header logo
   // and a bare gradient square would otherwise be written and recorded as if the logo had worked.
@@ -73,7 +73,7 @@ describe('makeHeaderLogo', () => {
     expect([logo.width, logo.height]).toEqual([432, HEADER_LOGO_HEIGHT]);
   });
 
-  // I2 fix: RemBG can hand back a mark it only partly trusts — a neon or glow style logo — as
+  // I2 fix: the remover can hand back a mark it only partly trusts — a neon or glow style logo — as
   // partial opacity rather than a clean cut. A ~30% opaque mark is still a real, visible mark and
   // must be accepted, not thrown away as if nothing survived.
   it('accepts a faint ~30% opacity glow', async () => {

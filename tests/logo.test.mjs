@@ -199,12 +199,12 @@ describe('generateLogo', () => {
     expect(lines.at(-1)).toMatch(/^Логотип: Runware отклонил запрос \(400: failed with 400\) — пропущен, потрачено \$0\.0900$/);
   });
 
-  // I2: RemBG can answer 200 with a normal-looking, fully transparent PNG — a wordmark it could
+  // I2: the remover can answer 200 with a normal-looking, fully transparent PNG — a wordmark it could
   // not tell apart from its own plain background — instead of failing outright. Both requests are
   // paid for either way, so the cost is still reported, but nothing usable came out of them: no
   // header logo, no square, and no images.json entries for either, so the next build still tries
   // to make the logo (a half-written pair of entries would stop that from ever happening again).
-  it('writes nothing when RemBG erases the whole wordmark, but still reports what was spent', async () => {
+  it('writes nothing when background removal erases the whole wordmark, but still reports what was spent', async () => {
     const siteDir = writeSite({ site: { brand: { name: 'Blank' } } });
     const blank = await sharp({
       create: { width: 1536, height: 768, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },

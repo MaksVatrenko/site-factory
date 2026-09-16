@@ -1,6 +1,6 @@
 import sharp from 'sharp';
 
-// Turns the transparent PNG RemBG returns into the two pictures a site needs. Pure image work — no
+// Turns the transparent PNG the background remover returns into the two pictures a site needs. Pure image work — no
 // network, no files — so it is tested on pictures the test draws itself.
 export const HEADER_LOGO_HEIGHT = 144;
 export const SQUARE_SIZE = 512;
@@ -8,18 +8,18 @@ export const SQUARE_SIZE = 512;
 // does not crowd a small favicon.
 const SQUARE_LOGO_MAX_WIDTH = 0.8;
 const SQUARE_LOGO_MAX_HEIGHT = 0.6;
-// A pixel this faint is background noise, not a mark RemBG actually kept — real lettering left
+// A pixel this faint is background noise, not a mark the remover actually kept — real lettering
 // behind is fully opaque (alpha 255) well before it is anywhere near this dim.
 const VISIBLE_ALPHA_THRESHOLD = 16;
 
-// RemBG keeps the whole canvas and only makes the background transparent, so the lettering sits in
+// The remover keeps the whole canvas and only makes the background transparent, so the lettering sits in
 // a wide empty margin; shown as is, the header would draw it tiny. Trimming leaves the lettering
 // itself. 144 px is four times the header's 36 px, so it stays sharp on dense screens, and a mark
 // already smaller than that is left at its own size rather than blown up. The trimmed PNG is handed
 // back too: the square is drawn from it, at full resolution.
 export async function makeHeaderLogo(cutoutPng) {
   const trimmed = await sharp(cutoutPng).trim().png().toBuffer();
-  // RemBG can erase everything — a wordmark it could not tell from its own plain background — and
+  // The remover can erase everything — a wordmark it could not tell from its own plain background — and
   // still answer with a normal-looking, fully transparent PNG. trim() has nothing to crop then, so
   // it keeps the whole blank canvas instead of throwing (verified directly against this project's
   // sharp 0.35.4). Left unchecked, that blank canvas would be saved as a real header logo and a
