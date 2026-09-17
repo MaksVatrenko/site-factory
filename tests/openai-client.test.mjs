@@ -100,11 +100,14 @@ describe('askJson', () => {
 
   // The specific billing code is not always one we know, but the broad type is: a 429 that names
   // the category must be terminal even when its code is a string this client has never seen.
+  // The code below is deliberately NOT in QUOTA_CODES — a code from that set would pass this test
+  // through the code branch alone, and the test would still pass with the type check deleted,
+  // which is the very regression it exists to catch.
   it('treats an unknown billing code as out of money when the type says so', async () => {
     let calls = 0;
     const fetchFn = async () => {
       calls += 1;
-      return failed(429, { type: 'insufficient_quota', code: 'credit_balance_exhausted', message: 'no funds' });
+      return failed(429, { type: 'insufficient_quota', code: 'some_future_billing_code', message: 'no funds' });
     };
     await expect(ask({}, { fetchFn })).rejects.toMatchObject({ kind: 'balance' });
     expect(calls).toBe(1);
