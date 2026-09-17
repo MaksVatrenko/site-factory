@@ -501,6 +501,18 @@ describe('askJson', () => {
     expect(calls).toBe(1);
   });
 
+  // The specific billing code is not always one we know, but the broad type is: a 429 that names
+  // the category must be terminal even when its code is a string this client has never seen.
+  it('treats an unknown billing code as out of money when the type says so', async () => {
+    let calls = 0;
+    const fetchFn = async () => {
+      calls += 1;
+      return failed(429, { type: 'insufficient_quota', code: 'credit_balance_exhausted', message: 'no funds' });
+    };
+    await expect(ask({}, { fetchFn })).rejects.toMatchObject({ kind: 'balance' });
+    expect(calls).toBe(1);
+  });
+
   it('retries a plain 429 and succeeds on a later attempt', async () => {
     let calls = 0;
     const fetchFn = async () => {
@@ -618,8 +630,16 @@ export class OpenAiError extends Error {
 const defaultSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // A 429 means two different things: "too fast", which is worth another try, and "out of money",
-// which will answer the same way for the rest of the run. Only the error code tells them apart.
-const QUOTA_CODES = new Set(['insufficient_quota', 'billing_hard_limit_reached']);
+// which will answer the same way for the rest of the run — retrying it only wastes the remaining
+// pages' time. Billing reports itself in two places and neither alone is enough: `code` carries the
+// specific cause, which is not always the same string, while `type` stays the broad category. So
+// both are consulted, and a billing answer is terminal whichever one names it.
+const QUOTA_CODES = new Set([
+  'insufficient_quota',
+  'billing_hard_limit_reached',
+  'credit_balance_exhausted',
+]);
+const QUOTA_TYPES = new Set(['insufficient_quota']);
 
 async function readJson(response) {
   try {
@@ -641,6 +661,7 @@ function errorOf(payload) {
   const error = payload?.error;
   return {
     code: typeof error?.code === 'string' ? error.code : '',
+    type: typeof error?.type === 'string' ? error.type : '',
     message: typeof error?.message === 'string' ? error.message : '',
   };
 }
@@ -731,12 +752,12 @@ export async function askJson(
     }
 
     const payload = await readJson(response);
-    const { code, message } = errorOf(payload);
+    const { code, type, message } = errorOf(payload);
 
     if (response.status === 401 || response.status === 403) {
       throw new OpenAiError('auth', 'OpenAI не принял ключ');
     }
-    if (QUOTA_CODES.has(code)) {
+    if (QUOTA_CODES.has(code) || QUOTA_TYPES.has(type)) {
       throw new OpenAiError('balance', 'на счёте OpenAI недостаточно денег');
     }
     if (response.status === 429 || response.status >= 500) {
