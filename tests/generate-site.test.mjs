@@ -142,6 +142,20 @@ describe('generateSite', () => {
     expect(summary.cost).toBeCloseTo(successfulCalls * costPerReply + costPerTruncated, 10);
   });
 
+  // Same reasoning one level up: the site-frame catch used to log and return without adding what
+  // a failed attempt cost to summary.cost, unlike the page-level catch below it in
+  // generate-site.mjs, which already does. A truncated frame still ran the model and still cost
+  // money — and since the frame is the very first request of the run, nothing else is ever asked
+  // for, so the whole total should be exactly this one call's cost, not zero.
+  it("adds a truncated site frame's cost to the run's total, instead of a silent zero", async () => {
+    const dir = siteDir();
+    const { summary, lines } = await run(dir, { fetchFn: async () => truncated() });
+    const costPerTruncated = (1000 * 0.2 + 100 * 1.2) / 1e6;
+    expect(summary.written).toEqual([]);
+    expect(summary.cost).toBeCloseTo(costPerTruncated, 10);
+    expect(lines.join('\n')).toContain('кадр сайта не получился');
+  });
+
   // siteDir() always ends in the same leaf name ("newsite"), and the skeleton is seeded from that
   // leaf name alone — so two independent runs below roll the exact same section counts, and the
   // only difference between them is the one section this test makes fail.

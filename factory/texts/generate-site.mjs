@@ -110,6 +110,9 @@ export async function generateSite({
     if (writeIfNew(join(siteDir, name), frame.site)) summary.written.push(name);
     else summary.skipped.push(name);
   } catch (error) {
+    // Same principle as the page-level catch below: a truncated or refused attempt still ran the
+    // model and still cost money, even though the frame itself came to nothing.
+    summary.cost += error.cost ?? 0;
     log(`Тексты: кадр сайта не получился — ${error.message}. Пропущено, ${formatCost(summary.cost)}`);
     return summary;
   }
