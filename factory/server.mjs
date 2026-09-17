@@ -501,7 +501,7 @@ export function createApp({
     }
 
     const job = startJob({ domain: site }, async (log) => {
-      await generateSite({
+      const summary = await generateSite({
         siteDir: join(SITES_DIR, site),
         templateId: template,
         brand,
@@ -514,6 +514,18 @@ export function createApp({
         fetchFn,
         log,
       });
+      // generateSite never throws — a bad key, an empty balance, or a broken template all just
+      // become a log line so a half-written folder stays inspectable (see generate-site.mjs). But
+      // startJob only marks the job 'failed' when the work function throws, and the form's `done`
+      // event has nothing else to go on — so without this, every one of those runs would still
+      // report success. A page file actually on disk (freshly written, or already there from an
+      // earlier run this one resumed) is what "success" means here; site.json alone is the frame,
+      // not a page, so it does not count.
+      const pageFiles = new Set([...summary.written, ...summary.skipped]);
+      pageFiles.delete('site.json');
+      if (pageFiles.size === 0) {
+        throw new Error('ни одна страница не была написана — смотри лог');
+      }
     });
 
     res.json({ jobId: job.id, site });

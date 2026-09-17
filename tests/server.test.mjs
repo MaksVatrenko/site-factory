@@ -56,6 +56,15 @@ async function readUntilDone(buildId, origin = base) {
   return text;
 }
 
+// What the stream's own `done` event carries — 'ok' or 'failed' — read out of the raw SSE text
+// `readUntilDone` already collected, rather than a second round trip through GET /api/builds/:id.
+// A build/job that never reaches 'done' (still 'running') has nothing here to match, so this
+// returns undefined instead of throwing — a wrong status is a clearer failure than a crash.
+function doneStatus(log) {
+  const match = log.match(/event: done\ndata: (.+)/);
+  return match ? JSON.parse(match[1]) : undefined;
+}
+
 // --- Minimal, dependency-free ZIP parsing — just enough to prove an archive is complete. ---
 // archiver (the only zip-related package in this project) only ever writes zips, so there is
 // no library already available to read one back with, and none may be added. These read the
@@ -1401,6 +1410,9 @@ describe('the texts tab writes a whole site folder', () => {
     const log = await readUntilDone(jobId, textsBase);
     expect(log).toContain('event: done');
     expect(log).not.toContain(SENTINEL);
+    // Finding 1: a run that actually wrote pages must still be reported as a success — this is
+    // the honest counterpart to the "no key" failure test below.
+    expect(doneStatus(log)).toBe('ok');
 
     expect(existsSync(join(siteDir, 'home.json'))).toBe(true);
     expect(existsSync(join(siteDir, 'casino.json'))).toBe(true);
@@ -1409,6 +1421,31 @@ describe('the texts tab writes a whole site folder', () => {
     // The point of the whole tab: the folder is now a site the Генерация tab can build.
     const sites = await fetch(`${textsBase}/api/sites`).then((r) => r.json());
     expect(sites.sites.some((site) => site.id === siteId)).toBe(true);
+  });
+
+  // Finding 1: generateSite never throws — a run with no key just logs "ключ не задан" and
+  // returns having written nothing (see generate-site.test.mjs's "says so and does nothing at all
+  // without a key"). Before this fix, startJob only ever saw that clean, non-throwing return and
+  // reported 'ok' regardless — the Тексты tab's `is-bad` branch in app.js was unreachable. This
+  // posts to the main `base` app, whose envFile (NO_ENV_FILE) never has a key, unlike textsBase
+  // above — proving the job is marked 'failed' even though generateSite itself never threw.
+  it('reports failure, not success, when the run wrote no page at all', async () => {
+    const out = 'texts-no-key-fixture';
+    rmSync(join('data', 'sites', out), { recursive: true, force: true });
+    try {
+      const response = await fetch(`${base}/api/texts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ template: 'review', out, brand: 'Acme', pages: 'home' }),
+      });
+      expect(response.status).toBe(200);
+      const { jobId } = await response.json();
+      const log = await readUntilDone(jobId);
+      expect(doneStatus(log)).toBe('failed');
+      expect(existsSync(join('data', 'sites', out, 'home.json'))).toBe(false);
+    } finally {
+      rmSync(join('data', 'sites', out), { recursive: true, force: true });
+    }
   });
 
   it('refuses a page list with no home page, before spending anything', async () => {
