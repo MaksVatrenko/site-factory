@@ -5,7 +5,6 @@ export const OPENAI_DEFAULTS = Object.freeze({
   // whose `text.format` carries the strict JSON schema this stage depends on.
   apiUrl: 'https://api.openai.com/v1/responses',
   model: 'gpt-5.6-luna',
-  concurrency: 1,
   // Prices are settings, not facts. Unlike Runware, which answers with `cost`, OpenAI answers only
   // with token counts, so the only way to report what a run cost is to multiply them out here.
   // Dollars per million tokens, matching the default model above: change the model and these have
@@ -20,13 +19,8 @@ export const OPENAI_DEFAULTS = Object.freeze({
 // fetch error leak a key once. Caught here, once, so every caller gets a clean "no usable key".
 const VISIBLE_ASCII = /^[\x21-\x7E]+$/;
 
-function positiveInteger(raw, fallback) {
-  const number = Number(raw);
-  return Number.isInteger(number) && number > 0 ? number : fallback;
-}
-
-// Zero is a legitimate price (a free model), so this accepts it — unlike the positive-only helpers
-// above, where zero really does mean "not set".
+// Zero is a legitimate price (a free model), so this accepts it — only a genuinely empty setting
+// falls back to the default.
 function price(raw, fallback) {
   if (raw === '') return fallback;
   const number = Number(raw);
@@ -43,7 +37,6 @@ export function readOpenAiConfig(envFile) {
     apiKeyInvalid,
     apiUrl: text('OPENAI_API_URL') || OPENAI_DEFAULTS.apiUrl,
     model: text('OPENAI_MODEL') || OPENAI_DEFAULTS.model,
-    concurrency: positiveInteger(text('OPENAI_CONCURRENCY'), OPENAI_DEFAULTS.concurrency),
     priceInput: price(text('OPENAI_PRICE_INPUT'), OPENAI_DEFAULTS.priceInput),
     priceCachedInput: price(text('OPENAI_PRICE_CACHED_INPUT'), OPENAI_DEFAULTS.priceCachedInput),
     priceOutput: price(text('OPENAI_PRICE_OUTPUT'), OPENAI_DEFAULTS.priceOutput),

@@ -27,23 +27,24 @@ describe('readOpenAiConfig', () => {
     expect(config.apiKeyInvalid).toBe(false);
     expect(config.apiUrl).toBe(OPENAI_DEFAULTS.apiUrl);
     expect(config.model).toBe(OPENAI_DEFAULTS.model);
-    expect(config.concurrency).toBe(OPENAI_DEFAULTS.concurrency);
-    expect(config.priceInput).toBe(OPENAI_DEFAULTS.priceInput);
-    expect(config.priceCachedInput).toBe(OPENAI_DEFAULTS.priceCachedInput);
-    expect(config.priceOutput).toBe(OPENAI_DEFAULTS.priceOutput);
+    // Literal numbers, not OPENAI_DEFAULTS.priceX: these are prices, and comparing the parsed
+    // result against the very constant it was read from can never catch a wrong default — only a
+    // wrong default silently mispricing every run's money log can.
+    expect(config.priceInput).toBe(0.2);
+    expect(config.priceCachedInput).toBe(0.02);
+    expect(config.priceOutput).toBe(1.2);
   });
 
   it('takes every setting from the file when it is there', () => {
     const config = readOpenAiConfig(
       envFile(
         `OPENAI_API_KEY=${SENTINEL}\nOPENAI_API_URL=https://proxy.test/v1/responses\n` +
-          'OPENAI_MODEL=gpt-5.6-terra\nOPENAI_CONCURRENCY=3\n' +
+          'OPENAI_MODEL=gpt-5.6-terra\n' +
           'OPENAI_PRICE_INPUT=2\nOPENAI_PRICE_CACHED_INPUT=0.2\nOPENAI_PRICE_OUTPUT=12\n',
       ),
     );
     expect(config.apiUrl).toBe('https://proxy.test/v1/responses');
     expect(config.model).toBe('gpt-5.6-terra');
-    expect(config.concurrency).toBe(3);
     expect(config.priceInput).toBe(2);
     expect(config.priceCachedInput).toBe(0.2);
     expect(config.priceOutput).toBe(12);
@@ -69,10 +70,5 @@ describe('readOpenAiConfig', () => {
     const config = readOpenAiConfig(envFile('OPENAI_API_KEY=key with a space\n'));
     expect(config.apiKey).toBe('');
     expect(config.apiKeyInvalid).toBe(true);
-  });
-
-  it('treats a bogus concurrency as absent', () => {
-    const config = readOpenAiConfig(envFile(`OPENAI_API_KEY=${SENTINEL}\nOPENAI_CONCURRENCY=nope\n`));
-    expect(config.concurrency).toBe(OPENAI_DEFAULTS.concurrency);
   });
 });
