@@ -147,9 +147,29 @@ describe('askJson', () => {
     await expect(ask({}, { fetchFn })).rejects.toMatchObject({ kind: 'truncated' });
   });
 
+  // The model ran, and OpenAI billed for it, before the answer hit the output cap — so the error
+  // must carry that cost rather than let it disappear the moment askJson throws.
+  it('prices a truncated answer from the same usage counters a success would read', async () => {
+    const fetchFn = async () =>
+      truncated('max_output_tokens', { input_tokens: 2_000, output_tokens: 500, input_tokens_details: { cached_tokens: 0 } });
+    await expect(ask({}, { fetchFn })).rejects.toMatchObject({
+      kind: 'truncated',
+      cost: (2_000 * 0.2 + 500 * 1.2) / 1e6,
+    });
+  });
+
   it('reports a refusal as a refusal', async () => {
     const fetchFn = async () => refused();
     await expect(ask({}, { fetchFn })).rejects.toMatchObject({ kind: 'refused' });
+  });
+
+  it('prices a refusal from the same usage counters a success would read', async () => {
+    const fetchFn = async () =>
+      refused('no', { input_tokens: 2_000, output_tokens: 50, input_tokens_details: { cached_tokens: 0 } });
+    await expect(ask({}, { fetchFn })).rejects.toMatchObject({
+      kind: 'refused',
+      cost: (2_000 * 0.2 + 50 * 1.2) / 1e6,
+    });
   });
 
   it('gives up with "unavailable" after the last retry', async () => {

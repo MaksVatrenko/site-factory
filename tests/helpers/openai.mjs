@@ -12,18 +12,26 @@ export function answer(data, usage = {}) {
 }
 
 // A run that hit the output limit. The API reports this itself rather than leaving broken JSON.
-export function truncated(reason = 'max_output_tokens') {
+// The model still ran before hitting the cap, so — like `answer` — this carries token counters too;
+// a caller that prices the failure needs real numbers to do it with.
+export function truncated(reason = 'max_output_tokens', usage = {}) {
   return new Response(
-    JSON.stringify({ status: 'incomplete', incomplete_details: { reason }, output: [] }),
+    JSON.stringify({
+      status: 'incomplete',
+      incomplete_details: { reason },
+      output: [],
+      usage: { input_tokens: 1000, output_tokens: 100, input_tokens_details: { cached_tokens: 0 }, ...usage },
+    }),
     { status: 200 },
   );
 }
 
-export function refused(text = 'I cannot help with that') {
+export function refused(text = 'I cannot help with that', usage = {}) {
   return new Response(
     JSON.stringify({
       status: 'completed',
       output: [{ type: 'message', content: [{ type: 'refusal', refusal: text }] }],
+      usage: { input_tokens: 1000, output_tokens: 100, input_tokens_details: { cached_tokens: 0 }, ...usage },
     }),
     { status: 200 },
   );

@@ -153,6 +153,9 @@ export async function generateSite({
           // So it is rethrown, to be handled exactly once, by the same catch that stops the run for
           // a page-level failure. Only a genuinely local failure degrades locally.
           if (error?.kind === 'auth' || error?.kind === 'balance') throw error;
+          // A truncated or refused answer still ran the model and still cost money, even though the
+          // section itself came to nothing — so that money is counted here, not dropped on the floor.
+          spent += error.cost ?? 0;
           // One section short is a shorter page, not a lost one.
           log(`Тексты: ${name}: раздел «${section.heading}» не вышел — ${error.message}`);
           sections.push({ heading: section.heading, items: [] });
@@ -176,13 +179,20 @@ export async function generateSite({
           // way, so those stop the run. Anything else means only the FAQ is missing — the sections
           // above already paid for their prose, and a page without FAQ beats no page at all.
           if (error?.kind === 'auth' || error?.kind === 'balance') throw error;
+          spent += error.cost ?? 0;
           log(`Тексты: ${name}: FAQ не вышел — ${error.message}`);
         }
       }
 
+      // An empty `items` above only ever means the catch pushed it after fillSection failed locally
+      // — never a success. Dropping those here, before assemblePage builds the table of contents
+      // and the section blocks from this very array, keeps the two lists in agreement: no contents
+      // entry is left pointing at a heading with nothing under it.
+      const filledSections = sections.filter((section) => section.items.length > 0);
+
       const { page: built, warnings } = assemblePage({
         plan: planned.plan,
-        sections,
+        sections: filledSections,
         faq,
         pages,
         labels,
@@ -194,6 +204,9 @@ export async function generateSite({
       else summary.skipped.push(name);
       log(`Тексты: ${name} готова — ${((Date.now() - started) / 1000).toFixed(1)} с, ${formatCost(spent)}`);
     } catch (error) {
+      // Whatever this page already spent before dying — planning, filled sections, a truncated or
+      // refused attempt right here — is real money and belongs in the total the log line prints next.
+      spent += error.cost ?? 0;
       log(`Тексты: ${name} не вышла — ${error.message}, потрачено ${formatCost(spent)}`);
       // A bad key or an empty balance answers the same way for every page left. Carrying on would
       // just repeat the same failure once per page, slowly, so the run stops here instead. `spent`

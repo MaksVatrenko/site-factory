@@ -42,13 +42,18 @@ function reply(data) {
 }
 
 // Answers by schema name, which is how the three call types tell themselves apart.
-function fakeOpenAi({ failPlanFor = '', failFaq = false } = {}) {
+function fakeOpenAi({ failPlanFor = '', failFaq = false, failFirstSection = false } = {}) {
   const asked = [];
+  let sectionCalls = 0;
   const fetchFn = async (_url, init) => {
     const body = JSON.parse(init.body);
     const name = body.text.format.name;
     asked.push(name);
     if (name === 'faq_answers' && failFaq) return truncated();
+    if (name === 'section_content' && failFirstSection) {
+      sectionCalls += 1;
+      if (sectionCalls === 1) return truncated();
+    }
     if (name === 'site_frame') {
       const size = body.text.format.schema.properties.navLabels.minItems;
       return reply({
@@ -118,6 +123,49 @@ describe('generateSite', () => {
     const { summary, lines } = await run(dir, fakeOpenAi());
     expect(summary.cost).toBeGreaterThan(0);
     expect(lines.join('\n')).toMatch(/\$\d+\.\d{4}/);
+  });
+
+  // A section that comes back truncated still ran the model and still cost money — that attempt's
+  // price must land in the run's total even though the section itself contributed nothing.
+  it("adds a truncated section's cost to the run's total, not just the sections that succeeded", async () => {
+    const dir = siteDir();
+    const fake = fakeOpenAi({ failFirstSection: true });
+    const { summary } = await run(dir, fake);
+    // Every call in this fake's fetchFn answers through reply(), with the same fixed usage, except
+    // the one section_content call that failFirstSection turns into a bare truncated() — so the
+    // total is exactly "every other call, priced as usual" plus "one truncated call, priced from
+    // its own usage counters". If the fix regressed to dropping the failed attempt's cost, this
+    // would come up short by exactly that second term.
+    const costPerReply = (100 * 0.2 + 900 * 0.02 + 100 * 1.2) / 1e6;
+    const costPerTruncated = (1000 * 0.2 + 100 * 1.2) / 1e6;
+    const successfulCalls = fake.asked.length - 1;
+    expect(summary.cost).toBeCloseTo(successfulCalls * costPerReply + costPerTruncated, 10);
+  });
+
+  // siteDir() always ends in the same leaf name ("newsite"), and the skeleton is seeded from that
+  // leaf name alone — so two independent runs below roll the exact same section counts, and the
+  // only difference between them is the one section this test makes fail.
+  it('drops a section that never came out, so the contents list and the body agree', async () => {
+    const baseDir = siteDir();
+    await run(baseDir, fakeOpenAi());
+    const basePage = JSON.parse(readFileSync(join(baseDir, 'home.json'), 'utf8'));
+    const baseSectionCount = basePage.blocks.filter((block) => block.type === 'section').length;
+
+    const dir = siteDir();
+    await run(dir, fakeOpenAi({ failFirstSection: true }));
+    const page = JSON.parse(readFileSync(join(dir, 'home.json'), 'utf8'));
+    const sectionBlocks = page.blocks.filter((block) => block.type === 'section');
+    const tocList = page.blocks.find((block) => block.type === 'toc').content.find((item) => item.type === 'list');
+
+    // One fewer section, and the contents list shrank with it — never one without the other.
+    expect(sectionBlocks).toHaveLength(baseSectionCount - 1);
+    expect(tocList.items).toHaveLength(baseSectionCount - 1);
+    // The failed section was "Section 1" (the plan's first) — its heading must be gone entirely,
+    // not left behind as a contents entry with nothing under it.
+    expect(tocList.items).not.toContain('Section 1');
+    for (const block of sectionBlocks) {
+      expect(block.content.length).toBeGreaterThan(1); // heading plus at least one real item
+    }
   });
 
   // A run that stopped halfway must carry on, not start over and pay twice.
@@ -266,10 +314,10 @@ describe('a generated folder builds', () => {
     });
     expect(existsSync(join(out, 'index.html'))).toBe(true);
     const html = readFileSync(join(out, 'casino', 'index.html'), 'utf8');
-    // 'Section 1' is a heading from the plan alone — assemblePage writes it (and the section's
-    // contents entry) even when fillSection fails and contributes { heading, items: [] }. The body
-    // text only lands here if a section's fill actually delivered prose, which is the real proof
-    // that this build holds a site and not merely a page whose sections all silently came up empty.
+    // 'Section 1' is a heading from the plan, kept only because this fake never fails a section —
+    // a section whose fill fails is dropped entirely (see "drops a section that never came out"
+    // above), heading and all. The body text only lands here if the fill actually delivered prose,
+    // which is the real proof that this build holds a site, not merely a page of empty headings.
     expect(html).toContain('Section 1');
     expect(html).toContain('Body text of the section.');
   }, 120_000);

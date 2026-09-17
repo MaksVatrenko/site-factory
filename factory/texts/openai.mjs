@@ -7,14 +7,20 @@ export const RETRY_DELAYS_MS = Object.freeze([1000, 2000, 4000]);
 const DEFAULT_TIMEOUT_MS = 120_000;
 
 // `kind` is what the caller acts on. 'auth' and 'balance' mean every further request fails the same
-// way, so the run stops. 'refused' and 'truncated' are this one request's problem and are worth
-// asking again. 'rejected' is a request the API would refuse identically forever. 'unavailable'
-// means OpenAI never answered properly even after retrying. Messages never contain the key.
+// way, so the run stops. 'refused' and 'truncated' are this one request's problem — though only a
+// refusal is actually worth asking again, see fill.mjs. 'rejected' is a request the API would refuse
+// identically forever. 'unavailable' means OpenAI never answered properly even after retrying.
+// Messages never contain the key.
+//
+// `cost` is optional and only ever set for 'truncated' and 'refused': the model still ran and OpenAI
+// still billed for it, so a caller that swallows the error (or retries and eventually gives up) can
+// still add what was actually spent to its running total instead of reporting it as free.
 export class OpenAiError extends Error {
-  constructor(kind, message) {
+  constructor(kind, message, { cost } = {}) {
     super(message);
     this.name = 'OpenAiError';
     this.kind = kind;
+    this.cost = cost;
   }
 }
 
@@ -166,11 +172,15 @@ export async function askJson(
 
     if (payload?.status === 'incomplete') {
       const reason = payload?.incomplete_details?.reason ?? 'без причины';
-      throw new OpenAiError('truncated', `OpenAI оборвал ответ (${reason})`);
+      throw new OpenAiError('truncated', `OpenAI оборвал ответ (${reason})`, {
+        cost: costOf(payload?.usage, config),
+      });
     }
     const refusal = refusalText(payload);
     if (refusal) {
-      throw new OpenAiError('refused', `OpenAI отказался отвечать (${scrubKey(refusal, config.apiKey)})`);
+      throw new OpenAiError('refused', `OpenAI отказался отвечать (${scrubKey(refusal, config.apiKey)})`, {
+        cost: costOf(payload?.usage, config),
+      });
     }
 
     const text = outputText(payload);

@@ -7,11 +7,12 @@ import { faqSchema, sectionSchema } from './schema.mjs';
 
 const DEFAULT_ATTEMPTS = 3;
 
-// Two failures are the model's, not the request's: refusing, and running out of room. Both are
-// worth asking again, because the same request can succeed the second time. Everything else —
-// a rejected request, a bad key, an empty balance — will fail the same way forever, so retrying it
-// would only spend time and money.
-const WORTH_ASKING_AGAIN = new Set(['refused', 'truncated']);
+// Only a refusal is worth asking again: the model can genuinely answer differently the second time.
+// A truncated answer cannot — it means the answer hit the model's own output cap, no production
+// caller ever passes maxOutputTokens, and an unchanged request against an unchanged cap will run
+// into exactly the same wall. Retrying it would not buy a better answer, only bill for the same
+// full-length generation two or three times over.
+const WORTH_ASKING_AGAIN = new Set(['refused']);
 
 async function askWithRetries(request, options, attempts) {
   let last;

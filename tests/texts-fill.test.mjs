@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { fillFaq, fillSection } from '../factory/texts/fill.mjs';
-import { answer, failed, truncated } from './helpers/openai.mjs';
+import { answer, failed, refused, truncated } from './helpers/openai.mjs';
 
 const CONFIG = {
   apiKey: 'sentinel-openai-key-fill-7c30',
@@ -40,14 +40,28 @@ describe('fillSection', () => {
     expect(result.items).toHaveLength(2);
   });
 
-  it('asks again when the answer was cut off, and keeps the one that worked', async () => {
+  it('asks again when the model refuses, and keeps the one that worked', async () => {
     let calls = 0;
     const result = await run({}, async () => {
       calls += 1;
-      return calls === 1 ? truncated() : answer(ITEMS);
+      return calls === 1 ? refused() : answer(ITEMS);
     });
     expect(calls).toBe(2);
     expect(result.items).toHaveLength(2);
+  });
+
+  // A truncated answer hit the model's own output cap. No production caller ever passes
+  // maxOutputTokens, so the second request is byte-identical to the first and would hit the exact
+  // same cap — retrying could only ever repeat the bill, never fix the answer.
+  it('does not retry a truncated answer, since an unchanged request cannot clear an unchanged cap', async () => {
+    let calls = 0;
+    await expect(
+      run({}, async () => {
+        calls += 1;
+        return truncated();
+      }),
+    ).rejects.toMatchObject({ kind: 'truncated' });
+    expect(calls).toBe(1);
   });
 
   it('gives up after the allowed number of attempts and says why', async () => {
@@ -55,9 +69,9 @@ describe('fillSection', () => {
     await expect(
       run({ attempts: 3 }, async () => {
         calls += 1;
-        return truncated();
+        return refused();
       }),
-    ).rejects.toMatchObject({ kind: 'truncated' });
+    ).rejects.toMatchObject({ kind: 'refused' });
     expect(calls).toBe(3);
   });
 
@@ -89,5 +103,25 @@ describe('fillFaq', () => {
     );
     expect(body.text.format.schema.properties.answers.minItems).toBe(2);
     expect(result.answers).toEqual(['Yes.', 'Fast.']);
+  });
+
+  // fillFaq shares askWithRetries with fillSection, but nothing exercised the retry policy from
+  // this side of it — a typo that dropped 'refused' from the retry set would have broken the FAQ
+  // silently while every fillSection test above kept passing.
+  it('asks again when the model refuses, and keeps the answer from the attempt that worked', async () => {
+    let calls = 0;
+    const result = await fillFaq(
+      { questions: ['Is it safe?'], brand: 'Acme', locale: 'en-US', instructions: 'RULES' },
+      {
+        config: CONFIG,
+        sleep: async () => {},
+        fetchFn: async () => {
+          calls += 1;
+          return calls === 1 ? refused() : answer({ answers: ['Yes.'] });
+        },
+      },
+    );
+    expect(calls).toBe(2);
+    expect(result.answers).toEqual(['Yes.']);
   });
 });
