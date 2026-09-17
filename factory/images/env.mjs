@@ -1,5 +1,4 @@
-import { readFileSync } from 'node:fs';
-import { parseEnv } from 'node:util';
+import { readEnvFile } from '../env-file.mjs';
 
 // Runware settings come from the project's .env file. They are parsed into a plain object and
 // deliberately never copied into process.env: the factory starts every Astro build with
@@ -18,16 +17,6 @@ export const RUNWARE_DEFAULTS = Object.freeze({
   logoModel: 'ideogram:4@0',
   bgModel: 'ideogram:remove-background@0',
 });
-
-// A missing or unreadable .env is not an error here: without a key, generation reports that it
-// skipped the pictures, and the site still builds.
-function readEnvFile(envFile) {
-  try {
-    return parseEnv(readFileSync(envFile, 'utf8'));
-  } catch {
-    return {};
-  }
-}
 
 function positiveNumber(raw, fallback) {
   if (raw === '') return fallback;
