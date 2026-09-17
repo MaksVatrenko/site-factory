@@ -40,6 +40,33 @@ describe('fillSection', () => {
     expect(result.items).toHaveLength(2);
   });
 
+  // Finding 1: the plan is the only place a section's picture name is decided, but fill.mjs never
+  // passed it on — the model was asked for an "image" element with no idea what to call it, so the
+  // name it guessed could never match what assemble.mjs later checks against.
+  it("tells the model the exact name of the picture the plan chose for this section", async () => {
+    let body;
+    const section = { ...SECTION, elements: ['title', 'text', 'image'], image: 'roulette-table-close-up' };
+    await run({ section }, async (_url, init) => {
+      body = JSON.parse(init.body);
+      return answer({ items: [{ kind: 'text', text: 'Body.' }, { kind: 'image', name: 'roulette-table-close-up' }] });
+    });
+    const input = String(body.input[0].content);
+    expect(input).toContain('roulette-table-close-up');
+  });
+
+  // The other half of the same fix: inventing a picture the plan never asked for is exactly as
+  // wrong as mangling the name of one it did — so a section with no picture must not be told about
+  // one at all.
+  it('says nothing about a picture when the plan gave this section none', async () => {
+    let body;
+    await run({}, async (_url, init) => {
+      body = JSON.parse(init.body);
+      return answer(ITEMS);
+    });
+    const input = String(body.input[0].content);
+    expect(input.toLowerCase()).not.toContain('picture');
+  });
+
   it('asks again when the model refuses, and keeps the one that worked', async () => {
     let calls = 0;
     const result = await run({}, async () => {

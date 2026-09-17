@@ -50,6 +50,11 @@ export async function fillSection(
     `Section heading: ${section.heading}`,
     `What this section covers: ${section.brief}`,
     `Write these elements, in this order: ${wanted.join(', ')}`,
+    // The plan is the only place a picture's name is chosen — plan.mjs settled it, paid for it, and
+    // budgeted it. Told here verbatim, the model's "image" element can only repeat that exact name;
+    // left unsaid, the model has to invent one, and assemble.mjs then discards it as undeclared. A
+    // section with no picture must stay silent about the topic rather than invite one into existence.
+    section.image ? `This section's picture is already named "${section.image}" — if you write the image element, its name must be exactly that, verbatim.` : '',
     section.links.length > 0 ? `Link to these pages from inside the text, using [words](/path): ${section.links.join(', ')}` : '',
     // The neighbours are named but not quoted: enough for the model to stay off their topics,
     // cheap enough to send with every section.
