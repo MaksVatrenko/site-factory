@@ -53,7 +53,13 @@ export const ELEMENT_KINDS = Object.freeze(Object.keys(ELEMENT_DEFS));
 // The counts come from the skeleton, which has already rolled them, so minItems and maxItems are
 // the same number: the model cannot return eight sections when the page is meant to have nine.
 export function planSchema({ sections, faq }, elements) {
+  // Same guard as sectionSchema, for the same reason: an empty `known` would leave every section's
+  // `elements` field an `enum: []` — a schema nothing can ever satisfy, so the request would be
+  // paid for and fail every single time.
   const known = elements.filter((element) => Object.hasOwn(ELEMENT_DEFS, element));
+  if (known.length === 0) {
+    throw new Error('ни один элемент шаблона не описан схемой — генерировать нечего');
+  }
   return object({
     title: { type: 'string' },
     description: { type: 'string' },

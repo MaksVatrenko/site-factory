@@ -52,6 +52,12 @@ describe('planSchema', () => {
   it('is strict everywhere', () => {
     expect(everyObjectIsStrict(planSchema({ sections: 9, faq: 6 }, ELEMENTS))).toEqual([]);
   });
+
+  // An empty enum is a schema nothing can ever satisfy — a request that gets paid for and can only
+  // ever fail. sectionSchema already refuses to build one; planSchema must refuse the same way.
+  it('refuses to build a schema with nothing usable in the whole template', () => {
+    expect(() => planSchema({ sections: 2, faq: 2 }, ['video'])).toThrow(/элемент/);
+  });
 });
 
 describe('sectionSchema', () => {
