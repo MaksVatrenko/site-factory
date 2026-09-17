@@ -75,7 +75,7 @@ OPENAI_PRICE_OUTPUT=1.20
     { "type": "hero",    "content": { "title": 1, "text": [1, 2], "image": [0, 1] } },
     { "type": "toc",     "auto": true },
     { "type": "section", "count": [8, 10],
-      "content": { "title": 1, "text": [2, 6], "list": [0, 1], "table": [0, 1], "cards": [0, 1], "image": [0, 1] } },
+      "content": { "title": [1, 2], "text": [2, 6], "list": [0, 1], "table": [0, 1], "cards": [0, 1], "image": [0, 1] } },
     { "type": "links",   "auto": true },
     { "type": "faq",     "content": { "title": 1, "toggle": [5, 8] } }
   ],
