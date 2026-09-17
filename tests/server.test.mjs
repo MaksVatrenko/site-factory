@@ -1464,10 +1464,18 @@ describe('the texts tab writes a whole site folder', () => {
   // three guarded fields (template, brand, locale) follow the identical isPresentNonString check.
   it('refuses a present but non-string geo instead of silently treating it as absent', async () => {
     const out = 'texts-non-string-geo';
-    const response = await start({ template: 'review', out, brand: 'Acme', geo: 42, pages: 'home' });
-    expect(response.status).toBe(400);
-    expect((await response.json()).error).toContain('geo');
-    expect(existsSync(join('data', 'sites', out))).toBe(false);
+    // Same belt-and-braces cleanup as the fixture above: this only ever leaves a folder behind if
+    // the guard regresses and the run actually starts — exactly the case where you would least want
+    // a stray folder left in the real data/sites/.
+    rmSync(join('data', 'sites', out), { recursive: true, force: true });
+    try {
+      const response = await start({ template: 'review', out, brand: 'Acme', geo: 42, pages: 'home' });
+      expect(response.status).toBe(400);
+      expect((await response.json()).error).toContain('geo');
+      expect(existsSync(join('data', 'sites', out))).toBe(false);
+    } finally {
+      rmSync(join('data', 'sites', out), { recursive: true, force: true });
+    }
   });
 
   // Review finding on Task 12: this test's name claimed to cover loadTemplateContent's own

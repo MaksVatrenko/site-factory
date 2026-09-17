@@ -11,7 +11,6 @@ const CONFIG = {
   apiKeyInvalid: false,
   apiUrl: 'https://openai.test/v1/responses',
   model: 'gpt-5.6-luna',
-  concurrency: 1,
   priceInput: 0.2,
   priceCachedInput: 0.02,
   priceOutput: 1.2,
