@@ -233,6 +233,44 @@ describe('askJson', () => {
       );
     await expect(ask({}, { fetchFn })).rejects.toMatchObject({ kind: 'rejected' });
   });
+
+  // Finding 2: this response completed and OpenAI billed for it — the model simply produced no
+  // output_text part — so, like truncated and refused above, it must carry what was actually spent
+  // rather than let a caller that swallows or retries it report the attempt as free.
+  it('prices an answer with no output text from the same usage counters a success would read', async () => {
+    const fetchFn = async () =>
+      new Response(
+        JSON.stringify({
+          status: 'completed',
+          output: [],
+          usage: { input_tokens: 2_000, output_tokens: 500, input_tokens_details: { cached_tokens: 0 } },
+        }),
+        { status: 200 },
+      );
+    await expect(ask({}, { fetchFn })).rejects.toMatchObject({
+      kind: 'rejected',
+      cost: (2_000 * 0.2 + 500 * 1.2) / 1e6,
+    });
+  });
+
+  // Same principle, the other rejected-but-billed branch: the answer completed with real output_text,
+  // it just was not parseable JSON — strict mode makes this all but impossible, but it still means
+  // the model ran and OpenAI charged for it.
+  it('prices an answer whose text will not parse from the same usage counters a success would read', async () => {
+    const fetchFn = async () =>
+      new Response(
+        JSON.stringify({
+          status: 'completed',
+          output: [{ type: 'message', content: [{ type: 'output_text', text: 'sorry, plain prose' }] }],
+          usage: { input_tokens: 5_000, output_tokens: 100, input_tokens_details: { cached_tokens: 0 } },
+        }),
+        { status: 200 },
+      );
+    await expect(ask({}, { fetchFn })).rejects.toMatchObject({
+      kind: 'rejected',
+      cost: (5_000 * 0.2 + 100 * 1.2) / 1e6,
+    });
+  });
 });
 
 describe('costOf', () => {

@@ -16,9 +16,12 @@ const DEFAULT_TIMEOUT_MS = 120_000;
 // identically forever. 'unavailable' means OpenAI never answered properly even after retrying.
 // Messages never contain the key.
 //
-// `cost` is optional and only ever set for 'truncated' and 'refused': the model still ran and OpenAI
-// still billed for it, so a caller that swallows the error (or retries and eventually gives up) can
-// still add what was actually spent to its running total instead of reporting it as free.
+// `cost` is optional and only ever set when a response actually completed and OpenAI billed for it:
+// 'truncated', 'refused', and the two 'rejected' cases below where a completed answer's content
+// could not be used (no output text, or text that will not parse). A caller that swallows the error
+// (or retries and eventually gives up) can then still add what was actually spent to its running
+// total instead of reporting it as free. The third 'rejected' case — the API refusing the request
+// outright, before it ever completed — carries no cost, because nothing ran to bill for.
 export class OpenAiError extends Error {
   constructor(kind, message, { cost } = {}) {
     super(message);
@@ -191,7 +194,12 @@ export async function askJson(
     }
 
     const text = outputText(payload);
-    if (text === '') throw new OpenAiError('rejected', 'OpenAI вернул ответ без текста');
+    // Both branches below are a completed, billed response whose content just could not be used —
+    // the same situation as a refusal or a truncation, so the same costOf(payload?.usage, ...) is
+    // attached rather than left for the caller to report as a free attempt.
+    if (text === '') {
+      throw new OpenAiError('rejected', 'OpenAI вернул ответ без текста', { cost: costOf(payload?.usage, config) });
+    }
     let data;
     try {
       data = JSON.parse(text);
@@ -199,7 +207,7 @@ export async function askJson(
       // Strict mode makes this all but impossible, so it means something unexpected happened
       // rather than the model being sloppy. The text itself is not logged: it is the model's own
       // words about our request and has no place in a build log.
-      throw new OpenAiError('rejected', 'OpenAI вернул не JSON');
+      throw new OpenAiError('rejected', 'OpenAI вернул не JSON', { cost: costOf(payload?.usage, config) });
     }
 
     const usage = payload?.usage;

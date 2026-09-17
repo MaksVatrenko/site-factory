@@ -16,14 +16,21 @@ const WORTH_ASKING_AGAIN = new Set(['refused']);
 
 async function askWithRetries(request, options, attempts) {
   let last;
+  // Every retried refusal is its own billed request — OpenAI ran the model and charged for it each
+  // time, not only on the attempt that finally gave up. Spent is carried across the loop so the
+  // error thrown at the end, once every attempt is spent, reports what all of them cost together
+  // rather than only the last one's share.
+  let spent = 0;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
       return await askJson(request, options);
     } catch (error) {
       if (!WORTH_ASKING_AGAIN.has(error?.kind)) throw error;
+      spent += error.cost ?? 0;
       last = error;
     }
   }
+  last.cost = spent;
   throw last;
 }
 

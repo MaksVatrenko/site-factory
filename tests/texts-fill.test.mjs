@@ -102,6 +102,21 @@ describe('fillSection', () => {
     expect(calls).toBe(3);
   });
 
+  // Finding 2: each retried refusal is a separate billed request — OpenAI ran the model and charged
+  // for it on every attempt, not only on the one that finally gave up. Keeping only the last
+  // attempt's cost on the thrown error would hide what the earlier, also-billed attempts spent.
+  it('accumulates the cost of every refused attempt into the final error, not just the last', async () => {
+    let calls = 0;
+    const perAttempt = (1000 * 0.2 + 100 * 1.2) / 1e6; // refused()'s default usage, at CONFIG's prices
+    const error = await run({ attempts: 3 }, async () => {
+      calls += 1;
+      return refused();
+    }).catch((caught) => caught);
+    expect(calls).toBe(3);
+    expect(error.kind).toBe('refused');
+    expect(error.cost).toBeCloseTo(perAttempt * 3, 12);
+  });
+
   it('does not retry a refusal that is really a rejected request', async () => {
     let calls = 0;
     await expect(
