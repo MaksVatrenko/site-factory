@@ -48,6 +48,7 @@ async function loadLists() {
     ]);
 
     fillSelect(document.querySelector('#field-template'), templates.templates);
+    fillSelect(document.querySelector('#texts-template'), templates.templates);
     fillSelect(document.querySelector('#field-scheme'), schemes.schemes);
     // /api/sites reports each folder's id, page count and (when site.json declares one) brand
     // name; the option text is built here so the picker shows something meaningful — which
@@ -159,3 +160,66 @@ form.addEventListener('submit', async (event) => {
 });
 
 loadLists();
+
+// The texts tab. It watches its job through the very same log stream a build uses, so there is
+// nothing new to learn here: post, then follow /api/builds/<id>/log until it says done.
+const textsForm = document.querySelector('#texts-form');
+const textsSubmit = document.querySelector('#texts-submit');
+const textsStatus = document.querySelector('#texts-status');
+const textsLog = document.querySelector('#texts-log');
+const textsPages = document.querySelector('#texts-pages');
+
+const DEFAULT_PAGES = ['home', 'casino', 'slots', 'games', 'betting', 'bonus', 'app', 'login'];
+textsPages.value = DEFAULT_PAGES.join('\n');
+
+function followTextsJob(jobId) {
+  const stream = new EventSource(`/api/builds/${jobId}/log`);
+  stream.addEventListener('message', (event) => {
+    textsLog.textContent += `${JSON.parse(event.data)}\n`;
+    textsLog.scrollTop = textsLog.scrollHeight;
+  });
+  stream.addEventListener('done', (event) => {
+    stream.close();
+    textsSubmit.disabled = false;
+    const ok = JSON.parse(event.data) === 'ok';
+    textsStatus.textContent = ok ? 'Готово — папка появилась на вкладке «Генерация»' : 'Не получилось — смотри лог';
+    textsStatus.className = ok ? 'status is-ok' : 'status is-bad';
+    // The new folder only shows up in the site picker once the lists are read again.
+    if (ok) loadLists();
+  });
+  stream.addEventListener('error', () => {
+    stream.close();
+    textsSubmit.disabled = false;
+    textsStatus.textContent = 'Связь с сервером прервалась';
+    textsStatus.className = 'status is-bad';
+  });
+}
+
+textsForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  textsSubmit.disabled = true;
+  textsLog.textContent = '';
+  textsStatus.textContent = 'Пишем тексты…';
+  textsStatus.className = 'status';
+
+  const payload = Object.fromEntries(new FormData(textsForm).entries());
+  try {
+    const response = await fetch('/api/texts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      textsStatus.textContent = data.error ?? 'Сервер отклонил запрос';
+      textsStatus.className = 'status is-bad';
+      textsSubmit.disabled = false;
+      return;
+    }
+    followTextsJob(data.jobId);
+  } catch (error) {
+    textsStatus.textContent = `Ошибка запроса: ${error.message}`;
+    textsStatus.className = 'status is-bad';
+    textsSubmit.disabled = false;
+  }
+});

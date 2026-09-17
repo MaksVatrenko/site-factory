@@ -13,6 +13,9 @@ import { isPageFileName } from '../src/lib/site-dir.mjs';
 import { readRunwareConfig } from './images/env.mjs';
 import { generateMissingImages } from './images/generate.mjs';
 import { generateLogo } from './images/logo.mjs';
+import { readOpenAiConfig } from './texts/env.mjs';
+import { generateSite } from './texts/generate-site.mjs';
+import { loadTemplateContent } from './texts/template.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -24,6 +27,7 @@ const PORT = Number(process.env.PORT || 3002);
 const ENV_FILE = join(ROOT, '.env');
 const IMAGE_PROMPTS_FILE = join(HERE, 'prompts', 'images.json');
 const LOGO_PROMPTS_FILE = join(HERE, 'prompts', 'logo.json');
+const TEXTS_PROMPTS_FILE = join(HERE, 'prompts', 'texts.json');
 
 const builds = new Map();
 
@@ -239,6 +243,22 @@ export function startBuild(options, spawnFn = spawn) {
   return build;
 }
 
+// A job that is not a build: same record, same log stream, no Astro. Generating texts writes a site
+// folder instead of building one, but the form should watch it exactly the same way — so it shares
+// `builds` and therefore GET /api/builds/:id/log without that route knowing anything new.
+export function startJob({ domain }, work) {
+  const job = { id: randomUUID(), status: 'running', domain, outDir: '', lines: [], listeners: new Set() };
+  builds.set(job.id, job);
+  Promise.resolve()
+    .then(() => work((line) => pushLine(job, line)))
+    .then(() => finishBuild(job, 'ok'))
+    .catch((error) => {
+      pushLine(job, `Не удалось: ${error.message}`);
+      finishBuild(job, 'failed');
+    });
+  return job;
+}
+
 // Content is not required to place a page at "/" — a site whose only page is not at "/", like
 // the broken test fixture (tests/fixtures/sites/broken, whose only page is "/sloppy") — so a
 // build can finish cleanly and report success while writing no root index.html at all.
@@ -437,6 +457,66 @@ export function createApp({
     });
 
     res.json({ buildId: build.id, domain, outDir });
+  });
+
+  app.post('/api/texts', (req, res) => {
+    const body = req.body ?? {};
+
+    const templateInput = trimmedString(body.template);
+    const template = templateInput || listTemplates(ROOT)[0]?.id || '';
+    if (!listTemplates(ROOT).some((candidate) => candidate.id === template)) {
+      res.status(400).json({ error: `Шаблон «${template}» не найден` });
+      return;
+    }
+    // A template with no content.json cannot be generated for at all, and saying so now costs
+    // nothing — finding out after the first paid request would not.
+    try {
+      loadTemplateContent(template, ROOT);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
+    const site = safeName(body.out, '');
+    if (site === '') {
+      res.status(400).json({ error: 'Нужно имя папки для нового сайта' });
+      return;
+    }
+    const brand = trimmedString(body.brand);
+    if (brand === '') {
+      res.status(400).json({ error: 'Нужно название бренда' });
+      return;
+    }
+
+    const raw = Array.isArray(body.pages) ? body.pages : String(body.pages ?? '').split(/[\s,]+/);
+    const pages = [...new Set(raw.map((name) => safeName(name, '')).filter(Boolean))];
+    if (!pages.includes('home')) {
+      res.status(400).json({ error: 'В списке страниц нужна home — иначе у сайта не будет главной' });
+      return;
+    }
+
+    if (isBuildRunning(site)) {
+      res.status(409).json({ error: `Для папки «${site}» уже что-то выполняется` });
+      return;
+    }
+
+    const job = startJob({ domain: site }, async (log) => {
+      await generateSite({
+        siteDir: join(SITES_DIR, site),
+        templateId: template,
+        brand,
+        geo: trimmedString(body.geo),
+        locale: trimmedString(body.locale),
+        pages,
+        config: readOpenAiConfig(envFile),
+        root: ROOT,
+        promptFile: TEXTS_PROMPTS_FILE,
+        fetchFn,
+        log,
+      });
+    });
+
+    res.json({ jobId: job.id, site });
   });
 
   app.get('/api/builds/:id', (req, res) => {

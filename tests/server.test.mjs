@@ -1315,3 +1315,120 @@ describe('zip archive completeness guard', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 });
+
+describe('the texts tab writes a whole site folder', () => {
+  const siteId = 'texts-generation-fixture';
+  const siteDir = join('data', 'sites', siteId);
+  const SENTINEL = 'sentinel-openai-key-server-texts-2f8c';
+  let envDir;
+  let textsServer;
+  let textsBase;
+
+  const reply = (data) =>
+    new Response(
+      JSON.stringify({
+        status: 'completed',
+        output: [{ type: 'message', content: [{ type: 'output_text', text: JSON.stringify(data) }] }],
+        usage: { input_tokens: 100, output_tokens: 10, input_tokens_details: { cached_tokens: 0 } },
+      }),
+      { status: 200 },
+    );
+
+  beforeAll(async () => {
+    rmSync(siteDir, { recursive: true, force: true });
+    envDir = mkdtempSync(join(tmpdir(), 'site-factory-texts-env-'));
+    writeFileSync(join(envDir, '.env'), `OPENAI_API_KEY=${SENTINEL}\n`);
+    const fetchFn = async (_url, init) => {
+      // A real, if tiny, delay — the same trick the concurrency test in image-generate.test.mjs
+      // uses. Without it every simulated call resolves through microtasks alone, with no timer or
+      // socket I/O in between, so the whole job (all of a page's sections, in one page, done
+      // sequentially) finishes before this same process's own HTTP client ever sees the response
+      // to the request that started it. That made the "still running" test below flake into a
+      // guaranteed failure: the second request always arrived after the job had already finished.
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      const body = JSON.parse(init.body);
+      const { name, schema } = body.text.format;
+      if (name === 'site_frame') {
+        const size = schema.properties.navLabels.minItems;
+        return reply({
+          tagline: 'Tagline.',
+          navLabels: Array.from({ length: size }, (_, i) => `Page ${i + 1}`),
+          footer: { ageWarning: '18+', ageText: 'Adults only.', quickLinksTitle: 'LINKS', paymentsTitle: 'PAY', copyright: '© 2026.' },
+          blockLabels: { toc: 'Contents', links: 'Other pages', faq: 'Questions' },
+        });
+      }
+      if (name === 'page_plan') {
+        const sections = schema.properties.sections.minItems;
+        const faq = schema.properties.faq.minItems;
+        return reply({
+          title: 'T', description: 'D', h1: 'H', heroText: ['Hero.'], heroImage: null,
+          sections: Array.from({ length: sections }, (_, i) => ({
+            heading: `Section ${i + 1}`, brief: 'b', elements: ['title', 'text'], image: null, links: [],
+          })),
+          faq: Array.from({ length: faq }, (_, i) => `Question ${i + 1}?`),
+        });
+      }
+      if (name === 'faq_answers') {
+        const count = schema.properties.answers.minItems;
+        return reply({ answers: Array.from({ length: count }, () => 'An answer.') });
+      }
+      return reply({ items: [{ kind: 'text', text: 'Body text.' }] });
+    };
+    textsServer = createApp({ envFile: join(envDir, '.env'), fetchFn }).listen(0);
+    await new Promise((resolve) => textsServer.once('listening', resolve));
+    textsBase = `http://127.0.0.1:${textsServer.address().port}`;
+  });
+
+  afterAll(() => {
+    textsServer?.close();
+    rmSync(siteDir, { recursive: true, force: true });
+    rmSync(envDir, { recursive: true, force: true });
+  });
+
+  const start = (payload) =>
+    fetch(`${textsBase}/api/texts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+  it('writes the pages and site.json, and the new folder is listed as a site', async () => {
+    const response = await start({
+      template: 'review', out: siteId, brand: 'Acme', geo: 'Bangladesh', pages: 'home\ncasino',
+    });
+    expect(response.status).toBe(200);
+    const { jobId } = await response.json();
+    const log = await readUntilDone(jobId, textsBase);
+    expect(log).toContain('event: done');
+    expect(log).not.toContain(SENTINEL);
+
+    expect(existsSync(join(siteDir, 'home.json'))).toBe(true);
+    expect(existsSync(join(siteDir, 'casino.json'))).toBe(true);
+    expect(JSON.parse(readFileSync(join(siteDir, 'site.json'), 'utf8')).nav).toHaveLength(1);
+
+    // The point of the whole tab: the folder is now a site the Генерация tab can build.
+    const sites = await fetch(`${textsBase}/api/sites`).then((r) => r.json());
+    expect(sites.sites.some((site) => site.id === siteId)).toBe(true);
+  });
+
+  it('refuses a page list with no home page, before spending anything', async () => {
+    const response = await start({ template: 'review', out: 'texts-no-home', brand: 'Acme', pages: 'casino' });
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toContain('home');
+    expect(existsSync(join('data', 'sites', 'texts-no-home'))).toBe(false);
+  });
+
+  it('refuses a template that cannot describe itself', async () => {
+    const response = await start({ template: 'nope', out: 'texts-bad-template', brand: 'Acme', pages: 'home' });
+    expect(response.status).toBe(400);
+  });
+
+  it('refuses a second run into the same folder while the first is going', async () => {
+    const payload = { template: 'review', out: 'texts-busy', brand: 'Acme', pages: 'home' };
+    const first = await start(payload).then((r) => r.json());
+    const second = await start(payload);
+    expect(second.status).toBe(409);
+    await readUntilDone(first.jobId, textsBase);
+    rmSync(join('data', 'sites', 'texts-busy'), { recursive: true, force: true });
+  });
+});
