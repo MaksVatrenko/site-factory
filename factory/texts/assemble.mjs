@@ -131,6 +131,9 @@ export function assemblePage({ plan, sections, faq, pages, labels, lengths = {} 
 
   noteLength('title страницы', plan.title, lengths.title, warnings);
   noteLength('description страницы', plan.description, lengths.description, warnings);
+  // The h1 belongs here with them: content.json gives it a limit, it is the most prominent text on
+  // the page, and unlike the item counts it is never trimmed anywhere earlier in the pipeline.
+  noteLength('h1 страницы', plan.h1, lengths.h1, warnings);
 
   return {
     page: {

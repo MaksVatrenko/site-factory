@@ -22,7 +22,7 @@ const SECTIONS = [
 ];
 const FAQ = [{ question: 'Is it safe?', answer: 'Yes.' }];
 
-const LENGTHS = { title: 60, description: [120, 160], text: [200, 400] };
+const LENGTHS = { title: 60, description: [120, 160], h1: 60, text: [200, 400] };
 const build = (overrides = {}) =>
   assemblePage({ plan: PLAN, sections: SECTIONS, faq: FAQ, pages: PAGES, labels: LABELS, lengths: LENGTHS, ...overrides });
 
@@ -136,6 +136,13 @@ describe('assemblePage', () => {
     const written = page.blocks.filter((block) => block.type === 'section')[0].content[1];
     expect(written.text).toBe('Short.');
     expect(warnings.join(' ')).toContain('text');
+  });
+
+  it('mentions an h1 longer than the template allows, without shortening it', () => {
+    const h1 = 'A headline far longer than the sixty characters this template asks a heading to keep';
+    const { page, warnings } = build({ plan: { ...PLAN, h1 } });
+    expect(blockOf(page, 'hero').content[0]).toEqual({ type: 'title', h1 });
+    expect(warnings.join(' ')).toContain('h1');
   });
 
   it('leaves exactly one h1 on the page', () => {
