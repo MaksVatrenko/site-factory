@@ -148,6 +148,13 @@ export async function generateSite({
             options,
           );
           spent += filled.cost;
+          // sectionSchema sets no minItems on `items`, so `{"items": []}` is a valid, successful
+          // answer, not a failure — but it still leaves nothing to show for this section, so it is
+          // worth the same kind of log line a failed section gets below, instead of vanishing
+          // silently into the filter a few lines down.
+          if (filled.items.length === 0) {
+            log(`Тексты: ${name}: раздел «${section.heading}» вернулся пустым — пропущен`);
+          }
           sections.push({ heading: section.heading, items: filled.items });
         } catch (error) {
           // A bad key or an empty balance fails the same way for every section left, on this page
@@ -187,10 +194,12 @@ export async function generateSite({
         }
       }
 
-      // An empty `items` above only ever means the catch pushed it after fillSection failed locally
-      // — never a success. Dropping those here, before assemblePage builds the table of contents
-      // and the section blocks from this very array, keeps the two lists in agreement: no contents
-      // entry is left pointing at a heading with nothing under it.
+      // An empty `items` above means one of two things, both already logged by this point: the catch
+      // pushed it after fillSection failed locally, or the model legitimately answered `{"items": []}`
+      // — sectionSchema sets no minItems, so that shape is valid. Either way there is nothing to show
+      // for the section, so dropping it here, before assemblePage builds the table of contents and
+      // the section blocks from this very array, keeps the two lists in agreement: no contents entry
+      // is left pointing at a heading with nothing under it.
       const filledSections = sections.filter((section) => section.items.length > 0);
 
       const { page: built, warnings } = assemblePage({

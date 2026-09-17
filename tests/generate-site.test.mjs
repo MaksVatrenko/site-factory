@@ -226,6 +226,20 @@ describe('generateSite', () => {
     }
   });
 
+  // Finding 5: sectionSchema sets no minItems on `items`, so `{"items": []}` is a valid, successful
+  // answer — not a failure — yet it used to be dropped exactly like a failed section, with no log
+  // line at all, as if nothing had happened. It must be logged the same way a failed section is.
+  it('logs a section that came back empty even though the request itself succeeded', async () => {
+    const dir = siteDir();
+    const { summary, lines } = await run(dir, fakeOpenAi({ emptyFirstSection: true }));
+    expect(summary.written).toContain('home.json');
+    const page = JSON.parse(readFileSync(join(dir, 'home.json'), 'utf8'));
+    const tocList = page.blocks.find((block) => block.type === 'toc').content.find((item) => item.type === 'list');
+    // Empty, so dropped from the contents just like a failed section — but this path must say why.
+    expect(tocList.items).not.toContain('Section 1');
+    expect(lines.join('\n')).toMatch(/раздел.*Section 1.*пуст/i);
+  });
+
   // A run that stopped halfway must carry on, not start over and pay twice.
   it('skips pages that are already on disk', async () => {
     const dir = siteDir();
