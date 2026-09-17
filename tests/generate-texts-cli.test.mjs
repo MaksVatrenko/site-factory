@@ -62,4 +62,18 @@ describe('npm run generate:texts', () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain('--pages');
   });
+
+  // Finding 3: --out used to be joined straight onto data/sites with no containment check at
+  // all, unlike its sibling generate-images.mjs's own --site. Same two shapes that script refuses.
+  it('refuses a folder name with a path separator', () => {
+    const result = runCli('--out', '../../etc', '--brand', 'Acme');
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('недопустимо');
+  });
+
+  it('refuses a folder name that starts with a dot', () => {
+    const result = runCli('--out', '.hidden', '--brand', 'Acme');
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('недопустимо');
+  });
 });

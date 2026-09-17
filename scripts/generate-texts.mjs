@@ -57,6 +57,15 @@ if (out === '' || brand === '') {
   process.exit(1);
 }
 
+// A plain folder name only: anything with a path separator or a leading dot could step outside
+// data/sites — same containment generate-images.mjs applies to its own --site, and for the same
+// reason. Unlike that script's --site, --out need not already exist (a fresh site starts here),
+// so this checks only the shape, not existsSync.
+if (/[/\\]/.test(out) || out.startsWith('.')) {
+  console.error(`Имя папки «${out}» недопустимо: без «/», «\\» и без точки в начале`);
+  process.exit(1);
+}
+
 const list = pages
   .split(',')
   .map((name) => name.trim())
