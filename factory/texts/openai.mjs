@@ -21,8 +21,16 @@ export class OpenAiError extends Error {
 const defaultSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // A 429 means two different things: "too fast", which is worth another try, and "out of money",
-// which will answer the same way for the rest of the run. Only the error code tells them apart.
-const QUOTA_CODES = new Set(['insufficient_quota', 'billing_hard_limit_reached']);
+// which will answer the same way for the rest of the run — retrying it only wastes the remaining
+// pages' time. Billing reports itself in two places and neither alone is enough: `code` carries the
+// specific cause, which is not always the same string, while `type` stays the broad category. So
+// both are consulted, and a billing answer is terminal whichever one names it.
+const QUOTA_CODES = new Set([
+  'insufficient_quota',
+  'billing_hard_limit_reached',
+  'credit_balance_exhausted',
+]);
+const QUOTA_TYPES = new Set(['insufficient_quota']);
 
 async function readJson(response) {
   try {
@@ -44,6 +52,7 @@ function errorOf(payload) {
   const error = payload?.error;
   return {
     code: typeof error?.code === 'string' ? error.code : '',
+    type: typeof error?.type === 'string' ? error.type : '',
     message: typeof error?.message === 'string' ? error.message : '',
   };
 }
@@ -52,6 +61,7 @@ function errorOf(payload) {
 // rather than read from a convenience field, because this client talks to the API directly.
 function outputText(payload) {
   for (const item of Array.isArray(payload?.output) ? payload.output : []) {
+    if (item?.type !== 'message') continue;
     for (const part of Array.isArray(item?.content) ? item.content : []) {
       if (part?.type === 'output_text' && typeof part.text === 'string') return part.text;
     }
@@ -59,9 +69,10 @@ function outputText(payload) {
   return '';
 }
 
-// A refusal replaces the schema-shaped answer. It is documented as an output item; it is also
-// accepted here as a content part, because either shape means the same thing and guessing wrong
-// would turn a clear refusal into a confusing "no answer".
+// A refusal replaces the schema-shaped answer. The docs only ever show it nested inside a
+// message's `content` array; a bare top-level item is not a documented shape. The branch below
+// that checks for one anyway is cheap defensive insurance, because mistaking a refusal for "no
+// answer" would produce a confusing error.
 function refusalText(payload) {
   for (const item of Array.isArray(payload?.output) ? payload.output : []) {
     if (item?.type === 'refusal' && typeof item.refusal === 'string') return item.refusal;
@@ -135,12 +146,12 @@ export async function askJson(
     }
 
     const payload = await readJson(response);
-    const { code, message } = errorOf(payload);
+    const { code, type, message } = errorOf(payload);
 
     if (response.status === 401 || response.status === 403) {
       throw new OpenAiError('auth', 'OpenAI не принял ключ');
     }
-    if (QUOTA_CODES.has(code)) {
+    if (QUOTA_CODES.has(code) || QUOTA_TYPES.has(type)) {
       throw new OpenAiError('balance', 'на счёте OpenAI недостаточно денег');
     }
     if (response.status === 429 || response.status >= 500) {

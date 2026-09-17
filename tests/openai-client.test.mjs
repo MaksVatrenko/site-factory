@@ -98,6 +98,18 @@ describe('askJson', () => {
     expect(calls).toBe(1);
   });
 
+  // The specific billing code is not always one we know, but the broad type is: a 429 that names
+  // the category must be terminal even when its code is a string this client has never seen.
+  it('treats an unknown billing code as out of money when the type says so', async () => {
+    let calls = 0;
+    const fetchFn = async () => {
+      calls += 1;
+      return failed(429, { type: 'insufficient_quota', code: 'credit_balance_exhausted', message: 'no funds' });
+    };
+    await expect(ask({}, { fetchFn })).rejects.toMatchObject({ kind: 'balance' });
+    expect(calls).toBe(1);
+  });
+
   it('retries a plain 429 and succeeds on a later attempt', async () => {
     let calls = 0;
     const fetchFn = async () => {
@@ -151,6 +163,19 @@ describe('askJson', () => {
     const fetchFn = async () => failed(400, { message: `your key ${SENTINEL} is odd` });
     await expect(ask({}, { fetchFn })).rejects.toSatisfy(
       (error) => error instanceof OpenAiError && !error.message.includes(SENTINEL),
+    );
+  });
+
+  // undici throws, for an invalid header value, an error whose own message quotes the whole header
+  // back — the entire "Bearer <key>" this request sent. The catch around fetchFn must never let
+  // that message through unscrubbed.
+  it('never lets the key into an error message when fetchFn itself throws it back', async () => {
+    const fetchFn = async () => {
+      throw new Error(`Invalid header value: "Bearer ${SENTINEL}"`);
+    };
+    await expect(ask({}, { fetchFn })).rejects.toSatisfy(
+      (error) =>
+        error instanceof OpenAiError && error.kind === 'unavailable' && !error.message.includes(SENTINEL),
     );
   });
 
