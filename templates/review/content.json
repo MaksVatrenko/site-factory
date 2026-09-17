@@ -1,0 +1,21 @@
+{
+  "blocks": [
+    { "type": "hero", "content": { "title": 1, "text": [1, 2], "image": [0, 1] } },
+    { "type": "toc", "auto": true },
+    { "type": "section", "count": [8, 10],
+      "content": { "title": 1, "text": [2, 6], "list": [0, 1], "table": [0, 1], "cards": [0, 1], "image": [0, 1] } },
+    { "type": "links", "auto": true },
+    { "type": "faq", "content": { "title": 1, "toggle": [5, 8] } }
+  ],
+  "images": [0, 3],
+  "lengths": {
+    "title": 60,
+    "description": [120, 160],
+    "h1": 60,
+    "text": [200, 400],
+    "listItems": [3, 8],
+    "tableRows": [3, 10],
+    "cards": [2, 4]
+  },
+  "home": { "sectionsBonus": 2 }
+}
