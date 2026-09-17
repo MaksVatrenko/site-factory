@@ -121,10 +121,14 @@ describe('generateSite', () => {
     const dir = siteDir();
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, 'home.json'), JSON.stringify({ title: 'Mine', blocks: [] }));
-    const { summary } = await run(dir, fakeOpenAi());
+    const fake = fakeOpenAi();
+    const { summary } = await run(dir, fake);
     expect(summary.skipped).toContain('home.json');
     expect(JSON.parse(readFileSync(join(dir, 'home.json'), 'utf8')).title).toBe('Mine');
     expect(summary.written).toContain('casino.json');
+    // Not paying twice means never asking: only casino, the page genuinely missing, should ever
+    // reach a page_plan request. Without the existsSync guard, home would be re-planned too.
+    expect(fake.asked.filter((name) => name === 'page_plan')).toEqual(['page_plan']);
   });
 
   // One page failing is one page missing, not a lost run.
@@ -134,7 +138,8 @@ describe('generateSite', () => {
     expect(summary.written).toContain('home.json');
     expect(summary.written).not.toContain('casino.json');
     expect(lines.join('\n')).toContain('casino');
-    // Paid for and lost is still paid for: the plan request for the failed page was billed.
+    // A failed request costs nothing — OpenAiError carries no cost — so this only shows that the
+    // frame and the home page that did succeed were billed, not that the failed casino plan was.
     expect(summary.cost).toBeGreaterThan(0);
   });
 
@@ -165,6 +170,37 @@ describe('generateSite', () => {
     expect(lines.join('\n')).toContain('остановлен');
     // The frame, then one page that failed — never a second attempt at the same wall.
     expect(calls).toBe(2);
+  });
+
+  // The balance test above only ever fails at the plan stage; this is the same wall hit one level
+  // down, inside the per-section loop, which needs its own rethrow to stop the run just as promptly.
+  it('stops the run when the balance runs out during a section, not just during planning', async () => {
+    const dir = siteDir();
+    const fake = fakeOpenAi();
+    let calls = 0;
+    let sectionCalls = 0;
+    const { summary, lines } = await run(dir, {
+      fetchFn: async (url, init) => {
+        calls += 1;
+        const name = JSON.parse(init.body).text.format.name;
+        if (name === 'section_content') {
+          sectionCalls += 1;
+          // Only the first section-fill request hits the wall; if the rethrow were missing, later
+          // sections (and later pages) would each try and fail again instead of the run stopping.
+          if (sectionCalls === 1) {
+            return new Response(
+              JSON.stringify({ error: { code: 'insufficient_quota', message: 'no funds' } }),
+              { status: 429 },
+            );
+          }
+        }
+        return fake.fetchFn(url, init);
+      },
+    });
+    expect(summary.written).toEqual(['site.json']);
+    expect(lines.join('\n')).toContain('остановлен');
+    // Frame, plan, first section — never a second section or a second page.
+    expect(calls).toBe(3);
   });
 
   it('says so and does nothing at all without a key', async () => {
@@ -207,6 +243,12 @@ describe('a generated folder builds', () => {
       stdio: 'pipe',
     });
     expect(existsSync(join(out, 'index.html'))).toBe(true);
-    expect(readFileSync(join(out, 'casino', 'index.html'), 'utf8')).toContain('Section 1');
+    const html = readFileSync(join(out, 'casino', 'index.html'), 'utf8');
+    // 'Section 1' is a heading from the plan alone — assemblePage writes it (and the section's
+    // contents entry) even when fillSection fails and contributes { heading, items: [] }. The body
+    // text only lands here if a section's fill actually delivered prose, which is the real proof
+    // that this build holds a site and not merely a page whose sections all silently came up empty.
+    expect(html).toContain('Section 1');
+    expect(html).toContain('Body text of the section.');
   }, 120_000);
 });

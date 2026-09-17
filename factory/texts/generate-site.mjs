@@ -86,7 +86,15 @@ export async function generateSite({
   const skeleton = rollSkeleton({ content, pages, seed: siteDir.split(/[/\\]/).filter(Boolean).at(-1) });
   const options = { config, fetchFn, sleep };
 
-  mkdirSync(siteDir, { recursive: true });
+  // A dedicated catch, not left to escape: an unwritable path or a plain file already sitting where
+  // the folder should go must degrade to a log line like every other free check above, not surface
+  // as an unhandled rejection in the CLI that awaits this function.
+  try {
+    mkdirSync(siteDir, { recursive: true });
+  } catch (error) {
+    log(`Тексты: не удалось создать папку сайта — ${error.message} — пропущены`);
+    return summary;
+  }
 
   // Asked for every time, even on a re-run: the service-block headings live only in this answer,
   // and the pages below cannot be assembled without them. Only the file is protected, not the call.
