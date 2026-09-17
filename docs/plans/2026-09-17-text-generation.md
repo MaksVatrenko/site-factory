@@ -36,6 +36,10 @@
   и правятся без правки кода.
 
 **Ключ и тесты**
+- Поддельные ответы OpenAI для тестов живут в `tests/helpers/openai.mjs` (создаётся в Task 2).
+  Каждый файл тестов **импортирует** оттуда `answer`, `truncated`, `refused`, `failed` и не заводит
+  свою копию. В задачах 7, 8, 10, 11 и 12 куски тестов показывают форму ответа для чтения — писать
+  её заново не нужно, нужен импорт.
 - Ключ OpenAI живёт только в `.env`. Он читается в объект и **никогда** не попадает в
   `process.env`, в лог, в тексты ошибок и в готовый сайт. Тексты ошибок OpenAI очищаются от ключа.
 - Тесты не ходят в сеть и не читают настоящий `.env`: `fetchFn` и путь к `.env` передаются
@@ -81,6 +85,7 @@
 | `factory/env-file.mjs` | Чтение `.env` в объект. Общее для Runware и OpenAI |
 | `factory/texts/env.mjs` | Настройки OpenAI из `.env` |
 | `factory/texts/openai.mjs` | Один запрос со схемой: повторы, ошибки, отказ, обрыв, цена |
+| `tests/helpers/openai.mjs` | Поддельные ответы OpenAI для всех тестов этапа |
 | `factory/texts/template.mjs` | Чтение `content.json` и примеров шаблона |
 | `factory/texts/texts-prompts.mjs` | Чтение `factory/prompts/texts.json`, язык по гео |
 | `factory/texts/skeleton.mjs` | Жребий каркаса по зерну |
@@ -336,7 +341,49 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
   { config, fetchFn, sleep, timeoutMs }) -> { data, cost, usage }`.
   Все задачи с 7 по 11 обращаются к OpenAI **только** через `askJson`.
 
-- [ ] **Step 1: Тест.** Создать `tests/openai-client.test.mjs`:
+- [ ] **Step 1: Общий помощник тестов.** Создать `tests/helpers/openai.mjs`. Он нужен шести файлам
+тестов, а в репозитории для такого уже есть `tests/helpers/` (см. `build.mjs`):
+
+```js
+// The shapes the Responses API answers with, for tests. Shared because six test files need them,
+// and a copy per file is six places for the shape to drift from the one the client really parses.
+export function answer(data, usage = {}) {
+  return new Response(
+    JSON.stringify({
+      status: 'completed',
+      output: [{ type: 'message', content: [{ type: 'output_text', text: JSON.stringify(data) }] }],
+      usage: { input_tokens: 1000, output_tokens: 100, input_tokens_details: { cached_tokens: 0 }, ...usage },
+    }),
+    { status: 200 },
+  );
+}
+
+// A run that hit the output limit. The API reports this itself rather than leaving broken JSON.
+export function truncated(reason = 'max_output_tokens') {
+  return new Response(
+    JSON.stringify({ status: 'incomplete', incomplete_details: { reason }, output: [] }),
+    { status: 200 },
+  );
+}
+
+export function refused(text = 'I cannot help with that') {
+  return new Response(
+    JSON.stringify({
+      status: 'completed',
+      output: [{ type: 'message', content: [{ type: 'refusal', refusal: text }] }],
+    }),
+    { status: 200 },
+  );
+}
+
+export function failed(status, error = { message: 'nope' }) {
+  return new Response(JSON.stringify({ error }), { status });
+}
+```
+
+- [ ] **Step 2: Тест.** Создать `tests/openai-client.test.mjs`. Поддельные ответы берутся из
+помощника выше — `import { answer, failed, refused, truncated } from './helpers/openai.mjs';` — а
+показанное здесь объявление `answer` не переписывается:
 
 ```js
 import { describe, it, expect } from 'vitest';
@@ -542,10 +589,10 @@ describe('costOf', () => {
 });
 ```
 
-- [ ] **Step 2: Прогон.** `npx vitest run tests/openai-client.test.mjs`. Ожидается FAIL: модуля
+- [ ] **Step 3: Прогон.** `npx vitest run tests/openai-client.test.mjs`. Ожидается FAIL: модуля
 `factory/texts/openai.mjs` нет.
 
-- [ ] **Step 3: Код.** Создать `factory/texts/openai.mjs`:
+- [ ] **Step 4: Код.** Создать `factory/texts/openai.mjs`:
 
 ```js
 // One request, one JSON answer, over OpenAI's Responses API. The schema goes in `text.format` with
@@ -742,12 +789,12 @@ export async function askJson(
 Объявить `let lastRetryAfter = 0;` рядом с `let lastProblem = '';` — она нужна циклу, чтобы пауза
 перед следующей попыткой была не короче, чем просил заголовок.
 
-- [ ] **Step 4: Проверка.** `npx vitest run tests/openai-client.test.mjs` — PASS, все 13 тестов.
+- [ ] **Step 5: Проверка.** `npx vitest run tests/openai-client.test.mjs` — PASS, все 13 тестов.
 
-- [ ] **Step 5: Коммит.**
+- [ ] **Step 6: Коммит.**
 
 ```bash
-git add factory/texts/openai.mjs tests/openai-client.test.mjs
+git add factory/texts/openai.mjs tests/helpers/openai.mjs tests/openai-client.test.mjs
 git diff --cached --name-only
 git commit -m "Клиент OpenAI: строгая схема, повторы, отказ и обрыв
 
@@ -1457,7 +1504,9 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 **Interfaces:**
 - Consumes: `elements` (список из манифеста шаблона) и числа каркаса из Task 5.
 - Produces: `ELEMENT_KINDS`, `planSchema({ sections, faq }, elements) -> object`,
-  `sectionSchema(elements) -> object`, `faqSchema(count) -> object`.
+  `sectionSchema(elements) -> object`, `faqSchema(count) -> object`, плюс помощники
+  `object(properties)` и `string` — Task 10 строит свою схему ими же, чтобы правила строгого
+  режима были записаны в одном месте.
   Все три отдаются в `askJson` как поле `schema`.
 
 - [ ] **Step 1: Тест.** Создать `tests/texts-schema.test.mjs`:
@@ -1581,14 +1630,18 @@ describe('faqSchema', () => {
 // `enum` with a single value, not `const`: enum is on the documented list of keywords strict mode
 // supports, and const is not. One less thing to be surprised by.
 const kind = (name) => ({ type: 'string', enum: [name] });
-const strings = { type: 'array', items: { type: 'string' } };
+const strings = { type: 'array', items: string };
 
-const object = (properties) => ({
+// Exported: site-json.mjs builds a schema of its own and must obey the same two rules of strict
+// mode. Two copies would be two places to get them wrong.
+export const object = (properties) => ({
   type: 'object',
   properties,
   required: Object.keys(properties),
   additionalProperties: false,
 });
+
+export const string = { type: 'string' };
 
 const ELEMENT_DEFS = {
   // Only h3. A page has exactly one h1, and every section's own h2 is written by the factory from
@@ -2643,6 +2696,7 @@ describe('generateSiteJson', () => {
 
 ```js
 import { askJson } from './openai.mjs';
+import { object, string } from './schema.mjs';
 
 // Everything a reader sees that is not a page: the menu, the footer, the age warning, the tagline,
 // and the headings of the blocks the factory builds itself. Without this, a Spanish site would
@@ -2650,14 +2704,6 @@ import { askJson } from './openai.mjs';
 //
 // Addresses are the factory's and labels are the model's, so a page added to the list turns up in
 // the menu and the footer on its own.
-
-const string = { type: 'string' };
-const object = (properties) => ({
-  type: 'object',
-  properties,
-  required: Object.keys(properties),
-  additionalProperties: false,
-});
 
 function siteSchema(menuSize) {
   return object({
