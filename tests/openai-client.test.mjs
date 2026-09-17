@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { askJson, costOf, OpenAiError, RETRY_DELAYS_MS, RETRY_JITTER_MS } from '../factory/texts/openai.mjs';
 import { answer, failed, refused, truncated } from './helpers/openai.mjs';
 
@@ -126,8 +126,11 @@ describe('askJson', () => {
   });
 
   // Spec §12: "нарастающей паузой и разбросом" — a spread on top of the fixed schedule, so several
-  // pages retrying at once do not all wake up on the same tick. The exact number is random, so this
-  // checks the band the spread is meant to stay inside, not one fixed value.
+  // pages retrying at once do not all wake up on the same tick. Math.random is stubbed to a fixed,
+  // non-zero value so the resulting delay can be pinned down exactly: a jitter-free `sleep(floor)`
+  // produces exactly the floor and fails this. A "stays within the band" check does not, since a
+  // jitter-free sleep sits at the bottom of that same band and passes it by accident — which is
+  // exactly what let `await sleep(floor)` slip past this test once already.
   it('adds a small random spread on top of the fixed retry delays', async () => {
     const waited = [];
     let calls = 0;
@@ -136,13 +139,13 @@ describe('askJson', () => {
       if (calls <= RETRY_DELAYS_MS.length) return failed(500, { message: 'down' });
       return answer({ headline: 'ok' });
     };
-    await ask({}, { fetchFn, sleep: async (ms) => waited.push(ms) });
-    expect(waited).toHaveLength(RETRY_DELAYS_MS.length);
-    waited.forEach((ms, index) => {
-      const floor = RETRY_DELAYS_MS[index];
-      expect(ms).toBeGreaterThanOrEqual(floor);
-      expect(ms).toBeLessThanOrEqual(floor + RETRY_JITTER_MS);
-    });
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    try {
+      await ask({}, { fetchFn, sleep: async (ms) => waited.push(ms) });
+    } finally {
+      randomSpy.mockRestore();
+    }
+    expect(waited).toEqual(RETRY_DELAYS_MS.map((floor) => floor + 0.5 * RETRY_JITTER_MS));
   });
 
   it('waits at least as long as Retry-After asks', async () => {
