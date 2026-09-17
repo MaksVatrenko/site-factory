@@ -462,6 +462,12 @@ export function createApp({
   app.post('/api/texts', (req, res) => {
     const body = req.body ?? {};
 
+    // Empty/absent template stays valid — it means "use the default" — but a *present* value of
+    // the wrong type is neither of those things, exactly like /api/generate's own guard above.
+    if (isPresentNonString(body.template)) {
+      res.status(400).json({ error: 'Поле «template» должно быть строкой' });
+      return;
+    }
     const templateInput = trimmedString(body.template);
     const template = templateInput || listTemplates(ROOT)[0]?.id || '';
     if (!listTemplates(ROOT).some((candidate) => candidate.id === template)) {
@@ -482,11 +488,28 @@ export function createApp({
       res.status(400).json({ error: 'Нужно имя папки для нового сайта' });
       return;
     }
+
+    if (isPresentNonString(body.brand)) {
+      res.status(400).json({ error: 'Поле «brand» должно быть строкой' });
+      return;
+    }
     const brand = trimmedString(body.brand);
     if (brand === '') {
       res.status(400).json({ error: 'Нужно название бренда' });
       return;
     }
+
+    if (isPresentNonString(body.geo)) {
+      res.status(400).json({ error: 'Поле «geo» должно быть строкой' });
+      return;
+    }
+    const geo = trimmedString(body.geo);
+
+    if (isPresentNonString(body.locale)) {
+      res.status(400).json({ error: 'Поле «locale» должно быть строкой' });
+      return;
+    }
+    const locale = trimmedString(body.locale);
 
     const raw = Array.isArray(body.pages) ? body.pages : String(body.pages ?? '').split(/[\s,]+/);
     const pages = [...new Set(raw.map((name) => safeName(name, '')).filter(Boolean))];
@@ -505,8 +528,8 @@ export function createApp({
         siteDir: join(SITES_DIR, site),
         templateId: template,
         brand,
-        geo: trimmedString(body.geo),
-        locale: trimmedString(body.locale),
+        geo,
+        locale,
         pages,
         config: readOpenAiConfig(envFile),
         root: ROOT,

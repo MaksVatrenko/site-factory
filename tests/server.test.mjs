@@ -1455,6 +1455,21 @@ describe('the texts tab writes a whole site folder', () => {
     expect(existsSync(join('data', 'sites', 'texts-no-home'))).toBe(false);
   });
 
+  // Finding 4: /api/generate already refuses a present but non-string template/scheme instead of
+  // letting trimmedString coerce it to '' and read as "absent" (see the non-string-template test
+  // near the top of this file) — /api/texts skipped that guard entirely. geo has no "must be
+  // non-empty" check of its own the way brand and out do, so a non-string value used to sail
+  // straight through as plain "geo not given" — a 200 with the job started — instead of being
+  // refused the way a bad *string* geo already would be treated as unknown-but-valid. The other
+  // three guarded fields (template, brand, locale) follow the identical isPresentNonString check.
+  it('refuses a present but non-string geo instead of silently treating it as absent', async () => {
+    const out = 'texts-non-string-geo';
+    const response = await start({ template: 'review', out, brand: 'Acme', geo: 42, pages: 'home' });
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toContain('geo');
+    expect(existsSync(join('data', 'sites', out))).toBe(false);
+  });
+
   // Review finding on Task 12: this test's name claimed to cover loadTemplateContent's own
   // guard (a template with no content.json), but 'nope' is never in the template list at all, so
   // the request is rejected by the earlier unknown-template-id check instead and never reaches
