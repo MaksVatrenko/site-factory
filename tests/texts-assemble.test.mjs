@@ -22,7 +22,15 @@ const SECTIONS = [
 ];
 const FAQ = [{ question: 'Is it safe?', answer: 'Yes.' }];
 
-const LENGTHS = { title: 60, description: [120, 160], h1: 60, text: [200, 400] };
+const LENGTHS = {
+  title: 60,
+  description: [120, 160],
+  h1: 60,
+  text: [200, 400],
+  listItems: [3, 8],
+  tableRows: [3, 10],
+  cards: [2, 4],
+};
 const build = (overrides = {}) =>
   assemblePage({ plan: PLAN, sections: SECTIONS, faq: FAQ, pages: PAGES, labels: LABELS, lengths: LENGTHS, ...overrides });
 
@@ -136,6 +144,48 @@ describe('assemblePage', () => {
     const written = page.blocks.filter((block) => block.type === 'section')[0].content[1];
     expect(written.text).toBe('Short.');
     expect(warnings.join(' ')).toContain('text');
+  });
+
+  // Unlike a character length, an item count can be cut cleanly — spec §9: "лишнее отбрасывается,
+  // строка в лог" — so these three, unlike the text/h1 lengths above, actually get trimmed.
+  it('trims a list past the template maximum, and logs what was cut', () => {
+    const items = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+    const sections = [{ heading: 'Payments', items: [{ kind: 'list', items }] }, SECTIONS[1]];
+    const { page, warnings } = build({ sections });
+    const list = page.blocks.filter((block) => block.type === 'section')[0].content[1];
+    expect(list.items).toEqual(['1', '2', '3', '4', '5', '6', '7', '8']);
+    expect(warnings.join(' ')).toContain('пунктов списка: 10 вместо 8');
+  });
+
+  it('trims a table past the template row maximum, and logs what was cut', () => {
+    const rows = Array.from({ length: 12 }, (_, index) => [`r${index + 1}`]);
+    const sections = [{ heading: 'Payments', items: [{ kind: 'table', columns: ['A'], rows }] }, SECTIONS[1]];
+    const { page, warnings } = build({ sections });
+    const table = page.blocks.filter((block) => block.type === 'section')[0].content[1];
+    expect(table.rows).toEqual(rows.slice(0, 10));
+    expect(warnings.join(' ')).toContain('строк таблицы: 12 вместо 10');
+  });
+
+  it('trims a card set past the template maximum, and logs what was cut', () => {
+    const cards = Array.from({ length: 6 }, (_, index) => ({ title: `C${index + 1}`, text: 'T', image: null }));
+    const sections = [{ heading: 'Payments', items: [{ kind: 'cards', cards }] }, SECTIONS[1]];
+    const { page, warnings } = build({ sections });
+    const cardsBlock = page.blocks.filter((block) => block.type === 'section')[0].content[1];
+    expect(cardsBlock.items).toHaveLength(4);
+    expect(cardsBlock.items.map((card) => card.title)).toEqual(['C1', 'C2', 'C3', 'C4']);
+    expect(warnings.join(' ')).toContain('карточек: 6 вместо 4');
+  });
+
+  // Trimming only ever removes — it must never invent items to reach the minimum, the same rule
+  // trimPlan already follows for elements and pictures.
+  it('leaves a list under the template minimum alone, without inventing items', () => {
+    const sections = [{ heading: 'Payments', items: [{ kind: 'list', items: ['one'] }] }, SECTIONS[1]];
+    const { page, warnings } = build({ sections });
+    const list = page.blocks.filter((block) => block.type === 'section')[0].content[1];
+    expect(list.items).toEqual(['one']);
+    // Other, unrelated length warnings from this fixture's text are fine — only a count trim of
+    // this list, which must not happen, would mention "пунктов списка".
+    expect(warnings.join(' ')).not.toContain('пунктов списка');
   });
 
   it('mentions an h1 longer than the template allows, without shortening it', () => {

@@ -25,7 +25,19 @@ function keepLinks(text, allowed, warnings) {
   });
 }
 
-function toElement(item, { images, allowed, warnings }) {
+// content.json's item counts (listItems, tableRows, cards) are a ceiling the model was already
+// asked to respect, unlike the character lengths below. A count is safe to actually cut, unlike a
+// length: dropping the last few rows never breaks one mid-sentence, so — unlike noteLength — this
+// one trims rather than only reporting.
+function trimToMax(what, list, range, warnings) {
+  if (!range) return list;
+  const max = Array.isArray(range) ? range[1] : range;
+  if (list.length <= max) return list;
+  warnings.push(`${what}: ${list.length} вместо ${max} — лишнее отброшено`);
+  return list.slice(0, max);
+}
+
+function toElement(item, { images, allowed, warnings, lengths }) {
   const link = (text) => keepLinks(text, allowed, warnings);
   const picture = (name) => {
     if (name && images.has(name)) return name;
@@ -39,13 +51,15 @@ function toElement(item, { images, allowed, warnings }) {
     case 'text':
       return { type: 'text', text: link(item.text) };
     case 'list':
-      return { type: 'list', items: item.items.map(link) };
-    case 'table':
-      return { type: 'table', columns: item.columns, rows: item.rows.map((row) => row.map(link)) };
+      return { type: 'list', items: trimToMax('пунктов списка', item.items, lengths.listItems, warnings).map(link) };
+    case 'table': {
+      const rows = trimToMax('строк таблицы', item.rows, lengths.tableRows, warnings);
+      return { type: 'table', columns: item.columns, rows: rows.map((row) => row.map(link)) };
+    }
     case 'cards':
       return {
         type: 'cards',
-        items: item.cards.map((card) => {
+        items: trimToMax('карточек', item.cards, lengths.cards, warnings).map((card) => {
           const image = picture(card.image);
           return { title: card.title, text: link(card.text), ...(image ? { image } : {}) };
         }),
@@ -81,7 +95,7 @@ export function assemblePage({ plan, sections, faq, pages, labels, lengths = {} 
   const images = new Set(
     [plan.heroImage, ...plan.sections.map((section) => section.image)].filter(Boolean),
   );
-  const context = { images, allowed, warnings };
+  const context = { images, allowed, warnings, lengths };
 
   const hero = {
     type: 'hero',
