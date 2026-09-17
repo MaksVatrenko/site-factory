@@ -341,6 +341,7 @@ FAQ наполняется одним запросом на все вопрос�
 | Файл | Что делает |
 |---|---|
 | `factory/texts/openai.mjs` | Запросы, повторы, разбор ошибок, вычистка ключа |
+| `factory/env-file.mjs` | Чтение `.env` в объект. Общее с этапом картинок |
 | `factory/texts/env.mjs` | Чтение настроек OpenAI из `.env` |
 | `factory/texts/template.mjs` | Чтение `content.json` и примеров шаблона |
 | `factory/texts/skeleton.mjs` | Жребий каркаса по зерну |
@@ -350,6 +351,7 @@ FAQ наполняется одним запросом на все вопрос�
 | `factory/texts/assemble.mjs` | Сборка страницы, оглавление, проверки |
 | `factory/texts/site-json.mjs` | Меню, футер, слоган |
 | `factory/texts/generate-site.mjs` | Оркестровка, лог, деньги |
+| `factory/texts/texts-prompts.mjs` | Чтение правил, язык по гео |
 | `factory/prompts/texts.json` | Правила и таблица языков |
 | `scripts/generate-texts.mjs` | Команда |
 
