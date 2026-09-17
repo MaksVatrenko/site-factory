@@ -59,6 +59,7 @@
             "Genuine winner screenshots floating around Telegram, not staged ones"
           ]
         },
+        { "image": "live-dealer-table" },
         {
           "type": "cards",
           "items": [
@@ -83,7 +84,7 @@
         },
         {
           "type": "text",
-          "text": "The lobby is grouped by provider so you can jump straight to what you like. If you'd rather spin reels than sit at a table, the slots library has hundreds of titles from Pragmatic and PG Soft."
+          "text": "The lobby is grouped by provider so you can jump straight to what you like. If you'd rather spin reels than sit at a table, [the slots library](/slots) has hundreds of titles from Pragmatic and PG Soft."
         },
         {
           "type": "table",
@@ -159,7 +160,7 @@
         },
         {
           "type": "text",
-          "text": "Tap Player, tap Banker, done. The scoreboards help pattern-chasers, but honestly it's a coin flip with a house edge. Before you deposit anything, glance at the bonus wagering rules — live tables only count 10% toward wagering, so plan for that."
+          "text": "Tap Player, tap Banker, done. The scoreboards help pattern-chasers, but honestly it's a coin flip with a house edge. Before you deposit anything, glance at [the bonus wagering rules](/bonus) — live tables only count 10% toward wagering, so plan for that."
         }
       ]
     },
@@ -293,6 +294,10 @@
         {
           "type": "text",
           "text": "Withdrawals return to the same wallet you deposited from. Have your NID and a selfie ready before your first cash-out to skip the 24-hour verification queue."
+        },
+        {
+          "type": "title",
+          "h3": "Deposit vs Withdrawal Speed"
         },
         {
           "type": "cards",
