@@ -3166,7 +3166,15 @@ export async function generateSite({
   const skeleton = rollSkeleton({ content, pages, seed: siteDir.split(/[/\\]/).filter(Boolean).at(-1) });
   const options = { config, fetchFn, sleep };
 
-  mkdirSync(siteDir, { recursive: true });
+  // Inside a try like everything else: this function's contract is that nothing ever throws out of
+  // it, and an unwritable path or a plain file sitting on that name would otherwise reject the
+  // promise — which the command awaits at top level with no catch, turning it into a stack trace.
+  try {
+    mkdirSync(siteDir, { recursive: true });
+  } catch (error) {
+    log(`Тексты: не удалось создать папку сайта — ${error.message} — пропущены`);
+    return summary;
+  }
 
   // Asked for every time, even on a re-run: the service-block headings live only in this answer,
   // and the pages below cannot be assembled without them. Only the file is protected, not the call.
@@ -3219,8 +3227,11 @@ export async function generateSite({
           spent += filled.cost;
           sections.push({ heading: section.heading, items: filled.items });
         } catch (error) {
-          // One section short is a shorter page, not a lost one.
-          spent += 0;
+          // A bad key or an empty balance is not this section's problem — it is the run's, and it
+          // answers the same way for every request left. Swallowing it here would spend a whole
+          // page's worth of doomed requests before the outer handler ever saw it, so it is thrown
+          // on. Everything else really is local: one section short is a shorter page, not a lost one.
+          if (error?.kind === 'auth' || error?.kind === 'balance') throw error;
           log(`Тексты: ${name}: раздел «${section.heading}» не вышел — ${error.message}`);
           sections.push({ heading: section.heading, items: [] });
         }
@@ -3255,9 +3266,10 @@ export async function generateSite({
     } catch (error) {
       log(`Тексты: ${name} не вышла — ${error.message}, потрачено ${formatCost(spent)}`);
       // A bad key or an empty balance answers the same way for every page left. Carrying on would
-      // just repeat the same failure once per page, slowly, so the run stops here instead.
+      // just repeat the same failure once per page, slowly, so the run stops here instead. The cost
+      // is not added here: `finally` below runs on the way out of a `break` too, and adding it in
+      // both places counted this page's spend twice.
       if (error?.kind === 'auth' || error?.kind === 'balance') {
-        summary.cost += spent;
         log('Тексты: прогон остановлен — остальные страницы не пробовались');
         break;
       }
