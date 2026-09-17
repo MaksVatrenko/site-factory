@@ -1342,8 +1342,11 @@ export function loadTextsPromptFile(path) {
   }
   return {
     rules: rules.map((rule) => rule.trim()),
+    // Geo names keep their exact spelling from the file here. Matching ignores case and spacing
+    // over in languageFor, the one place that needs it — this loader stays a plain read-and-validate
+    // step instead of a second place with its own normalization rules that could drift from the first.
     languageByGeo: Object.fromEntries(
-      Object.entries(languageByGeo).map(([geo, locale]) => [geo.trim().toLowerCase(), locale.trim()]),
+      Object.entries(languageByGeo).map(([geo, locale]) => [geo, locale.trim()]),
     ),
   };
 }
@@ -1351,10 +1354,20 @@ export function loadTextsPromptFile(path) {
 // The form's own language field wins over this; it is consulted only when that field is empty.
 // An unknown geo is not an error — English is a defensible default for the markets this factory
 // serves — but the caller is told, so it can say so in the log instead of quietly guessing.
+//
+// Looks up the geo by scanning the table's own entries with a case/space-insensitive comparison,
+// rather than lower-casing the input and indexing straight into languageByGeo: object property
+// lookup is case-sensitive, so a direct index would silently miss any table whose keys are not
+// already all-lowercase (including the one loadTextsPromptFile hands back, which keeps the file's
+// original spelling — see the comment there).
 export function languageFor(geo, languageByGeo) {
   const key = String(geo ?? '').trim().toLowerCase();
-  const locale = key === '' ? '' : languageByGeo[key];
-  return locale ? { locale, known: true } : { locale: DEFAULT_LOCALE, known: false };
+  if (key !== '') {
+    for (const [geoName, locale] of Object.entries(languageByGeo)) {
+      if (geoName.trim().toLowerCase() === key) return { locale, known: true };
+    }
+  }
+  return { locale: DEFAULT_LOCALE, known: false };
 }
 ```
 
