@@ -884,7 +884,7 @@ git diff --stat data/sites/899ok/casino.json data/sites/899ok/slots.json
 
 ```js
 import { describe, it, expect, afterEach } from 'vitest';
-import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -929,6 +929,24 @@ const CONTENT = {
     { type: 'section', count: [8, 10], content: { title: 1, text: [2, 6], list: [0, 1] } },
     { type: 'links', auto: true },
     { type: 'faq', content: { title: 1, toggle: [5, 8] } },
+  ],
+  images: [0, 3],
+  lengths: { title: 60, description: [120, 160], h1: 60, text: [200, 400], listItems: [3, 8] },
+  home: { sectionsBonus: 2 },
+};
+
+// `CONTENT` above is the raw on-disk shape, which is what `writeTemplate` needs. `describeTemplate`
+// never sees that shape: its only caller hands it `loadTemplateContent`'s output, where every count
+// is already a `[min, max]` pair and every block carries one. So it gets its own fixture, in the
+// shape it is actually contracted to accept — feeding it the raw one would be testing a shape no
+// real caller produces, and would push the "number or pair" rule into a second place in the code.
+const LOADED = {
+  blocks: [
+    { type: 'hero', auto: false, count: [1, 1], content: { title: [1, 1], text: [1, 2], image: [0, 1] } },
+    { type: 'toc', auto: true, count: [1, 1], content: {} },
+    { type: 'section', auto: false, count: [8, 10], content: { title: [1, 1], text: [2, 6], list: [0, 1] } },
+    { type: 'links', auto: true, count: [1, 1], content: {} },
+    { type: 'faq', auto: false, count: [1, 1], content: { title: [1, 1], toggle: [5, 8] } },
   ],
   images: [0, 3],
   lengths: { title: 60, description: [120, 160], h1: 60, text: [200, 400], listItems: [3, 8] },
@@ -999,7 +1017,7 @@ describe('loadTemplateExamples', () => {
 
 describe('describeTemplate', () => {
   it('turns the rules into prompt text that names every block and its counts', () => {
-    const text = describeTemplate(CONTENT);
+    const text = describeTemplate(LOADED);
     expect(text).toContain('hero');
     expect(text).toContain('8');
     expect(text).toContain('10');
