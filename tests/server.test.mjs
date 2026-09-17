@@ -1418,9 +1418,40 @@ describe('the texts tab writes a whole site folder', () => {
     expect(existsSync(join('data', 'sites', 'texts-no-home'))).toBe(false);
   });
 
-  it('refuses a template that cannot describe itself', async () => {
+  // Review finding on Task 12: this test's name claimed to cover loadTemplateContent's own
+  // guard (a template with no content.json), but 'nope' is never in the template list at all, so
+  // the request is rejected by the earlier unknown-template-id check instead and never reaches
+  // that branch. Renamed to say what it actually exercises; the test below takes over the branch
+  // this name used to promise.
+  it('refuses an unknown template id', async () => {
     const response = await start({ template: 'nope', out: 'texts-bad-template', brand: 'Acme', pages: 'home' });
     expect(response.status).toBe(400);
+  });
+
+  // The loadTemplateContent branch itself: a template that IS in the real list (its manifest.json
+  // exists, so it passes the guard above) but has no content.json beside it. Same fixture recipe
+  // as "accepts a template id safeName would mangle past recognition" earlier in this file, minus
+  // content.json. The id sorts after 'review' (the only real template on disk) and is not a real
+  // id, so nothing could ever pick it up as the "first available" fallback template by accident.
+  it('refuses a template that cannot describe itself', async () => {
+    const templateId = 'texts-missing-content-fixture';
+    const templateDir = join('templates', templateId);
+    const out = 'texts-missing-content-fixture-out';
+    mkdirSync(templateDir, { recursive: true });
+    writeFileSync(join(templateDir, 'manifest.json'), JSON.stringify({ id: templateId, name: 'Fixture' }));
+
+    try {
+      const response = await start({ template: templateId, out, brand: 'Acme', pages: 'home' });
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      // Names both the template and its missing file, so this reads differently in the logs than
+      // the unknown-id guard's "не найден" message above -- the owner can tell the two failures apart.
+      expect(data.error).toContain(templateId);
+      expect(data.error).toContain('content.json');
+      expect(existsSync(join('data', 'sites', out))).toBe(false);
+    } finally {
+      rmSync(templateDir, { recursive: true, force: true });
+    }
   });
 
   it('refuses a second run into the same folder while the first is going', async () => {
