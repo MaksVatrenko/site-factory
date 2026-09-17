@@ -300,6 +300,34 @@ describe('generateSite', () => {
     expect(calls).toBe(2);
   });
 
+  // Finding 4: site.json is written first, from the full requested page list, so its menu links to
+  // every page the owner asked for — including ones a stopped run never got to. The menu is never
+  // pruned (a re-run fills the gap), but the log must say, once, which pages it is leaving dangling.
+  it('logs which requested pages still have no file when the run stops early', async () => {
+    const dir = siteDir();
+    const { summary, lines } = await run(dir, {
+      fetchFn: async (_url, init) => {
+        const body = JSON.parse(init.body);
+        if (body.text.format.name === 'site_frame') {
+          return reply({
+            tagline: 't', navLabels: ['Casino'],
+            footer: { ageWarning: '18+', ageText: 'a', quickLinksTitle: 'L', paymentsTitle: 'P', copyright: 'c' },
+            blockLabels: { toc: 'C', links: 'O', faq: 'Q' },
+          });
+        }
+        return new Response(JSON.stringify({ error: { code: 'insufficient_quota', message: 'no funds' } }), { status: 429 });
+      },
+    });
+    // Neither requested page ever got a file — site.json's menu still points at both.
+    expect(summary.written).toEqual(['site.json']);
+    const log = lines.join('\n');
+    expect(log).toContain('home');
+    expect(log).toContain('casino');
+    // Naming the pages is not enough on its own: the line has to actually say the menu is the thing
+    // pointing at them, not just list two page names that could be mistaken for something else.
+    expect(log).toMatch(/меню/i);
+  });
+
   // The balance test above only ever fails at the plan stage; this is the same wall hit one level
   // down, inside the per-section loop, which needs its own rethrow to stop the run just as promptly.
   it('stops the run when the balance runs out during a section, not just during planning', async () => {

@@ -224,6 +224,16 @@ export async function generateSite({
     }
   }
 
+  // site.json is written first, from the full requested page list, so its menu already links to
+  // every page the owner asked for — including any a stopped or partly-failed run never got to.
+  // The menu is deliberately never pruned back to what actually exists: the list is the owner's, and
+  // re-running the same command fills the gap, which a pruned-then-restored menu would only get in
+  // the way of. So the only thing left to do here is say, once, which links do not resolve yet.
+  const missingPages = pages.filter((page) => !existsSync(join(siteDir, `${page}.json`)));
+  if (missingPages.length > 0) {
+    log(`Тексты: меню ведёт на страницы без файла (${missingPages.join(', ')}) — заработают, когда прогон будет доведён до конца`);
+  }
+
   // site.json is written once, alongside the pages, but it is the frame, not a page itself — the
   // owner reading this line wants to know how many pages a run produced, and a site with zero pages
   // must never read back as "страниц 1".
