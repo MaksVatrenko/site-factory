@@ -1685,10 +1685,11 @@ describe('faqSchema', () => {
 // `enum` with a single value, not `const`: enum is on the documented list of keywords strict mode
 // supports, and const is not. One less thing to be surprised by.
 const kind = (name) => ({ type: 'string', enum: [name] });
-const strings = { type: 'array', items: string };
 
 // Exported: site-json.mjs builds a schema of its own and must obey the same two rules of strict
 // mode. Two copies would be two places to get them wrong.
+export const string = { type: 'string' };
+
 export const object = (properties) => ({
   type: 'object',
   properties,
@@ -1696,7 +1697,9 @@ export const object = (properties) => ({
   additionalProperties: false,
 });
 
-export const string = { type: 'string' };
+// Declared after `string` because it uses it. Two top-level consts in the wrong order fail at
+// import time, not at first call, so the whole module would refuse to load.
+const strings = { type: 'array', items: string };
 
 const ELEMENT_DEFS = {
   // Only h3. A page has exactly one h1, and every section's own h2 is written by the factory from
