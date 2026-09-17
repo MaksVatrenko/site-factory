@@ -1965,12 +1965,12 @@ export function buildInstructions({ rules, templateText, examples }) {
   return parts.join('\n\n');
 }
 
-function countBy(values) {
-  const counts = new Map();
-  for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1);
-  return counts;
-}
-
+// There is deliberately no check for a section having FEWER elements than the template's minimum.
+// `title` in a section's `elements` means an optional h3 subheading; the section's own heading is a
+// different channel entirely (the plan's `heading` field, always present). Comparing the two would
+// misfire on every well-formed plan that simply does not add a subheading — including the example in
+// the design document. Shortfalls are not among the trims the design asks for, either.
+//
 // The schema already pins the number of sections and questions. What it cannot express is a budget
 // spread across the page (pictures) or a per-kind limit inside one list (at most one table), so
 // those are enforced here, by trimming rather than by refusing: a plan that is slightly too rich is
@@ -1982,7 +1982,12 @@ export function trimPlan(plan, { budgets, pages, sectionContent }) {
   let imagesLeft = budgets.images;
   let heroImage = plan.heroImage ?? null;
   if (heroImage && imagesLeft > 0) imagesLeft -= 1;
-  else if (heroImage) heroImage = null;
+  else if (heroImage) {
+    // Reported like every other trim: a picture that quietly vanishes is the one the owner asks
+    // about later, having no way to tell it from a picture the model never asked for.
+    warnings.push(`картинка «${heroImage}» в шапке сверх бюджета — убрана`);
+    heroImage = null;
+  }
 
   const sections = plan.sections.map((section) => {
     let image = section.image ?? null;
@@ -2012,12 +2017,6 @@ export function trimPlan(plan, { budgets, pages, sectionContent }) {
 
     return { ...section, image, links, elements };
   });
-
-  for (const [element, [min]] of Object.entries(sectionContent)) {
-    if (min === 0) continue;
-    const short = sections.filter((section) => (countBy(section.elements).get(element) ?? 0) < min);
-    if (short.length > 0) warnings.push(`в ${short.length} разделах меньше ${min} элементов ${element}`);
-  }
 
   return { plan: { ...plan, heroImage, sections }, warnings };
 }
