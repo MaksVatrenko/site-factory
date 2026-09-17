@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { askJson, costOf, OpenAiError, RETRY_DELAYS_MS } from '../factory/texts/openai.mjs';
+import { askJson, costOf, OpenAiError, RETRY_DELAYS_MS, RETRY_JITTER_MS } from '../factory/texts/openai.mjs';
 import { answer, failed, refused, truncated } from './helpers/openai.mjs';
 
 const SENTINEL = 'sentinel-openai-key-client-8b4e';
@@ -123,6 +123,26 @@ describe('askJson', () => {
     const result = await ask({}, { fetchFn });
     expect(calls).toBe(3);
     expect(result.data).toEqual({ headline: 'at last' });
+  });
+
+  // Spec §12: "нарастающей паузой и разбросом" — a spread on top of the fixed schedule, so several
+  // pages retrying at once do not all wake up on the same tick. The exact number is random, so this
+  // checks the band the spread is meant to stay inside, not one fixed value.
+  it('adds a small random spread on top of the fixed retry delays', async () => {
+    const waited = [];
+    let calls = 0;
+    const fetchFn = async () => {
+      calls += 1;
+      if (calls <= RETRY_DELAYS_MS.length) return failed(500, { message: 'down' });
+      return answer({ headline: 'ok' });
+    };
+    await ask({}, { fetchFn, sleep: async (ms) => waited.push(ms) });
+    expect(waited).toHaveLength(RETRY_DELAYS_MS.length);
+    waited.forEach((ms, index) => {
+      const floor = RETRY_DELAYS_MS[index];
+      expect(ms).toBeGreaterThanOrEqual(floor);
+      expect(ms).toBeLessThanOrEqual(floor + RETRY_JITTER_MS);
+    });
   });
 
   it('waits at least as long as Retry-After asks', async () => {

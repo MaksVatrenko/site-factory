@@ -4,6 +4,10 @@
 // both are reported by the API rather than guessed at: the model refusing, and the answer running
 // into the output limit. Everything else here is transport.
 export const RETRY_DELAYS_MS = Object.freeze([1000, 2000, 4000]);
+// A small random spread added on top of the fixed schedule, never instead of it: several pages
+// retrying at the same moment would otherwise all wake up on the same tick and hit OpenAI together
+// again. RETRY_DELAYS_MS (and Retry-After, when OpenAI names one) stay the floor — this only adds.
+export const RETRY_JITTER_MS = 300;
 const DEFAULT_TIMEOUT_MS = 120_000;
 
 // `kind` is what the caller acts on. 'auth' and 'balance' mean every further request fails the same
@@ -130,7 +134,10 @@ export async function askJson(
   let lastProblem = '';
   let lastRetryAfter = 0;
   for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt += 1) {
-    if (attempt > 0) await sleep(Math.max(RETRY_DELAYS_MS[attempt - 1], lastRetryAfter));
+    if (attempt > 0) {
+      const floor = Math.max(RETRY_DELAYS_MS[attempt - 1], lastRetryAfter);
+      await sleep(floor + Math.random() * RETRY_JITTER_MS);
+    }
 
     let response;
     try {
