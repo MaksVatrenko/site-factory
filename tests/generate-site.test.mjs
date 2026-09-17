@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { generateSite } from '../factory/texts/generate-site.mjs';
+import { truncated } from './helpers/openai.mjs';
 
 const SENTINEL = 'sentinel-openai-key-site-run-6e12';
 const CONFIG = {
@@ -41,12 +42,13 @@ function reply(data) {
 }
 
 // Answers by schema name, which is how the three call types tell themselves apart.
-function fakeOpenAi({ failPlanFor = '' } = {}) {
+function fakeOpenAi({ failPlanFor = '', failFaq = false } = {}) {
   const asked = [];
   const fetchFn = async (_url, init) => {
     const body = JSON.parse(init.body);
     const name = body.text.format.name;
     asked.push(name);
+    if (name === 'faq_answers' && failFaq) return truncated();
     if (name === 'site_frame') {
       const size = body.text.format.schema.properties.navLabels.minItems;
       return reply({
@@ -93,7 +95,7 @@ const run = (dir, overrides = {}) => {
 describe('generateSite', () => {
   it('writes a page file per page, plus site.json', async () => {
     const dir = siteDir();
-    const { summary } = await run(dir, fakeOpenAi());
+    const { summary, lines } = await run(dir, fakeOpenAi());
     expect(summary.written.sort()).toEqual(['casino.json', 'home.json', 'site.json']);
     expect(existsSync(join(dir, 'home.json'))).toBe(true);
     const page = JSON.parse(readFileSync(join(dir, 'casino.json'), 'utf8'));
@@ -101,6 +103,8 @@ describe('generateSite', () => {
     expect(page.blocks.at(-1).type).toBe('faq');
     const site = JSON.parse(readFileSync(join(dir, 'site.json'), 'utf8'));
     expect(site.nav).toEqual([{ label: 'Page 1', href: '/casino' }]);
+    // Two pages were written (home, casino) — site.json is the frame, not a third page.
+    expect(lines.join('\n')).toContain('страниц 2');
   });
 
   it('takes the language from the geo when the form left it empty', async () => {
@@ -143,6 +147,21 @@ describe('generateSite', () => {
     expect(summary.cost).toBeGreaterThan(0);
   });
 
+  // The FAQ request sits inside the same page-level try as every section above it. Unlike the
+  // per-section loop, it used to have no catch of its own, so its failure escaped to the page-level
+  // catch and threw away every section that had already been filled and paid for.
+  it('keeps the page and its paid-for sections when only the FAQ fails', async () => {
+    const dir = siteDir();
+    const { summary, lines } = await run(dir, fakeOpenAi({ failFaq: true }));
+    expect(summary.written).toEqual(expect.arrayContaining(['home.json', 'casino.json', 'site.json']));
+    const page = JSON.parse(readFileSync(join(dir, 'home.json'), 'utf8'));
+    // The sections' prose is the money already spent — proof it was not thrown away with the FAQ.
+    expect(JSON.stringify(page)).toContain('Body text of the section.');
+    const faqBlock = page.blocks.find((block) => block.type === 'faq');
+    expect(faqBlock.content).toHaveLength(1); // just the heading — no question made it in
+    expect(lines.join('\n')).toMatch(/home\.json: FAQ не вышел/);
+  });
+
   it('stops the whole run when the balance is empty, instead of failing page by page', async () => {
     const dir = siteDir();
     let calls = 0;
@@ -167,6 +186,9 @@ describe('generateSite', () => {
       },
     });
     expect(summary.written).toEqual(['site.json']);
+    // Only the frame was written, zero pages — the summary line must say so, not count site.json
+    // as if it were a page.
+    expect(lines.join('\n')).toContain('страниц 0');
     expect(lines.join('\n')).toContain('остановлен');
     // The frame, then one page that failed — never a second attempt at the same wall.
     expect(calls).toBe(2);

@@ -161,15 +161,23 @@ export async function generateSite({
 
       let faq = [];
       if (planned.plan.faq.length > 0) {
-        const answered = await fillFaq(
-          { questions: planned.plan.faq, brand, locale: language, instructions },
-          options,
-        );
-        spent += answered.cost;
-        faq = planned.plan.faq.map((question, index) => ({
-          question,
-          answer: answered.answers[index] ?? '',
-        }));
+        try {
+          const answered = await fillFaq(
+            { questions: planned.plan.faq, brand, locale: language, instructions },
+            options,
+          );
+          spent += answered.cost;
+          faq = planned.plan.faq.map((question, index) => ({
+            question,
+            answer: answered.answers[index] ?? '',
+          }));
+        } catch (error) {
+          // Same reasoning as the section loop above: auth/balance fail every request left the same
+          // way, so those stop the run. Anything else means only the FAQ is missing — the sections
+          // above already paid for their prose, and a page without FAQ beats no page at all.
+          if (error?.kind === 'auth' || error?.kind === 'balance') throw error;
+          log(`Тексты: ${name}: FAQ не вышел — ${error.message}`);
+        }
       }
 
       const { page: built, warnings } = assemblePage({
@@ -200,6 +208,10 @@ export async function generateSite({
     }
   }
 
-  log(`Тексты: готово, страниц ${summary.written.length}, всего ${formatCost(summary.cost)}`);
+  // site.json is written once, alongside the pages, but it is the frame, not a page itself — the
+  // owner reading this line wants to know how many pages a run produced, and a site with zero pages
+  // must never read back as "страниц 1".
+  const pagesWritten = summary.written.filter((name) => name !== 'site.json').length;
+  log(`Тексты: готово, страниц ${pagesWritten}, всего ${formatCost(summary.cost)}`);
   return summary;
 }
