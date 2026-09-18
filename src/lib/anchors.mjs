@@ -63,19 +63,33 @@ export function linkAnchors(page) {
     block.props.anchor = anchor;
   });
 
-  // Then hand each contents entry the anchor of the section holding the same position after it.
-  // The contents are the first list in the toc block's content; the pairs are stored beside it as
-  // `tocLinks`, which the toc block draws in that list's place. An entry with no section left to
-  // point at keeps its label and simply is not a link.
+  // Then hand each contents entry the anchor of the block it belongs to. The contents are the
+  // first list in the toc block's content; the pairs are stored beside it as `tocLinks`, which the
+  // toc block draws in that list's place. An entry with no block left to point at keeps its label
+  // and simply is not a link.
+  //
+  // Position alone was enough while the contents listed an unbroken run of sections and every other
+  // headed block came after them. It stops being enough the moment a page puts a headed block the
+  // contents does not name — the "other pages" grid — between two blocks it does: every later
+  // pairing shifts by one, and the entry for the FAQ points at that grid instead. The factory
+  // writes a contents entry and the heading under it from the same plan, so the two are the same
+  // string; matching on it puts each entry back on its own block. A hand-written page whose entries
+  // paraphrase their headings ("Welcome Bonus — No Fluff" over "899OK Welcome Bonus — The Real
+  // Terms") matches nothing and keeps the old behaviour exactly. The search never looks back past a
+  // block an earlier entry already took, so repeated headings stay in their own order.
   for (const [index, block] of blocks.entries()) {
     if (block?.type !== 'toc' || !block.props) continue;
     const targets = blocks.slice(index + 1).filter((candidate) => candidate?.props?.anchor);
     const list = firstOfType(block.props.content, 'list');
     const labels = Array.isArray(list?.items) ? list.items : [];
-    block.props.tocLinks = labels.map((label, position) => ({
-      label: typeof label === 'string' ? label : '',
-      anchor: targets[position]?.props.anchor ?? '',
-    }));
+    let next = 0;
+    block.props.tocLinks = labels.map((label) => {
+      const text = typeof label === 'string' ? label : '';
+      const named = targets.findIndex((candidate, at) => at >= next && headingOf(candidate) === text);
+      const chosen = named === -1 ? next : named;
+      next = chosen + 1;
+      return { label: text, anchor: targets[chosen]?.props.anchor ?? '' };
+    });
   }
 
   return page;

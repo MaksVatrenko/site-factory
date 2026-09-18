@@ -19,6 +19,12 @@ function toc(items, heading) {
   return { type: 'toc', props: { content: [...title, { type: 'list', items }] } };
 }
 
+// The blocks this file had no helper for: a service block and the FAQ, both of which carry a
+// heading of their own without ever being a section.
+function headed(type, text) {
+  return { type, props: { content: [{ type: 'title', tag: 'h2', text }] } };
+}
+
 describe('linkAnchors', () => {
   it('pairs contents entries with the sections that follow, by position', () => {
     const result = linkAnchors(
@@ -124,6 +130,49 @@ describe('linkAnchors', () => {
       ),
     );
     expect(result.blocks[0].props.tocLinks).toEqual([{ label: 'Only', anchor: 'target' }]);
+  });
+
+  it('pairs a contents entry with the block it names, past a service block in between', () => {
+    // The page the factory builds once layouts exist: the contents names the FAQ as well as the
+    // sections, and the "other pages" grid — which carries a heading of its own — sits between them.
+    // Pairing purely by position hands the FAQ entry that grid's anchor.
+    const result = linkAnchors(
+      page(
+        toc(['Раздел А', 'Раздел Б', 'Частые вопросы'], 'Содержание'),
+        section('Раздел А'),
+        section('Раздел Б'),
+        headed('links', 'Другие страницы'),
+        headed('faq', 'Частые вопросы'),
+      ),
+    );
+    expect(result.blocks[0].props.tocLinks.map((entry) => entry.anchor)).toEqual([
+      'раздел-а',
+      'раздел-б',
+      'частые-вопросы',
+    ]);
+  });
+
+  it('still falls back to position when no entry names its block', () => {
+    // The guarantee for hand-written pages (data/sites/899ok): entries there paraphrase their
+    // headings, match nothing, and must still land on the sections in order.
+    const result = linkAnchors(
+      page(
+        toc(['Про бонус', 'Про вывод']),
+        section('899OK Welcome Bonus — The Real Terms'),
+        section('Withdrawals, Step by Step'),
+      ),
+    );
+    expect(result.blocks[0].props.tocLinks.map((entry) => entry.anchor)).toEqual([
+      's-899ok-welcome-bonus-the-real-terms',
+      'withdrawals-step-by-step',
+    ]);
+  });
+
+  it('never pairs an entry with a block an earlier entry already took', () => {
+    // A match never runs backwards, so two sections sharing a heading stay in their own order.
+    const result = linkAnchors(page(toc(['Бонусы', 'Бонусы']), section('Бонусы'), section('Бонусы')));
+    const anchors = result.blocks[0].props.tocLinks.map((entry) => entry.anchor);
+    expect(new Set(anchors).size).toBe(2);
   });
 
   it('survives malformed input', () => {
