@@ -56,20 +56,21 @@ function slugifyImageName(raw) {
 // actual logo image in the middle of a section, with no warning anywhere. Guarding here avoids both.
 const RESERVED_IMAGE_NAMES = new Set(['logo', 'logo-square']);
 
-// The schema already pins the number of sections and questions. What it cannot express is a budget
-// spread across the page (pictures) or a per-kind limit inside one list (at most one table), so
-// those are enforced here, by trimming rather than by refusing: a plan that is slightly too rich is
-// still a good plan once the extras are taken off. Trimming only ever removes — it cannot manufacture
-// a missing element out of nothing — so there is no matching check for too few; every removal is
-// still written to `warnings` so the run's log says what happened.
-export function trimPlan(plan, { budgets, pages, page, sectionContent }) {
+// The schema already pins the number of sections, questions and pictures. What it cannot express is
+// a per-kind limit inside one list (at most one table), a picture name that has to look like a file
+// name, or a link that has to name a real page — so those are enforced here, by trimming rather
+// than by refusing: a plan that is slightly too rich is still a good plan once the extras are taken
+// off. Trimming only ever removes — it cannot manufacture a missing element out of nothing — so
+// there is no matching check for too few; every removal is written to `warnings` so the run's log
+// says what happened.
+export function trimPlan(plan, { links, pages, page, sectionContent, imageLabels = [] }) {
   const warnings = [];
 
-  let imagesLeft = budgets.images;
-
-  // Normalises a picture name and only then spends the page's picture budget — in that order, so a
-  // name that turns out to be unusable or reserved for the logo never eats a slot that a later,
-  // real picture on the same page could have used instead.
+  // No budget left to spend: a picture exists because a block carries one by its nature, and the
+  // schema already pinned how many names come back. All that is left is whether a name is usable.
+  // A name that is not leaves its block without a picture — inventing one instead would put a made-
+  // up name into images.json and get it drawn, which is worse than a block with no picture.
+  const taken = new Set();
   const claimImage = (raw, where) => {
     if (!raw) return null;
     const slug = slugifyImageName(raw);
@@ -81,26 +82,27 @@ export function trimPlan(plan, { budgets, pages, page, sectionContent }) {
       warnings.push(`картинка «${raw}» ${where} — имя «${slug}» занято логотипом — убрана`);
       return null;
     }
-    if (imagesLeft <= 0) {
-      warnings.push(`картинка «${slug}» ${where} сверх бюджета — убрана`);
+    // Two blocks of one page naming one picture reads as a fault of the factory, not as a choice:
+    // the same image drawn twice on the way down the page. The first keeps the name.
+    if (taken.has(slug)) {
+      warnings.push(`картинка «${slug}» ${where} уже есть выше на странице — убрана`);
       return null;
     }
-    imagesLeft -= 1;
+    taken.add(slug);
     return slug;
   };
 
-  const heroImage = claimImage(plan.heroImage ?? null, 'в шапке');
+  const images = (plan.images ?? []).map((raw, index) =>
+    claimImage(raw, `для блока «${imageLabels[index] ?? index + 1}»`),
+  );
 
-  // Two budgets, same reasoning as pictures above: a page that came back too rich in links is still
-  // a good page once the excess is gone. `links` is optional on `budgets` — a caller that does not
-  // pass it (any template with no `links` entry in its content.json) gets no cap at all, rather than
-  // the harshest possible one.
-  const maxLinksPerSection = budgets.links?.section?.[1] ?? Infinity;
-  let pageLinksLeft = budgets.links?.page?.[1] ?? Infinity;
+  // Two budgets, which do survive: they exist to stop link spam, not to ration anything the layout
+  // decides. `links` is optional — a caller that does not pass it (any theme with no `links` entry
+  // in its blocks.json) gets no cap at all, rather than the harshest possible one.
+  const maxLinksPerSection = links?.perBlock?.[1] ?? Infinity;
+  let pageLinksLeft = links?.perPage?.[1] ?? Infinity;
 
   const sections = plan.sections.map((section) => {
-    const image = claimImage(section.image ?? null, `в разделе «${section.heading}»`);
-
     // A link that recognisably names a page of this site is repaired to that page's canonical
     // address rather than discarded — the brief hands the model page names, not a spelling rule
     // (see planPage below), so a bare name or an obvious near-miss is the model doing the expected
@@ -139,19 +141,11 @@ export function trimPlan(plan, { budgets, pages, page, sectionContent }) {
       })
       .filter(Boolean);
 
-    // An `image` element left over once its picture is gone — trimmed above for the budget, or
-    // simply never named one to begin with — has nothing left to point at. Left in, fillSection
-    // still asks the model to write it, the model invents a name, and assemble.mjs accepts that
-    // name whenever it happens to match some other picture the plan did declare (the hero's, most
-    // often — it is rarely trimmed, being first in line for the budget). That is the budget being
-    // satisfied on paper and exceeded in the file, so this element is dropped in the same pass that
-    // already knows whether `image` above is null, before the per-kind cap below ever sees it.
+    // There is no `image` element any more — loadTemplateBlocks refuses one outright, so no theme
+    // can offer the model a picture to place. The only cap left is per kind: at most one table, at
+    // most one card set, whatever blocks.json allows a block of this sort to hold.
     const used = new Map();
     const elements = section.elements.filter((element) => {
-      if (element === 'image' && !image) {
-        warnings.push(`элемент image в разделе «${section.heading}» без картинки — убран`);
-        return false;
-      }
       const max = sectionContent[element]?.[1] ?? 0;
       const seen = used.get(element) ?? 0;
       if (seen >= max) {
@@ -162,14 +156,14 @@ export function trimPlan(plan, { budgets, pages, page, sectionContent }) {
       return true;
     });
 
-    return { ...section, image, links, elements };
+    return { ...section, links, elements };
   });
 
-  return { plan: { ...plan, heroImage, sections }, warnings };
+  return { plan: { ...plan, images, sections }, warnings };
 }
 
 export async function planPage(
-  { page, pages, brand, geo, locale, budgets, sectionContent, instructions },
+  { page, pages, brand, geo, locale, shape, links, sectionContent, instructions },
   options,
 ) {
   // The elements a plan may offer for a section come from sectionContent itself, never from the
@@ -194,10 +188,23 @@ export async function planPage(
   const addresses = pages
     .filter((candidate) => pageAddress(candidate) !== pageAddress(page))
     .map(pageAddress);
-  const maxPageLinks = budgets.links?.page?.[1];
-  const budgetLine = Number.isFinite(maxPageLinks)
-    ? `This page has ${budgets.sections} sections, ${budgets.faq} FAQ questions, at most ${budgets.images} pictures and at most ${maxPageLinks} internal links.`
-    : `This page has ${budgets.sections} sections, ${budgets.faq} FAQ questions and at most ${budgets.images} pictures.`;
+  const maxPageLinks = links?.perPage?.[1];
+  // The layout decided the composition, so the brief states it rather than asking for it. A range
+  // left over is one the layout did not pin down and the model is free to choose inside.
+  const count = ([min, max]) => (min === max ? String(min) : `${min}–${max}`);
+  const shapeLine = Number.isFinite(maxPageLinks)
+    ? `This page has ${shape.sections} sections and ${count(shape.faq)} FAQ questions, and at most ${maxPageLinks} internal links.`
+    : `This page has ${shape.sections} sections and ${count(shape.faq)} FAQ questions.`;
+  // Where the pictures go is settled: each one belongs to a block that carries one by nature. The
+  // model is asked only to name them, and told which block each name is for, so a name can mean
+  // something — "hero" says nothing about a picture, "slot-reels" says what to draw.
+  const pictureLines = shape.imageLabels.length > 0
+    ? [
+        'Pictures on this page, in this order. Name each with a short hyphenated slug such as',
+        '"live-dealer-table" — never a sentence:',
+        ...shape.imageLabels.map((label, index) => `${index + 1}. ${label}`),
+      ]
+    : [];
   const brief = [
     `Brand: ${brand}`,
     `Geo: ${geo}`,
@@ -205,10 +212,10 @@ export async function planPage(
     `Page: ${page}`,
     `Pages on this site: ${addresses.join(', ')}`,
     'A link to another page of this site must use one of those exact addresses.',
-    budgetLine,
-    'Plan the page: a heading and a one-line brief for each section, which elements suit it, where a',
-    'picture belongs and which other pages are worth linking to. Do not write the body text yet.',
-    'Name every picture with a short hyphenated slug, such as "live-dealer-table" — never a sentence.',
+    shapeLine,
+    ...pictureLines,
+    'Plan the page: a heading and a one-line brief for each section, which elements suit it and',
+    'which other pages are worth linking to. Do not write the body text yet.',
   ].join('\n');
 
   const { data, cost, usage } = await askJson(
@@ -216,7 +223,7 @@ export async function planPage(
       instructions,
       input: brief,
       schemaName: 'page_plan',
-      schema: planSchema(budgets, elements),
+      schema: planSchema(shape, elements),
       // One cache per call type: the schema is part of the cached prefix, and plan and fill have
       // different schemas, so they cannot share an entry anyway.
       cacheKey: 'site-factory-plan',
@@ -224,6 +231,12 @@ export async function planPage(
     options,
   );
 
-  const { plan, warnings } = trimPlan(data, { budgets, pages, page, sectionContent });
+  const { plan, warnings } = trimPlan(data, {
+    links,
+    pages,
+    page,
+    sectionContent,
+    imageLabels: shape.imageLabels,
+  });
   return { plan, warnings, cost, usage };
 }

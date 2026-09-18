@@ -50,9 +50,11 @@ const ELEMENT_DEFS = {
 
 export const ELEMENT_KINDS = Object.freeze(Object.keys(ELEMENT_DEFS));
 
-// The counts come from the skeleton, which has already rolled them, so minItems and maxItems are
-// the same number: the model cannot return eight sections when the page is meant to have nine.
-export function planSchema({ sections, faq }, elements) {
+// The counts come from the layout (see layouts.mjs's planShape), so the model cannot return eight
+// sections when the page is meant to have nine. Where the layout left a range — what it did not
+// pin down — the range reaches the schema as minItems/maxItems and the model chooses inside it, by
+// the subject of the page. `sections` is always exact: a layout says how many blocks it has.
+export function planSchema({ sections, faq, heroText, images }, elements) {
   // Same guard as sectionSchema, for the same reason: an empty `known` would leave every section's
   // `elements` field an `enum: []` — a schema nothing can ever satisfy, so the request would be
   // paid for and fail every single time.
@@ -64,8 +66,12 @@ export function planSchema({ sections, faq }, elements) {
     title: { type: 'string' },
     description: { type: 'string' },
     h1: { type: 'string' },
-    heroText: strings,
-    heroImage: { type: ['string', 'null'] },
+    heroText: { type: 'array', minItems: heroText[0], maxItems: heroText[1], items: string },
+    // One name per picture the layout has, in the layout's own order — a plain list rather than a
+    // field on each block, because a picture belongs to a place and places are what a layout lists.
+    // Nothing here is nullable: a block with a picture has one. There is no budget to overshoot, no
+    // optional field to leave null, and no way to name a picture for a block that has none.
+    images: { type: 'array', minItems: images, maxItems: images, items: string },
     sections: {
       type: 'array',
       minItems: sections,
@@ -74,11 +80,10 @@ export function planSchema({ sections, faq }, elements) {
         heading: { type: 'string' },
         brief: { type: 'string' },
         elements: { type: 'array', items: { type: 'string', enum: known } },
-        image: { type: ['string', 'null'] },
         links: strings,
       }),
     },
-    faq: { type: 'array', minItems: faq, maxItems: faq, items: { type: 'string' } },
+    faq: { type: 'array', minItems: faq[0], maxItems: faq[1], items: { type: 'string' } },
   });
 }
 

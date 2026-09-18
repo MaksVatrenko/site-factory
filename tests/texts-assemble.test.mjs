@@ -12,16 +12,16 @@ const PLAN = {
   description: 'A description of the page.',
   h1: 'Casino guide',
   heroText: ['Opening words.'],
-  heroImage: null,
+  images: [],
   sections: [
-    { heading: 'Payments', brief: '', elements: ['title', 'text'], image: null, links: ['/bonus'] },
-    { heading: 'Games', brief: '', elements: ['title', 'text'], image: 'games-shot', links: [] },
+    { heading: 'Payments', brief: '', elements: ['title', 'text'], links: ['/bonus'] },
+    { heading: 'Games', brief: '', elements: ['title', 'text'], links: [] },
   ],
   faq: ['Is it safe?'],
 };
 const SECTIONS = [
   { heading: 'Payments', items: [{ kind: 'text', text: 'Pay with [the bonus](/bonus) first.' }] },
-  { heading: 'Games', items: [{ kind: 'text', text: 'Many games.' }, { kind: 'image', name: 'games-shot' }] },
+  { heading: 'Games', items: [{ kind: 'text', text: 'Many games.' }] },
 ];
 const FAQ = [{ question: 'Is it safe?', answer: 'Yes.' }];
 
@@ -109,7 +109,7 @@ describe('assemblePage', () => {
   // A picture is placed by the factory now, straight under the heading of the block whose nature
   // carries one. The model chose neither the place nor the count.
   it('puts the picture under the heading of the block whose nature carries it', () => {
-    const { page } = build({ plan: { ...PLAN, heroImage: 'casino-lobby' } });
+    const { page } = build({ plan: { ...PLAN, images: ['casino-lobby'] } });
     const hero = blockOf(page, 'hero');
     expect(hero.content[0]).toEqual({ type: 'title', h1: 'Casino guide' });
     expect(hero.content[1]).toEqual({ image: 'casino-lobby' });
@@ -118,9 +118,28 @@ describe('assemblePage', () => {
   it('gives no picture to a block whose nature has none', () => {
     const { page } = build({
       blocks: [nature('opener', { h1: true }), SECTION],
-      plan: { ...PLAN, heroImage: 'casino-lobby' },
+      plan: { ...PLAN, images: ['casino-lobby'] },
     });
     expect(JSON.stringify(page.blocks[0])).not.toMatch(/casino-lobby/);
+  });
+
+  // The names come back in layout order — planShape counted the picture-bearing blocks over the
+  // whole layout, not over what survived. So a picture-bearing block that gets dropped has to take
+  // its own name out of use and leave the rest where they were. A counter advanced while emitting
+  // would instead shift every later picture up by one, quietly putting one block's picture under
+  // another block's heading, with nothing anywhere saying so.
+  it('keeps each picture with its own block when an earlier one is dropped', () => {
+    const SPLIT = nature('split', { heading: true, image: true, content: { text: [1, 1] } });
+    const { page } = build({
+      // Two picture-bearing blocks: the split comes first, so it owns the first name.
+      blocks: [SPLIT, nature('hero', { h1: true, image: true })],
+      // Nothing filled the split, so it never reaches the page — and its name goes with it.
+      sections: [],
+      plan: { ...PLAN, images: ['split-picture', 'hero-picture'] },
+    });
+    expect(page.blocks.map((block) => block.type)).toEqual(['hero']);
+    expect(page.blocks[0].content).toContainEqual({ image: 'hero-picture' });
+    expect(JSON.stringify(page)).not.toContain('split-picture');
   });
 
   it('says so instead of emitting an empty block it has nothing to fill', () => {
@@ -220,10 +239,17 @@ describe('assemblePage', () => {
     expect(warnings.join(' ')).toContain('never-planned');
   });
 
-  it('keeps the picture the plan did ask for', () => {
-    const { page } = build();
-    const second = page.blocks.filter((block) => block.type === 'section')[1];
-    expect(second.content).toContainEqual({ image: 'games-shot' });
+  it('keeps a card picture the plan did declare', () => {
+    const sections = [
+      {
+        heading: 'Payments',
+        items: [{ kind: 'cards', cards: [{ title: 'C', text: 't', image: 'casino-lobby' }] }],
+      },
+    ];
+    const { page, warnings } = build({ sections, plan: { ...PLAN, images: ['casino-lobby'] } });
+    const first = page.blocks.filter((block) => block.type === 'section')[0];
+    expect(JSON.stringify(first)).toContain('casino-lobby');
+    expect(warnings.join(' ')).not.toContain('casino-lobby');
   });
 
   it('turns every element kind into its own shape', () => {
@@ -246,11 +272,6 @@ describe('assemblePage', () => {
     expect(content[3]).toEqual({ type: 'table', columns: ['A'], rows: [['1'], ['2']] });
     expect(content[4]).toEqual({ type: 'cards', items: [{ title: 'C', text: 'T' }] });
     expect(content[5]).toEqual({ type: 'toggle', title: 'Q', text: 'A' });
-  });
-
-  it('puts the hero picture in when the plan asked for one', () => {
-    const { page } = build({ plan: { ...PLAN, heroImage: 'hero-shot' } });
-    expect(blockOf(page, 'hero').content).toContainEqual({ image: 'hero-shot' });
   });
 
   // Lengths are reported, never enforced: cutting a paragraph mid-sentence is worse than a long

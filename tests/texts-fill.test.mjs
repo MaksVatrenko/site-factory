@@ -34,30 +34,31 @@ describe('fillSection', () => {
     // Without the neighbours, every section drifts into saying the same thing.
     expect(input).toContain('Bonuses');
     expect(input).toContain('Games');
-    // The section heading is the factory's to write, so the plan's first "title" is taken off the
-    // list and only "text" is left to ask for.
-    expect(Object.keys(body.text.format.schema.$defs)).toEqual(['text']);
+    // Every element the plan chose reaches the model. A block's heading used to be subtracted
+    // here, because content.json's "title" meant the heading and the subheading at once; blocks.json
+    // separates them, so a "title" in the plan is now the optional h3 and must not be eaten.
+    expect(Object.keys(body.text.format.schema.$defs)).toEqual(['title', 'text']);
     expect(result.items).toHaveLength(2);
   });
 
-  // Finding 1: the plan is the only place a section's picture name is decided, but fill.mjs never
-  // passed it on — the model was asked for an "image" element with no idea what to call it, so the
-  // name it guessed could never match what assemble.mjs later checks against.
-  it("tells the model the exact name of the picture the plan chose for this section", async () => {
+  // A subheading the plan asked for has to survive all the way to the request. This is the h3 that
+  // never once appeared on a generated page: the plan chose it, and fill.mjs ate it as if it were
+  // the block's own heading, so the model was never asked to write one.
+  it('asks for the subheading the plan chose, instead of mistaking it for the heading', async () => {
     let body;
-    const section = { ...SECTION, elements: ['title', 'text', 'image'], image: 'roulette-table-close-up' };
+    const section = { ...SECTION, elements: ['title', 'text'] };
     await run({ section }, async (_url, init) => {
       body = JSON.parse(init.body);
-      return answer({ items: [{ kind: 'text', text: 'Body.' }, { kind: 'image', name: 'roulette-table-close-up' }] });
+      return answer(ITEMS);
     });
-    const input = String(body.input[0].content);
-    expect(input).toContain('roulette-table-close-up');
+    expect(String(body.input[0].content)).toContain('title, text');
   });
 
-  // The other half of the same fix: inventing a picture the plan never asked for is exactly as
-  // wrong as mangling the name of one it did — so a section with no picture must not be told about
-  // one at all.
-  it('says nothing about a picture when the plan gave this section none', async () => {
+  // A picture belongs to a block by its nature and is placed by the factory, so there is no image
+  // element for the model to write and no name for it to get wrong. Saying anything about one would
+  // only invite it to write something that is then thrown away — which is how a picture nobody
+  // declared used to end up in the middle of a page.
+  it('never mentions a picture to the model at all', async () => {
     let body;
     await run({}, async (_url, init) => {
       body = JSON.parse(init.body);

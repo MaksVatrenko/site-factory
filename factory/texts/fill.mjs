@@ -38,18 +38,13 @@ export async function fillSection(
   { section, siblings, brand, locale, instructions, attempts = DEFAULT_ATTEMPTS },
   options,
 ) {
-  // The section's own heading is written by the factory, from the plan, so that the table of
-  // contents and the heading itself can never disagree. The plan still lists a "title" element,
-  // because the rendered section really does have one — so exactly one is taken off here, leaving
-  // any second one as the subheading the model is meant to write.
-  let headingTaken = false;
-  const wanted = section.elements.filter((element) => {
-    if (element === 'title' && !headingTaken) {
-      headingTaken = true;
-      return false;
-    }
-    return true;
-  });
+  // Every element the plan chose, with nothing taken off. A block's own heading used to have to be
+  // subtracted here, because content.json's "title" meant the heading and the subheading at once
+  // and the plan could not tell them apart. blocks.json separates them: the heading is a nature of
+  // the block, written by the factory from the plan so the contents and the heading can never
+  // disagree, and `title` in a block's content is the optional h3 inside it. Subtracting one now
+  // would eat that h3 — asked for by the plan, never written, never seen.
+  const wanted = section.elements;
 
   const brief = [
     `Brand: ${brand}`,
@@ -57,11 +52,10 @@ export async function fillSection(
     `Section heading: ${section.heading}`,
     `What this section covers: ${section.brief}`,
     `Write these elements, in this order: ${wanted.join(', ')}`,
-    // The plan is the only place a picture's name is chosen — plan.mjs settled it, paid for it, and
-    // budgeted it. Told here verbatim, the model's "image" element can only repeat that exact name;
-    // left unsaid, the model has to invent one, and assemble.mjs then discards it as undeclared. A
-    // section with no picture must stay silent about the topic rather than invite one into existence.
-    section.image ? `This section's picture is already named "${section.image}" — if you write the image element, its name must be exactly that, verbatim.` : '',
+    // Nothing is said about pictures, on purpose. A picture belongs to a block by its nature and is
+    // placed by the factory, so there is no `image` element for the model to write and no name for
+    // it to get wrong. Mentioning one at all would only invite it to write something that is then
+    // thrown away — which is how a picture nobody declared used to end up in the middle of a page.
     section.links.length > 0 ? `Link to these pages from inside the text, using [words](/path): ${section.links.join(', ')}` : '',
     // The neighbours are named but not quoted: enough for the model to stay off their topics,
     // cheap enough to send with every section.

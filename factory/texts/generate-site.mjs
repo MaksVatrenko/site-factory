@@ -155,23 +155,21 @@ export async function generateSite({
     let spent = 0;
     try {
       const pageLayout = resolved[page];
-      const shape = planShape(pageLayout.blocks);
-      // An adapter, and only until plan.mjs learns to read a shape: the old plan schema wants plain
-      // numbers where a layout speaks in ranges, and the old trimPlan spells the two link budgets
-      // section/page where blocks.json now spells them perBlock/perPage. Handing it content.links
-      // unmapped would leave both budgets undefined, which trimPlan reads as no ceiling at all —
-      // links unbounded, silently, for exactly as long as this adapter lives.
-      const budgets = {
-        sections: shape.sections,
-        faq: shape.faq[1],
-        images: shape.images,
-        // The link budgets are not a property of the layout — they exist to stop spam, not to add
-        // it, so every page of every site from this theme gets the same ceiling, straight from
-        // blocks.json.
-        links: { section: content.links.perBlock, page: content.links.perPage },
-      };
       const planned = await planPage(
-        { page, pages, brand, geo, locale: language, budgets, sectionContent, instructions },
+        {
+          page,
+          pages,
+          brand,
+          geo,
+          locale: language,
+          shape: planShape(pageLayout.blocks),
+          // The link budgets are not a property of the layout — they exist to stop spam, not to add
+          // it, so every page of every site from this theme gets the same ceiling, straight from
+          // blocks.json.
+          links: content.links,
+          sectionContent,
+          instructions,
+        },
         options,
       );
       spent += planned.cost;

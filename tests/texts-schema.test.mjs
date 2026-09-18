@@ -27,36 +27,61 @@ function everyObjectIsStrict(node, path = 'schema') {
   return problems;
 }
 
+const SHAPE = { sections: 9, faq: [5, 8], heroText: [1, 2], images: 1 };
+
 describe('planSchema', () => {
-  it('pins the section and faq counts to exactly what the skeleton rolled', () => {
-    const schema = planSchema({ sections: 9, faq: 6 }, ELEMENTS);
+  it('pins the section count to exactly what the layout said', () => {
+    const schema = planSchema(SHAPE, ELEMENTS);
     expect(schema.properties.sections.minItems).toBe(9);
     expect(schema.properties.sections.maxItems).toBe(9);
-    expect(schema.properties.faq.minItems).toBe(6);
-    expect(schema.properties.faq.maxItems).toBe(6);
+  });
+
+  // What the layout did not pin down stays a range, and the model chooses inside it by the subject
+  // of the page. A schema that collapsed every range to one number would take that choice away.
+  it('leaves a range a range, so the model still chooses inside it', () => {
+    const schema = planSchema(SHAPE, ELEMENTS);
+    expect(schema.properties.faq.minItems).toBe(5);
+    expect(schema.properties.faq.maxItems).toBe(8);
+    expect(schema.properties.heroText.minItems).toBe(1);
+    expect(schema.properties.heroText.maxItems).toBe(2);
+  });
+
+  // A picture exists because a block carries one. The plan names each, and cannot name more or
+  // fewer: no budget to overshoot, no optional field to leave null, no name for a block with none.
+  it('asks for exactly one name per picture the layout has', () => {
+    const schema = planSchema({ ...SHAPE, images: 3 }, ELEMENTS);
+    expect(schema.properties.images.minItems).toBe(3);
+    expect(schema.properties.images.maxItems).toBe(3);
+    expect(schema.properties.images.items.type).toBe('string');
+  });
+
+  it('asks for no names at all when the layout has no pictures', () => {
+    const schema = planSchema({ ...SHAPE, images: 0 }, ELEMENTS);
+    expect(schema.properties.images.maxItems).toBe(0);
   });
 
   it('offers only the elements this template can render', () => {
-    const schema = planSchema({ sections: 2, faq: 2 }, ['text', 'list']);
+    const schema = planSchema(SHAPE, ['text', 'list']);
     expect(schema.properties.sections.items.properties.elements.items.enum).toEqual(['text', 'list']);
   });
 
-  // Optional fields cannot be left out in strict mode; they are expressed as "or null" instead.
-  it('lets the hero and a section have no picture, without dropping the field', () => {
-    const schema = planSchema({ sections: 2, faq: 2 }, ELEMENTS);
-    expect(schema.properties.heroImage.type).toEqual(['string', 'null']);
-    expect(schema.properties.sections.items.properties.image.type).toEqual(['string', 'null']);
-    expect(schema.required).toContain('heroImage');
+  // The model used to choose where a picture belonged, section by section. It no longer can: the
+  // field it chose with is gone, and with it the whole class of pictures placed where no block of
+  // the theme was ever meant to hold one.
+  it('no longer lets a section ask for a picture of its own', () => {
+    const schema = planSchema(SHAPE, ELEMENTS);
+    expect(schema.properties.sections.items.properties).not.toHaveProperty('image');
+    expect(schema.properties).not.toHaveProperty('heroImage');
   });
 
   it('is strict everywhere', () => {
-    expect(everyObjectIsStrict(planSchema({ sections: 9, faq: 6 }, ELEMENTS))).toEqual([]);
+    expect(everyObjectIsStrict(planSchema(SHAPE, ELEMENTS))).toEqual([]);
   });
 
   // An empty enum is a schema nothing can ever satisfy — a request that gets paid for and can only
   // ever fail. sectionSchema already refuses to build one; planSchema must refuse the same way.
   it('refuses to build a schema with nothing usable in the whole template', () => {
-    expect(() => planSchema({ sections: 2, faq: 2 }, ['video'])).toThrow(/элемент/);
+    expect(() => planSchema(SHAPE, ['video'])).toThrow(/элемент/);
   });
 });
 

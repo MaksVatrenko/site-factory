@@ -80,10 +80,14 @@ function fakeOpenAi({
       const faq = body.text.format.schema.properties.faq.minItems;
       return reply({
         title: 'T', description: 'D', h1: 'H', heroText: ['Hero.'],
-        // The picture belongs to the block whose nature carries one, which in this theme is the
-        // first screen. A section is never offered one any more, so a fake that put a name there
-        // would be testing a path no theme can reach.
-        heroImage: heroImageName || null,
+        // One name per picture the layout has, read off the schema the way a real model would —
+        // not off what this fake happens to know. A regression that stops the layout's pictures
+        // from reaching the schema then shows up as a missing picture, not as a suspiciously
+        // well-informed fake that names one anyway.
+        images: Array.from(
+          { length: body.text.format.schema.properties.images.minItems },
+          (_, index) => (heroImageName && index === 0 ? heroImageName : `picture-${index + 1}`),
+        ),
         sections: Array.from({ length: sections }, (_, index) => ({
           heading: `Section ${index + 1}`,
           brief: 'b',

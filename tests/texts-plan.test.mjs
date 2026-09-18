@@ -10,11 +10,11 @@ const CONFIG = {
   priceCachedInput: 0.02,
   priceOutput: 1.2,
 };
-const SECTION_CONTENT = { title: [1, 1], text: [2, 6], list: [0, 1], table: [0, 1], image: [0, 1] };
+const SECTION_CONTENT = { title: [0, 1], text: [2, 6], list: [0, 1], table: [0, 1] };
 const PAGES = ['home', 'casino', 'bonus'];
 
 function plannedSection(overrides = {}) {
-  return { heading: 'Payments', brief: 'how to pay', elements: ['text', 'text'], image: null, links: [], ...overrides };
+  return { heading: 'Payments', brief: 'how to pay', elements: ['text', 'text'], links: [], ...overrides };
 }
 
 describe('buildInstructions', () => {
@@ -37,66 +37,37 @@ describe('buildInstructions', () => {
 });
 
 describe('trimPlan', () => {
-  const budgets = { sections: 2, faq: 2, images: 1 };
+  // The two link budgets, in the spelling blocks.json uses. Everything else a plan used to be
+  // trimmed against — how many pictures a page may hold, where they belong — is gone: the layout
+  // settled it, and the schema pinned it, so there is nothing left here to ration.
+  const links = { perBlock: [0, 5], perPage: [0, 10] };
+  const base = { title: 'T', description: 'D', h1: 'H', heroText: ['a'], images: [], faq: ['q1', 'q2'] };
+  const args = { links, pages: PAGES, sectionContent: SECTION_CONTENT, imageLabels: ['hero'] };
 
-  it('keeps a plan that is already inside its budgets, with nothing to say', () => {
-    const plan = {
-      title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
-      sections: [plannedSection(), plannedSection()], faq: ['q1', 'q2'],
-    };
-    const result = trimPlan(plan, { budgets, pages: PAGES, sectionContent: SECTION_CONTENT });
+  it('keeps a plan that is already inside its limits, with nothing to say', () => {
+    const plan = { ...base, sections: [plannedSection(), plannedSection()] };
+    const result = trimPlan(plan, args);
     expect(result.warnings).toEqual([]);
     expect(result.plan.sections).toHaveLength(2);
   });
 
-  it('drops pictures over the page budget, keeping the earliest', () => {
-    const plan = {
-      title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: 'hero-shot',
-      sections: [plannedSection({ image: 'one' }), plannedSection({ image: 'two' })], faq: ['q1', 'q2'],
-    };
-    const result = trimPlan(plan, { budgets, pages: PAGES, sectionContent: SECTION_CONTENT });
-    expect(result.plan.heroImage).toBe('hero-shot');
-    expect(result.plan.sections.map((section) => section.image)).toEqual([null, null]);
-    expect(result.warnings.join(' ')).toMatch(/картин/i);
-  });
-
-  // The hero image is first in line, but it is not exempt: if the budget is already zero it must be
-  // dropped and reported like any other picture, not silently kept or silently removed.
-  it('drops the hero image itself when the budget is already spent', () => {
-    const plan = {
-      title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: 'hero-shot',
-      sections: [plannedSection()], faq: ['q1', 'q2'],
-    };
-    const result = trimPlan(plan, {
-      budgets: { ...budgets, images: 0 },
-      pages: PAGES,
-      sectionContent: SECTION_CONTENT,
-    });
-    expect(result.plan.heroImage).toBeNull();
-    expect(result.warnings.join(' ')).toMatch(/картин/i);
-  });
-
   it('drops a link to a page this site does not have', () => {
-    const plan = {
-      title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
-      sections: [plannedSection({ links: ['/casino', '/nope'] }), plannedSection()], faq: ['q1', 'q2'],
-    };
-    const result = trimPlan(plan, { budgets, pages: PAGES, sectionContent: SECTION_CONTENT });
+    const plan = { ...base, sections: [plannedSection({ links: ['/casino', '/nope'] }), plannedSection()] };
+    const result = trimPlan(plan, args);
     expect(result.plan.sections[0].links).toEqual(['/casino']);
     expect(result.warnings.join(' ')).toContain('/nope');
   });
 
-  // The live-run bug this task exists to fix: slots.json spent five of its eight links pointing
-  // back at /slots. A page's own address, offered back as a link target, must be dropped — not kept
-  // as if it named some other page, and not reported with either of the two existing warnings,
-  // since it is neither unresolvable (links.mjs resolves it fine) nor merely late for the budget.
+  // The live-run bug this check exists for: slots.json spent five of its eight links pointing back
+  // at /slots. A page's own address, offered back as a link target, must be dropped — not kept as
+  // if it named some other page, and not reported with either of the two existing warnings, since
+  // it is neither unresolvable (links.mjs resolves it fine) nor merely late for the budget.
   it('drops a link to the page itself, with its own warning', () => {
     const plan = {
-      title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
+      ...base,
       sections: [plannedSection({ links: ['/casino', '/bonus'] }), plannedSection()],
-      faq: ['q1', 'q2'],
     };
-    const result = trimPlan(plan, { budgets, pages: PAGES, page: 'casino', sectionContent: SECTION_CONTENT });
+    const result = trimPlan(plan, { ...args, page: 'casino' });
     expect(result.plan.sections[0].links).toEqual(['/bonus']);
     expect(result.warnings.join(' ')).toContain('саму страницу');
     expect(result.warnings.join(' ')).not.toContain('никуда');
@@ -104,17 +75,17 @@ describe('trimPlan', () => {
   });
 
   // A self-link must not spend the very budget it exists to protect on its way out — if it did, it
-  // would still be displacing a link to a different page, just silently instead of by name, which is
-  // the same harm the live run had, one step removed.
+  // would still be displacing a link to a different page, just silently instead of by name, which
+  // is the same harm the live run had, one step removed.
   it('does not spend the link budget on a link to the page itself', () => {
-    const withLinks = { ...budgets, links: { section: [0, 2], page: [0, 2] } };
     const plan = {
-      title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
+      ...base,
       sections: [plannedSection({ links: ['/casino', '/casino', '/bonus', 'home'] })],
-      faq: ['q1', 'q2'],
     };
     const result = trimPlan(plan, {
-      budgets: withLinks, pages: PAGES, page: 'casino', sectionContent: SECTION_CONTENT,
+      ...args,
+      links: { perBlock: [0, 2], perPage: [0, 2] },
+      page: 'casino',
     });
     expect(result.plan.sections[0].links).toEqual(['/bonus', '/']);
   });
@@ -124,11 +95,10 @@ describe('trimPlan', () => {
   // is caught under either spelling, not just the one the model happened to write this time.
   it('drops both spellings of home linking to itself, when the page being planned is home', () => {
     const plan = {
-      title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
+      ...base,
       sections: [plannedSection({ links: ['home', '/home', '/casino'] }), plannedSection()],
-      faq: ['q1', 'q2'],
     };
-    const result = trimPlan(plan, { budgets, pages: PAGES, page: 'home', sectionContent: SECTION_CONTENT });
+    const result = trimPlan(plan, { ...args, page: 'home' });
     expect(result.plan.sections[0].links).toEqual(['/casino']);
     expect(result.warnings.filter((warning) => warning.includes('саму страницу'))).toHaveLength(2);
   });
@@ -139,41 +109,36 @@ describe('trimPlan', () => {
   // address, not thrown away like a link to a page that genuinely does not exist.
   it('repairs a link spelled as a bare page name or a near-miss address, instead of dropping it', () => {
     const plan = {
-      title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
+      ...base,
       sections: [plannedSection({ links: ['home', '/home', 'casino', '/casino/'] }), plannedSection()],
-      faq: ['q1', 'q2'],
     };
-    const result = trimPlan(plan, { budgets, pages: PAGES, sectionContent: SECTION_CONTENT });
+    const result = trimPlan(plan, args);
     expect(result.plan.sections[0].links).toEqual(['/', '/', '/casino', '/casino']);
     expect(result.warnings).toEqual([]);
   });
 
-  it('trims links past the per-section budget, keeping the earliest', () => {
-    const withLinks = { ...budgets, links: { section: [0, 2], page: [0, 10] } };
+  it('trims links past the per-block budget, keeping the earliest', () => {
     const plan = {
-      title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
+      ...base,
       sections: [plannedSection({ links: ['/casino', '/bonus', 'home'] }), plannedSection()],
-      faq: ['q1', 'q2'],
     };
-    const result = trimPlan(plan, { budgets: withLinks, pages: PAGES, sectionContent: SECTION_CONTENT });
+    const result = trimPlan(plan, { ...args, links: { perBlock: [0, 2], perPage: [0, 10] } });
     expect(result.plan.sections[0].links).toEqual(['/casino', '/bonus']);
     expect(result.warnings.join(' ')).toContain('сверх бюджета ссылок на раздел');
   });
 
   // Same budget, spread across the whole page rather than one section: the second section's own
-  // per-section allowance is nowhere near spent, but the page as a whole is, so it is the later
+  // per-block allowance is nowhere near spent, but the page as a whole is, so it is the later
   // section that gives way — a link near the top of the page is worth more than one near the bottom.
   it('trims links past the per-page budget, spending it on the earliest sections first', () => {
-    const withLinks = { ...budgets, links: { section: [0, 5], page: [0, 3] } };
     const plan = {
-      title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
+      ...base,
       sections: [
         plannedSection({ heading: 'First', links: ['/casino', '/bonus'] }),
         plannedSection({ heading: 'Second', links: ['/casino', '/bonus'] }),
       ],
-      faq: ['q1', 'q2'],
     };
-    const result = trimPlan(plan, { budgets: withLinks, pages: PAGES, sectionContent: SECTION_CONTENT });
+    const result = trimPlan(plan, { ...args, links: { perBlock: [0, 5], perPage: [0, 3] } });
     expect(result.plan.sections[0].links).toEqual(['/casino', '/bonus']);
     expect(result.plan.sections[1].links).toEqual(['/casino']);
     expect(result.warnings.join(' ')).toContain('сверх бюджета ссылок на страницу');
@@ -181,90 +146,40 @@ describe('trimPlan', () => {
 
   it('drops elements asked for more often than the template allows', () => {
     const plan = {
-      title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
+      ...base,
       sections: [plannedSection({ elements: ['text', 'text', 'list', 'list', 'list'] }), plannedSection()],
-      faq: ['q1', 'q2'],
     };
-    const result = trimPlan(plan, { budgets, pages: PAGES, sectionContent: SECTION_CONTENT });
+    const result = trimPlan(plan, args);
     expect(result.plan.sections[0].elements.filter((e) => e === 'list')).toHaveLength(1);
     expect(result.warnings.join(' ')).toContain('list');
   });
 
-  // Finding: trimPlan nulled a section's picture when the page's budget ran out, but left `image`
-  // sitting in that section's own `elements` list. fillSection (factory/texts/fill.mjs) builds its
-  // request straight from `elements`, so it still asked the model to write an `image` element — with
-  // no name to give it, since fill.mjs's brief only ever names a picture when trimPlan left one in
-  // place. The model then had to invent a name, and assemble.mjs accepts any invented name that
-  // happens to match some other picture the plan did declare (the hero's, typically) — the budget
-  // satisfied on paper, exceeded in the file. Mutation-proven: see live-fixes-report.md.
-  it("drops a trimmed section picture's own image element along with it", () => {
-    const plan = {
-      title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: 'hero-shot',
-      sections: [plannedSection({ image: 'over-budget-pic', elements: ['text', 'image'] })],
-      faq: ['q1', 'q2'],
-    };
-    // The page's one picture slot is spent by the hero, so the section's own image is over budget.
-    const result = trimPlan(plan, { budgets: { ...budgets, images: 1 }, pages: PAGES, sectionContent: SECTION_CONTENT });
-    expect(result.plan.sections[0].image).toBeNull();
-    expect(result.plan.sections[0].elements).not.toContain('image');
-    expect(result.warnings.join(' ')).toContain('без картинки');
-  });
-
-  // The other half: a section that never had a picture name at all, but still asked for the
-  // `image` element — there is nothing for fillSection to name it after, so it must go too, even
-  // though nothing here was ever trimmed for budget (no "сверх бюджета" warning fires).
-  it('drops an image element the plan never gave a picture name to', () => {
-    const plan = {
-      title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
-      sections: [plannedSection({ image: null, elements: ['text', 'image'] })],
-      faq: ['q1', 'q2'],
-    };
-    const result = trimPlan(plan, { budgets, pages: PAGES, sectionContent: SECTION_CONTENT });
-    expect(result.plan.sections[0].image).toBeNull();
-    expect(result.plan.sections[0].elements).not.toContain('image');
-    expect(result.warnings.join(' ')).toContain('без картинки');
-    expect(result.warnings.join(' ')).not.toContain('сверх бюджета');
-  });
-
-  // Keeps the two drops above honest: a section that really does have a picture must keep its
-  // image element exactly as the model wrote it.
-  it('keeps the image element when the section really does have a picture', () => {
-    const plan = {
-      title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
-      sections: [plannedSection({ image: 'a-real-picture', elements: ['text', 'image'] })],
-      faq: ['q1', 'q2'],
-    };
-    const result = trimPlan(plan, { budgets, pages: PAGES, sectionContent: SECTION_CONTENT });
-    expect(result.plan.sections[0].image).toBe('a-real-picture');
-    expect(result.plan.sections[0].elements).toContain('image');
-  });
-
   // Finding: games.json's picture came back named with a whole sentence, which becomes both a key
-  // in images.json and the file name the picture stage writes. Both the hero's name and a section's
-  // are slugged: lower case, spaces/underscores to hyphens, anything else dropped, repeated hyphens
-  // collapsed, trimmed, capped.
-  it('turns a sentence-shaped picture name into a short slug, for both the hero and a section', () => {
+  // in images.json and the file name the picture stage writes. Every name is slugged: lower case,
+  // spaces/underscores to hyphens, anything else dropped, repeated hyphens collapsed, capped.
+  it('turns a sentence-shaped picture name into a short slug', () => {
     const plan = {
-      title: 'T', description: 'D', h1: 'H', heroText: ['a'],
-      heroImage: 'A clean illustration of a game lobby with category tabs and card-style game tiles.',
-      sections: [plannedSection({ image: 'Cozy_Live Dealer   Table!!' })],
-      faq: ['q1', 'q2'],
+      ...base,
+      images: [
+        'A clean illustration of a game lobby with category tabs and card-style game tiles.',
+        'Cozy_Live Dealer   Table!!',
+      ],
+      sections: [plannedSection()],
     };
-    const result = trimPlan(plan, { budgets: { ...budgets, images: 2 }, pages: PAGES, sectionContent: SECTION_CONTENT });
-    expect(result.plan.heroImage).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
-    expect(result.plan.heroImage.length).toBeLessThanOrEqual(60);
-    expect(result.plan.sections[0].image).toBe('cozy-live-dealer-table');
+    const result = trimPlan(plan, { ...args, imageLabels: ['hero', 'split 1'] });
+    expect(result.plan.images[0]).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+    expect(result.plan.images[0].length).toBeLessThanOrEqual(60);
+    expect(result.plan.images[1]).toBe('cozy-live-dealer-table');
     // Normalising successfully is not itself something to warn about.
     expect(result.warnings).toEqual([]);
   });
 
-  it('drops a picture name with nothing usable left after stripping, and warns', () => {
-    const plan = {
-      title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: '!!! ??? ---',
-      sections: [plannedSection()], faq: ['q1', 'q2'],
-    };
-    const result = trimPlan(plan, { budgets, pages: PAGES, sectionContent: SECTION_CONTENT });
-    expect(result.plan.heroImage).toBeNull();
+  // The block still exists; it simply has no picture. Nothing may invent a name to fill the hole —
+  // an invented name reaches images.json and gets drawn, which is worse than a block without one.
+  it('leaves a hole rather than a made-up name when nothing usable came back', () => {
+    const plan = { ...base, images: ['!!! ??? ---'], sections: [plannedSection()] };
+    const result = trimPlan(plan, args);
+    expect(result.plan.images).toEqual([null]);
     expect(result.warnings.join(' ')).toContain('!!! ??? ---');
   });
 
@@ -272,17 +187,30 @@ describe('trimPlan', () => {
   // comment on RESERVED_IMAGE_NAMES for why they are duplicated here rather than imported). A slug
   // landing on either would otherwise either be dropped downstream with a confusing "reserved for
   // the logo" log line, or — on a site that already has its logo — silently reuse that actual logo
-  // image inside a content section. Guarded here, the same way an unusable or over-budget name is.
+  // image inside a content block. Guarded here, the same way an unusable name is.
   it("drops a picture name that collides with the logo's reserved names, and warns", () => {
-    const plan = {
-      title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: 'Logo',
-      sections: [plannedSection({ image: 'Logo Square' })],
-      faq: ['q1', 'q2'],
-    };
-    const result = trimPlan(plan, { budgets: { ...budgets, images: 5 }, pages: PAGES, sectionContent: SECTION_CONTENT });
-    expect(result.plan.heroImage).toBeNull();
-    expect(result.plan.sections[0].image).toBeNull();
+    const plan = { ...base, images: ['Logo', 'Logo Square'], sections: [plannedSection()] };
+    const result = trimPlan(plan, { ...args, imageLabels: ['hero', 'split 1'] });
+    expect(result.plan.images).toEqual([null, null]);
     expect(result.warnings.join(' ')).toContain('логотип');
+  });
+
+  // Two blocks of one page showing one and the same picture reads as a fault of the factory, not
+  // as a choice: the same image drawn twice on the way down the page. The first keeps the name, the
+  // later block goes without, and the log names which block lost it.
+  it('drops a repeated picture name, keeping the first, and warns by block', () => {
+    const plan = { ...base, images: ['lobby', 'Lobby'], sections: [plannedSection()] };
+    const result = trimPlan(plan, { ...args, imageLabels: ['hero', 'split 1'] });
+    expect(result.plan.images).toEqual(['lobby', null]);
+    expect(result.warnings.join(' ')).toContain('split 1');
+  });
+
+  // A name is normalised before anything else looks at it, so a picture that is only unusable after
+  // slugging never occupies the name a later, real picture would have taken.
+  it('names the block a picture was meant for, not its number in the list', () => {
+    const plan = { ...base, images: ['!!!'], sections: [plannedSection()] };
+    const result = trimPlan(plan, { ...args, imageLabels: ['hero'] });
+    expect(result.warnings.join(' ')).toContain('hero');
   });
 });
 
@@ -292,14 +220,14 @@ describe('planPage', () => {
     const fetchFn = async (_url, init) => {
       body = JSON.parse(init.body);
       return answer({
-        title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
+        title: 'T', description: 'D', h1: 'H', heroText: ['a'], images: ['lobby'],
         sections: [plannedSection()], faq: ['q1'],
       });
     };
     const result = await planPage(
       {
         page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        budgets: { sections: 1, faq: 1, images: 1 },
+        shape: { sections: 1, faq: [1, 1], heroText: [1, 1], images: 1, imageLabels: ['hero'] },
         sectionContent: SECTION_CONTENT,
         instructions: 'RULES',
       },
@@ -324,14 +252,15 @@ describe('planPage', () => {
     const fetchFn = async (_url, init) => {
       body = JSON.parse(init.body);
       return answer({
-        title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
+        title: 'T', description: 'D', h1: 'H', heroText: ['a'], images: ['lobby'],
         sections: [plannedSection()], faq: ['q1'],
       });
     };
     await planPage(
       {
         page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        budgets: { sections: 1, faq: 1, images: 1, links: { section: [0, 2], page: [0, 8] } },
+        shape: { sections: 1, faq: [1, 1], heroText: [1, 1], images: 1, imageLabels: ['hero'] },
+        links: { perBlock: [0, 2], perPage: [0, 8] },
         sectionContent: SECTION_CONTENT,
         instructions: 'RULES',
       },
@@ -357,14 +286,15 @@ describe('planPage', () => {
     const fetchFn = async (_url, init) => {
       body = JSON.parse(init.body);
       return answer({
-        title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
+        title: 'T', description: 'D', h1: 'H', heroText: ['a'], images: ['lobby'],
         sections: [plannedSection()], faq: ['q1'],
       });
     };
     await planPage(
       {
         page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        budgets: { sections: 1, faq: 1, images: 1, links: { section: [0, 2], page: [0, 8] } },
+        shape: { sections: 1, faq: [1, 1], heroText: [1, 1], images: 1, imageLabels: ['hero'] },
+        links: { perBlock: [0, 2], perPage: [0, 8] },
         sectionContent: SECTION_CONTENT,
         instructions: 'RULES',
       },
@@ -389,14 +319,14 @@ describe('planPage', () => {
     const fetchFn = async (_url, init) => {
       body = JSON.parse(init.body);
       return answer({
-        title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
+        title: 'T', description: 'D', h1: 'H', heroText: ['a'], images: ['lobby'],
         sections: [plannedSection()], faq: ['q1'],
       });
     };
     await planPage(
       {
         page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        budgets: { sections: 1, faq: 1, images: 1 },
+        shape: { sections: 1, faq: [1, 1], heroText: [1, 1], images: 1, imageLabels: ['hero'] },
         sectionContent: SECTION_CONTENT,
         instructions: 'RULES',
       },
@@ -418,7 +348,7 @@ describe('planPage', () => {
       planPage(
         {
           page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-          budgets: { sections: 1, faq: 1, images: 1 },
+          shape: { sections: 1, faq: [1, 1], heroText: [1, 1], images: 1, imageLabels: ['hero'] },
           sectionContent: {},
           instructions: 'RULES',
         },
@@ -428,20 +358,22 @@ describe('planPage', () => {
   });
 
   // Fix for games.json naming its picture a whole sentence: corrected after the fact in trimPlan,
-  // but also asked for up front, so the model has less to be corrected on.
-  it('asks the model to name every picture with a short slug, not a sentence', async () => {
+  // but also asked for up front, so the model has less to be corrected on. The brief also has to
+  // say which block each name is for — that is the only thing that lets a name mean anything, and
+  // it is what stops two pictures of one page from being briefed identically.
+  it('asks the model to name every picture with a short slug, and says which block each is for', async () => {
     let body;
     const fetchFn = async (_url, init) => {
       body = JSON.parse(init.body);
       return answer({
-        title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
+        title: 'T', description: 'D', h1: 'H', heroText: ['a'], images: ['lobby'],
         sections: [plannedSection()], faq: ['q1'],
       });
     };
     await planPage(
       {
         page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        budgets: { sections: 1, faq: 1, images: 1 },
+        shape: { sections: 1, faq: [1, 1], heroText: [1, 1], images: 1, imageLabels: ['hero'] },
         sectionContent: SECTION_CONTENT,
         instructions: 'RULES',
       },
@@ -450,5 +382,51 @@ describe('planPage', () => {
     const content = String(body.input[0].content);
     expect(content).toMatch(/short.*slug/i);
     expect(content).toMatch(/never a sentence/i);
+    expect(content).toMatch(/1\. hero/);
+  });
+
+  // A layout that has no picture-bearing block at all must not leave the brief asking for names
+  // that the schema then refuses to accept.
+  it('says nothing about pictures when the layout has none', async () => {
+    let body;
+    const fetchFn = async (_url, init) => {
+      body = JSON.parse(init.body);
+      return answer({
+        title: 'T', description: 'D', h1: 'H', heroText: ['a'], images: [],
+        sections: [plannedSection()], faq: ['q1'],
+      });
+    };
+    await planPage(
+      {
+        page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
+        shape: { sections: 1, faq: [1, 1], heroText: [1, 1], images: 0, imageLabels: [] },
+        sectionContent: SECTION_CONTENT,
+        instructions: 'RULES',
+      },
+      { config: CONFIG, fetchFn, sleep: async () => {} },
+    );
+    expect(String(body.input[0].content)).not.toMatch(/picture/i);
+  });
+
+  // A range the layout left open reaches the brief as a range, so the model knows it may choose.
+  it('tells the model a range where the layout left one', async () => {
+    let body;
+    const fetchFn = async (_url, init) => {
+      body = JSON.parse(init.body);
+      return answer({
+        title: 'T', description: 'D', h1: 'H', heroText: ['a'], images: ['lobby'],
+        sections: [plannedSection()], faq: ['q1', 'q2', 'q3', 'q4', 'q5'],
+      });
+    };
+    await planPage(
+      {
+        page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
+        shape: { sections: 1, faq: [5, 8], heroText: [1, 2], images: 1, imageLabels: ['hero'] },
+        sectionContent: SECTION_CONTENT,
+        instructions: 'RULES',
+      },
+      { config: CONFIG, fetchFn, sleep: async () => {} },
+    );
+    expect(String(body.input[0].content)).toContain('5–8 FAQ questions');
   });
 });

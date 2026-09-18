@@ -41,7 +41,7 @@ function keepLinks(text, pages, page, warnings) {
   });
 }
 
-// content.json's item counts (listItems, tableRows, cards) are a ceiling the model was already
+// blocks.json's item counts (listItems, tableRows, cards) are a ceiling the model was already
 // asked to respect, unlike the character lengths below. A count is safe to actually cut, unlike a
 // length: dropping the last few rows never breaks one mid-sentence, so — unlike noteLength — this
 // one trims rather than only reporting.
@@ -94,7 +94,7 @@ function toElement(item, { images, pages, page, warnings, lengths }) {
   }
 }
 
-// Lengths from content.json are reported, never enforced. Trimming a paragraph to fit would cut it
+// Lengths from blocks.json are reported, never enforced. Trimming a paragraph to fit would cut it
 // mid-sentence, which is worse than a long paragraph, and the engine imposes no limit of its own —
 // these numbers exist so the layout stays pleasant, not so the build can fail.
 function noteLength(what, value, range, warnings) {
@@ -123,9 +123,11 @@ export const AUTO_BLOCKS = Object.keys(AUTO);
 
 export function assemblePage({ plan, blocks, sections, faq, pages, page, labels, lengths = {} }) {
   const warnings = [];
-  const images = new Set(
-    [plan.heroImage, ...plan.sections.map((section) => section.image)].filter(Boolean),
-  );
+  // One name per picture-bearing block, in layout order, already normalised and de-duplicated by
+  // trimPlan. A null is a block whose name came back unusable: it keeps its place in the list so
+  // the pairing below stays aligned, and simply has no picture.
+  const pictures = plan.images ?? [];
+  const images = new Set(pictures.filter(Boolean));
   const context = { images, pages, page, warnings, lengths };
 
   // Two passes over the layout, because the contents cannot be built until every heading is known,
@@ -133,7 +135,7 @@ export function assemblePage({ plan, blocks, sections, faq, pages, page, labels,
   // what actually survived rather than over what the layout asked for.
   const built = [];
   let sectionIndex = 0;
-  for (const block of blocks) {
+  for (const [at, block] of blocks.entries()) {
     if (block.auto) {
       // layouts.mjs refuses this before the first paid request; by the time a page is assembled it
       // can only mean the two lists drifted apart, and an empty block on the page would be the
@@ -142,7 +144,7 @@ export function assemblePage({ plan, blocks, sections, faq, pages, page, labels,
         warnings.push(`блок «${block.type}» помечен auto, но фабрика не умеет его заполнять — пропущен`);
         continue;
       }
-      built.push({ block });
+      built.push({ block, at });
       continue;
     }
 
@@ -152,6 +154,7 @@ export function assemblePage({ plan, blocks, sections, faq, pages, page, labels,
       if (faq.length === 0) continue;
       built.push({
         block,
+        at,
         heading: labels.faq,
         items: faq.map((entry) => ({
           type: 'toggle',
@@ -171,6 +174,7 @@ export function assemblePage({ plan, blocks, sections, faq, pages, page, labels,
       sectionIndex += 1;
       built.push({
         block,
+        at,
         heading: section.heading,
         items: section.items
           .map((item) => {
@@ -185,6 +189,7 @@ export function assemblePage({ plan, blocks, sections, faq, pages, page, labels,
     if (block.h1) {
       built.push({
         block,
+        at,
         items: plan.heroText.map((text) => ({ type: 'text', text: keepLinks(text, pages, page, warnings) })),
       });
       continue;
@@ -198,7 +203,20 @@ export function assemblePage({ plan, blocks, sections, faq, pages, page, labels,
 
   const headings = built.filter((entry) => entry.block.heading).map((entry) => entry.heading);
 
-  const pageBlocks = built.map(({ block, heading, items = [] }) => ({
+  // Which picture belongs to which block, worked out over the whole layout rather than over what
+  // survived. planShape counted the names in layout order, so the fourth name is for the fourth
+  // picture-bearing block of the layout — whether or not the third one made it onto the page. A
+  // counter advanced while emitting would instead shift every later picture up by one the moment a
+  // block was dropped, quietly putting one block's picture under another block's heading.
+  const pictureAt = new Map();
+  let nextPicture = 0;
+  for (const [at, block] of blocks.entries()) {
+    if (!block.image) continue;
+    pictureAt.set(at, pictures[nextPicture] ?? null);
+    nextPicture += 1;
+  }
+
+  const pageBlocks = built.map(({ block, at, heading, items = [] }) => ({
     type: block.type,
     content: block.auto
       ? AUTO[block.type]({ headings, labels })
@@ -207,7 +225,7 @@ export function assemblePage({ plan, blocks, sections, faq, pages, page, labels,
           ...(block.heading ? [{ type: 'title', h2: heading }] : []),
           // A picture belongs to the block by its nature, so the factory places it: straight under
           // the heading, where every block that has one wants it. The model never chose where.
-          ...(block.image && plan.heroImage ? [{ image: plan.heroImage }] : []),
+          ...(pictureAt.get(at) ? [{ image: pictureAt.get(at) }] : []),
           ...items,
         ],
   }));
