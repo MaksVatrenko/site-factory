@@ -109,8 +109,11 @@ export function trimPlan(plan, { links, pages, page, sectionContent, imageLabels
   );
 
   // Two budgets, which do survive: they exist to stop link spam, not to ration anything the layout
-  // decides. `links` is optional — a caller that does not pass it (any theme with no `links` entry
-  // in its blocks.json) gets no cap at all, rather than the harshest possible one.
+  // decides. `links` is optional here because trimPlan is also called directly by its own tests —
+  // through generateSite it always arrives, since loadTemplateBlocks fills both budgets in, with a
+  // default of no links at all for a theme that says nothing about them. So this `?? Infinity` is
+  // a fallback for a caller that leaves the argument out, not the "theme said nothing" case: that
+  // one already arrives as zero.
   const maxLinksPerSection = links?.perBlock?.[1] ?? Infinity;
   let pageLinksLeft = links?.perPage?.[1] ?? Infinity;
 
@@ -185,7 +188,14 @@ export async function planPage(
   // to be handed in separately, and the two disagreeing is exactly how a plan got offered `toggle`
   // for an ordinary section, had all six copies stripped by trimPlan for being over the template's
   // (zero) allowance, and lost the section entirely. One source here leaves nothing to disagree with.
-  const elements = Object.keys(sectionContent);
+  // Only elements the block may actually hold. A layout can pin an element to zero — that is the
+  // whole point of «точные количества вместо диапазонов» — and offering the model something
+  // trimPlan will strip back out on arrival is the exact shape of the defect this argument was
+  // narrowed to fix in the first place: the model spends output on it, the log fills with removals,
+  // and the section comes back shorter than the page asked for.
+  const elements = Object.entries(sectionContent)
+    .filter(([, range]) => range[1] > 0)
+    .map(([element]) => element);
 
   // What we hand the model here used to be the bare file names ("home", "casino"), while trimPlan
   // accepted only written addresses ("/", "/casino") — home's above all, since it is never "/home".

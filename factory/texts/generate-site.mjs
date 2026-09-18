@@ -4,7 +4,7 @@ import { buildInstructions, planPage } from './plan.mjs';
 import { fillFaq, fillSection } from './fill.mjs';
 import { assemblePage, AUTO_BLOCKS } from './assemble.mjs';
 import { generateSiteJson } from './site-json.mjs';
-import { loadLayouts, pickLayouts, planShape, resolveLayout } from './layouts.mjs';
+import { loadLayouts, pickLayouts, planShape, resolveLayout, sectionContentOf } from './layouts.mjs';
 import { describeBlocks, loadTemplateBlocks, loadTemplateExamples } from './template.mjs';
 import { languageFor, loadTextsPromptFile } from './texts-prompts.mjs';
 import { loadGeos } from '../geos.mjs';
@@ -90,7 +90,6 @@ export async function generateSite({
     templateText: describeBlocks(content),
     examples,
   });
-  const sectionContent = content.blocks.section?.content ?? {};
 
   // Seeded by the folder name, so a re-run of a stopped generation keeps the same layouts. Every
   // page is resolved here, before the first paid request: a layout that does not fit the theme must
@@ -167,7 +166,10 @@ export async function generateSite({
           // it, so every page of every site from this theme gets the same ceiling, straight from
           // blocks.json.
           links: content.links,
-          sectionContent,
+          // From the resolved layout, not from the theme: the theme states the ceiling and the
+          // layout picks out of it, so reading the theme here would discard every exact number a
+          // layout wrote.
+          sectionContent: sectionContentOf(pageLayout.blocks),
           instructions,
         },
         options,

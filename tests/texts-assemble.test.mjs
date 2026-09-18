@@ -248,17 +248,21 @@ describe('assemblePage', () => {
     expect(warnings.join(' ')).toContain('never-planned');
   });
 
-  it('keeps a card picture the plan did declare', () => {
+  // A card used to be the one place left where the model could still name a picture, and naming
+  // one the plan had already declared reproduced it, once per card: nine card sets on a page and the
+  // first screen's picture came out ten times, legitimately as far as every check was concerned.
+  // The field is gone from the schema, so a card reaches here without one — and must leave without
+  // one, whatever it happens to carry.
+  it('gives a card no picture, even when one is handed to it', () => {
     const sections = [
       {
         heading: 'Payments',
         items: [{ kind: 'cards', cards: [{ title: 'C', text: 't', image: 'casino-lobby' }] }],
       },
     ];
-    const { page, warnings } = build({ sections, plan: { ...PLAN, images: ['casino-lobby'] } });
+    const { page } = build({ sections, plan: { ...PLAN, images: ['casino-lobby'] } });
     const first = page.blocks.filter((block) => block.type === 'section')[0];
-    expect(JSON.stringify(first)).toContain('casino-lobby');
-    expect(warnings.join(' ')).not.toContain('casino-lobby');
+    expect(first.content[1]).toEqual({ type: 'cards', items: [{ title: 'C', text: 't' }] });
   });
 
   it('turns every element kind into its own shape', () => {

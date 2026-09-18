@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { loadLayouts, pickLayouts, planShape, resolveLayout } from '../factory/texts/layouts.mjs';
+import { loadLayouts, pickLayouts, planShape, resolveLayout, sectionContentOf } from '../factory/texts/layouts.mjs';
 import { assemblePage } from '../factory/texts/assemble.mjs';
 
 let dirs = [];
@@ -46,6 +46,7 @@ function theme() {
         faq: { type: 'faq', auto: false, h1: false, image: false, heading: true, content: { toggle: [5, 8] } },
       },
       known: ['hero', 'toc', 'section', 'split', 'links', 'faq', 'gallery'],
+      id: 'demo',
     },
     autoBlocks: ['toc', 'links'],
   };
@@ -273,12 +274,52 @@ describe('planShape', () => {
   // one and the same brief.
   it('labels every picture by its block and its place among blocks of that type', () => {
     const { blocks } = resolveLayout(
-      layout(['hero', { type: 'split', count: 2 }, 'section', 'faq']),
+      layout(['hero', { type: 'split', count: 2 }, 'faq']),
       theme(),
     );
     const shape = planShape(blocks);
     expect(shape.images).toBe(3);
     expect(shape.imageLabels).toEqual(['hero', 'split 1', 'split 2']);
+  });
+});
+
+describe('sectionContentOf', () => {
+  // The defect this exists for: resolveLayout worked out the layout's exact numbers, wrote them
+  // into every block, and generate-site.mjs then handed the plan the theme's ranges instead. A
+  // layout pinning "no tables here" built a page with tables in it, byte for byte the same page as
+  // a layout that had said nothing at all, and nothing anywhere reported a thing.
+  it('reports what the layout allows, not what the theme allows', () => {
+    const { blocks } = resolveLayout(
+      layout(['hero', { type: 'section', count: 2, content: { text: 2, title: 0 } }]),
+      theme(),
+    );
+    expect(sectionContentOf(blocks)).toEqual({ text: [2, 2], title: [0, 0] });
+  });
+
+  it('reports nothing for a layout with no content block at all', () => {
+    const { blocks } = resolveLayout(layout(['hero', 'toc']), theme());
+    expect(sectionContentOf(blocks)).toEqual({});
+  });
+});
+
+describe('resolveLayout refuses what cannot be built', () => {
+  // One request answers the FAQ of a whole page, so a second faq block has nowhere to get different
+  // questions from: both would be filled from the same answer, word for word, and the contents
+  // would carry the same entry twice.
+  it('refuses a second faq block', () => {
+    expect(() => resolveLayout(layout(['hero', 'faq', 'faq']), theme())).toThrow(/faq/);
+  });
+
+  // The plan describes every content block with one shape, so the blocks drawing from it have to
+  // agree about what may go inside them. While they are all «section» they agree by construction;
+  // the moment a theme adds a second kind, the silent outcome is the new block planned with the old
+  // block's vocabulary — a table inside something whose nature allows none.
+  it('refuses two kinds of content block whose insides are described differently', () => {
+    expect(() => resolveLayout(layout(['hero', 'section', 'split']), theme())).toThrow(/по-разному/);
+  });
+
+  it('names the theme, not only the layout, when the theme cannot draw a block', () => {
+    expect(() => resolveLayout(layout(['hero', 'nosuch']), theme())).toThrow(/demo/);
   });
 });
 

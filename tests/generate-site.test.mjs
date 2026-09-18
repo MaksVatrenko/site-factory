@@ -433,6 +433,51 @@ describe('generateSite', () => {
 });
 
 // The real proof: what this writes is a site folder Astro can build, not merely valid JSON.
+// A layouts folder of this test's own, so a layout can say something the shipped one does not.
+function layoutsDirWith(layout) {
+  const dir = mkdtempSync(join(tmpdir(), 'site-factory-layouts-'));
+  dirs.push(dir);
+  writeFileSync(join(dir, 'probe.json'), JSON.stringify(layout));
+  return dir;
+}
+
+describe('the layout decides what goes inside a block', () => {
+  // The whole reason a layout may carry numbers at all. resolveLayout worked these out correctly
+  // from the start — and generate-site.mjs then handed the plan the theme's ranges instead, so a
+  // layout pinning "no tables here" produced a page with tables in it, byte for byte the same page
+  // as a layout that had said nothing. Checked through the request the model actually receives,
+  // because the defect lived in the wiring between two modules that were each right on their own.
+  it('offers the model what the layout allows, not what the theme allows', async () => {
+    const dir = siteDir();
+    const fake = fakeOpenAi();
+    const asked = [];
+    const fetchFn = async (url, init) => {
+      const body = JSON.parse(init.body);
+      if (body.text.format.name === 'page_plan') {
+        asked.push(body.text.format.schema.properties.sections.items.properties.elements.items.enum);
+      }
+      return fake.fetchFn(url, init);
+    };
+    await run(dir, {
+      fetchFn,
+      layoutsDir: layoutsDirWith({
+        name: 'Проба',
+        blocks: ['hero', 'toc', { type: 'section', count: 2, content: { text: 2, title: 0, list: 0, table: 0, cards: 0 } }, 'links', 'faq'],
+      }),
+    });
+
+    // The theme allows title, text, list, table and cards; this layout allows only text.
+    expect(asked.length).toBeGreaterThan(0);
+    for (const offered of asked) expect(offered).toEqual(['text']);
+
+    // And the page really does come out without them, not merely with them stripped after the fact.
+    const page = JSON.parse(readFileSync(join(dir, 'home.json'), 'utf8'));
+    const section = page.blocks.find((block) => block.type === 'section');
+    expect(section.content.map((item) => item.type)).toEqual(['title', 'text']); // h2 heading + one text
+    expect(page.blocks.filter((block) => block.type === 'section')).toHaveLength(2);
+  });
+});
+
 describe('a generated folder builds', () => {
   it('passes a real Astro build', async () => {
     const dir = siteDir();

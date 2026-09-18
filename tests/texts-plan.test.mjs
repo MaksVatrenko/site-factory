@@ -364,6 +364,34 @@ describe('planPage', () => {
     expect(offered).not.toContain('toggle');
   });
 
+  // The layout may pin an element to zero — that is what «точные количества вместо диапазонов»
+  // means — and an element the block may not hold must not be offered to the model at all. Offered,
+  // the model spends output on it, trimPlan strips every copy back out on arrival, the log fills
+  // with removals and the section comes back shorter than the page asked for. This is the same
+  // defect that lost a whole section to «toggle» on the live run of 2026-09-18, one layer down.
+  it('never offers an element the layout pinned to zero', async () => {
+    let body;
+    const fetchFn = async (_url, init) => {
+      body = JSON.parse(init.body);
+      return answer({
+        title: 'T', description: 'D', h1: 'H', heroText: ['a'], images: ['lobby'],
+        sections: [plannedSection()], faq: ['q1'],
+      });
+    };
+    await planPage(
+      {
+        page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
+        shape: { sections: 1, faq: [1, 1], heroText: [1, 1], images: 1, imageLabels: ['hero'] },
+        sectionContent: { ...SECTION_CONTENT, table: [0, 0] },
+        instructions: 'RULES',
+      },
+      { config: CONFIG, fetchFn, sleep: async () => {} },
+    );
+    const offered = body.text.format.schema.properties.sections.items.properties.elements.items.enum;
+    expect(offered).not.toContain('table');
+    expect(offered).toContain('text');
+  });
+
   // planSchema itself already refuses to build a schema with nothing usable in it (see
   // texts-schema.test.mjs) — this is the same guard, reached the new way, through sectionContent
   // alone rather than through a separate `elements` argument.

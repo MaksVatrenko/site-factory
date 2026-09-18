@@ -37,11 +37,17 @@ const ELEMENT_DEFS = {
   text: object({ kind: kind('text'), text: { type: 'string' } }),
   list: object({ kind: kind('list'), items: strings }),
   table: object({ kind: kind('table'), columns: strings, rows: { type: 'array', items: strings } }),
+  // A card has no picture here, though our content format allows one (see docs/content-format.md)
+  // and a hand-written site may use it. This is generation: a picture belongs to a block that
+  // carries one by its nature, and the factory places it. Left in, `image` was the one field the
+  // model could still name a picture with — and naming one the plan had already declared reproduced
+  // it, legitimately as far as every check was concerned, once per card. Nine card sets on one page
+  // and the first screen's picture came out ten times, with no warning anywhere.
   cards: object({
     kind: kind('cards'),
     cards: {
       type: 'array',
-      items: object({ title: { type: 'string' }, text: { type: 'string' }, image: { type: ['string', 'null'] } }),
+      items: object({ title: { type: 'string' }, text: { type: 'string' } }),
     },
   }),
   toggle: object({ kind: kind('toggle'), title: { type: 'string' }, text: { type: 'string' } }),

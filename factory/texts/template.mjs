@@ -83,6 +83,15 @@ export function loadTemplateBlocks(templateId, root = process.cwd()) {
       throw new Error(`шаблон «${templateId}» не умеет блок «${type}»: его нет в blocks манифеста`);
     }
     const auto = flag(block, 'auto', type);
+    // A block cannot be both the page's own heading and a section of it. assemble.mjs has to pick
+    // one, and whichever it picked, the other nature would be paid for and thrown away: the plan
+    // still writes lead paragraphs for an h1 block, and a heading block still takes an entry from
+    // the plan's sections. Refusing here costs nothing and leaves nothing to discover later.
+    if (flag(block, 'h1', type) && flag(block, 'heading', type)) {
+      throw new Error(
+        `блок «${type}» шаблона «${templateId}» помечен и h1, и heading — заголовок страницы и заголовок раздела это разные вещи`,
+      );
+    }
     if (auto && (block.content !== undefined || block.h1 || block.image || block.heading)) {
       throw new Error(
         `блок «${type}» шаблона «${templateId}» помечен auto — фабрика заполняет его сама, остальные признаки ему не нужны`,
@@ -123,6 +132,8 @@ export function loadTemplateBlocks(templateId, root = process.cwd()) {
   // links gets none, rather than an unstated unlimited budget.
   const linksRaw = isPlainObject(raw.links) ? raw.links : {};
   return {
+    // Named so a layout refused against this theme can say which theme refused it.
+    id: templateId,
     blocks,
     links: {
       perBlock: readRange(linksRaw.perBlock ?? 0, `links.perBlock шаблона «${templateId}»`),

@@ -126,6 +126,17 @@ describe('loadTemplateBlocks', () => {
     expect(() => load({ blocks: { toc: { auto: true, content: { text: [1, 1] } } } })).toThrow(/auto/);
   });
 
+  // assemble.mjs has to pick one, and whichever it picks the other nature is paid for and thrown
+  // away: the plan writes lead paragraphs for an h1 block, and a heading block takes an entry from
+  // the plan's sections. A theme claiming both gets one of them silently discarded.
+  it('refuses a block that is both the page heading and a section heading', () => {
+    expect(() => load({ blocks: { hero: { h1: true, heading: true } } })).toThrow(/h1/);
+  });
+
+  it('names itself, so a layout refused against it can say which theme refused it', () => {
+    expect(load({ blocks: { hero: { h1: true } } }).id).toBe('demo');
+  });
+
   it('refuses a nature flag that is not a boolean', () => {
     expect(() => load({ blocks: { hero: { image: 'yes' } } })).toThrow(/image/);
   });

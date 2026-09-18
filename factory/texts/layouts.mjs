@@ -64,14 +64,14 @@ const ALLOWED = new Set(['type', 'count', 'content']);
 
 function natureOf(layout, content, type) {
   if (!content.known.includes(type)) {
-    throw new Error(`раскладка «${layout.id}»: тема не умеет блок «${type}»`);
+    throw new Error(`раскладка «${layout.id}»: тема «${content.id}» не умеет блок «${type}»`);
   }
   // Two different mistakes with two different fixes: the theme has no such component at all, or it
   // has one and nothing says what goes inside it. Told apart here so the message names the fix.
   const nature = content.blocks[type];
   if (nature === undefined) {
     throw new Error(
-      `раскладка «${layout.id}»: тема рисует блок «${type}», но blocks.json его не описывает — неизвестно, что класть внутрь`,
+      `раскладка «${layout.id}»: тема «${content.id}» рисует блок «${type}», но blocks.json его не описывает — неизвестно, что класть внутрь`,
     );
   }
   return nature;
@@ -174,10 +174,44 @@ export function resolveLayout(layout, { content, autoBlocks }) {
       `в раскладке «${layout.id}» должен быть ровно один блок с признаком h1 — у страницы ровно один заголовок h1`,
     );
   }
+
+  // The FAQ is answered by one request for the whole page, so a second faq block has nowhere to get
+  // different questions from: assemble.mjs would fill both from the same answer, word for word, and
+  // the contents would carry the same entry twice. Refused rather than quietly deduplicated — a
+  // layout asking for two is asking for something that cannot exist, and saying so costs nothing.
+  if (countOf(blocks, 'faq') > 1) {
+    throw new Error(
+      `в раскладке «${layout.id}» больше одного блока faq — вопросы у страницы одни, и второй блок повторил бы первый слово в слово`,
+    );
+  }
+
+  // Everything the plan writes for a content block is described by one shape — planSchema has a
+  // single list of allowed elements for all of them — so the blocks drawing from that pool have to
+  // agree about what may go inside them. While they are all `section` they agree by construction.
+  // The moment a theme adds a second kind (the half-and-half block the spec leaves for later) that
+  // stops being true, and the silent outcome would be the new block planned with the old block's
+  // vocabulary: a table and a card set inside something whose nature allows neither.
+  const pools = new Set(blocks.filter(takesASection).map((block) => JSON.stringify(block.content)));
+  if (pools.size > 1) {
+    throw new Error(
+      `в раскладке «${layout.id}» блоки с заголовком описаны по-разному — план пишет их все по одному образцу, поэтому состав у них должен совпадать`,
+    );
+  }
+
   return { id: layout.id, name: layout.name, blocks };
 }
 
 const countOf = (blocks, type) => blocks.filter((block) => block.type === type).length;
+
+// What the plan may put inside a content block of this page, once the layout has had its say. Read
+// off the resolved layout rather than off the theme: the theme states the ceiling, the layout picks
+// out of it, and reading the theme here would quietly discard every exact number a layout wrote —
+// `{ "type": "section", "content": { "table": 0 } }` would build a page with tables in it anyway.
+// resolveLayout has already refused a layout whose content blocks disagree, so the first speaks
+// for all of them.
+export function sectionContentOf(blocks) {
+  return blocks.find(takesASection)?.content ?? {};
+}
 
 // What the plan request has to pin down, read off a resolved layout. Sections are an exact number —
 // the layout said how many. The FAQ and the lead paragraphs may still be a range: what a layout

@@ -73,12 +73,15 @@ function toElement(item, { images, pages, page, warnings, lengths }) {
       return { type: 'table', columns: item.columns, rows: rows.map((row) => row.map(link)) };
     }
     case 'cards':
+      // No picture on a card: the schema does not offer one (see schema.mjs), because a picture
+      // belongs to a block by its nature and is placed by the factory. A hand-written card may
+      // still carry one — that is the content format, not this stage.
       return {
         type: 'cards',
-        items: trimToMax('карточек', item.cards, lengths.cards, warnings).map((card) => {
-          const image = picture(card.image);
-          return { title: card.title, text: link(card.text), ...(image ? { image } : {}) };
-        }),
+        items: trimToMax('карточек', item.cards, lengths.cards, warnings).map((card) => ({
+          title: card.title,
+          text: link(card.text),
+        })),
       };
     case 'toggle':
       return { type: 'toggle', title: item.title, text: link(item.text) };
