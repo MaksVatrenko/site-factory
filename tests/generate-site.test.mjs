@@ -479,7 +479,7 @@ describe('the layout decides what goes inside a block', () => {
           {
             type: 'section',
             count: 2,
-            content: { text: 2, title: 0, list: 0, steps: 0, table: 0, cards: 0, line: 0, buttons: 0 },
+            content: { text: 2, list: 0, steps: 0, table: 0, cards: 0, line: 0, buttons: 0 },
           },
           'links',
           'faq',
