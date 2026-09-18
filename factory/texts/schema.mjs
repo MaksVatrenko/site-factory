@@ -88,7 +88,7 @@ export const ELEMENT_KINDS = Object.freeze(Object.keys(ELEMENT_DEFS));
 // sections when the page is meant to have nine. Where the layout left a range — what it did not
 // pin down — the range reaches the schema as minItems/maxItems and the model chooses inside it, by
 // the subject of the page. `sections` is always exact: a layout says how many blocks it has.
-export function planSchema({ byType, faq, heroText, images }, contentByType) {
+export function planSchema({ byType, faq, images }, contentByType) {
   // One array per kind of content block, each offering only what that kind may hold. Two kinds are
   // two different questions — a half-and-half block holds a heading, a paragraph or two and a call
   // to action, a section holds tables and card sets besides — and one shared list would offer the
@@ -126,7 +126,6 @@ export function planSchema({ byType, faq, heroText, images }, contentByType) {
     title: { type: 'string' },
     description: { type: 'string' },
     h1: { type: 'string' },
-    heroText: { type: 'array', minItems: heroText[0], maxItems: heroText[1], items: string },
     // One name per picture the layout has, in the layout's own order — a plain list rather than a
     // field on each block, because a picture belongs to a place and places are what a layout lists.
     // Nothing here is nullable: a block with a picture has one. There is no budget to overshoot, no

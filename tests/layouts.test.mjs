@@ -251,11 +251,14 @@ describe('planShape', () => {
       layout(['hero', 'toc', { type: 'section', count: 9 }, 'links', 'faq']),
       theme(),
     );
+    // The first screen is counted with the rest: it is an ordinary block the model writes, which
+    // happens to carry the page's own heading instead of a section heading. Filled any other way it
+    // could only hold what that other way knew about — which is how its call to action and its row
+    // of claims came to be declared, described to the model, and impossible to produce.
     expect(planShape(blocks)).toEqual({
-      byType: { section: 9 },
-      order: Array.from({ length: 9 }, () => 'section'),
+      byType: { hero: 1, section: 9 },
+      order: ['hero', ...Array.from({ length: 9 }, () => 'section')],
       faq: [5, 8],
-      heroText: [1, 2],
       images: 1,
       imageLabels: ['hero'],
     });
@@ -270,8 +273,8 @@ describe('planShape', () => {
       theme(),
     );
     const shape = planShape(blocks);
-    expect(shape.byType).toEqual({ section: 2, split: 1 });
-    expect(shape.order).toEqual(['section', 'split', 'section']);
+    expect(shape.byType).toEqual({ hero: 1, section: 2, split: 1 });
+    expect(shape.order).toEqual(['hero', 'section', 'split', 'section']);
   });
 
   // A layout without a FAQ asks for no questions rather than for an unspecified number of them: the
@@ -280,7 +283,7 @@ describe('planShape', () => {
     const { blocks } = resolveLayout(layout(['hero', { type: 'section', count: 2 }]), theme());
     expect(planShape(blocks).faq).toEqual([0, 0]);
     expect(planShape(blocks).images).toBe(1);
-    expect(planShape(blocks).byType).toEqual({ section: 2 });
+    expect(planShape(blocks).byType).toEqual({ hero: 1, section: 2 });
   });
 
   // The label goes into the brief, so the model knows what the picture is of. A bare type is enough
@@ -307,7 +310,7 @@ describe('contentByType', () => {
       layout(['hero', { type: 'section', count: 2, content: { text: 2, title: 0 } }]),
       theme(),
     );
-    expect(contentByType(blocks)).toEqual({ section: { text: [2, 2], title: [0, 0] } });
+    expect(contentByType(blocks).section).toEqual({ text: [2, 2], title: [0, 0] });
   });
 
   // One entry per kind, because each kind is a different question to ask the model. Collapsing them
@@ -316,14 +319,14 @@ describe('contentByType', () => {
   it('keeps the two kinds of content block apart', () => {
     const { blocks } = resolveLayout(layout(['hero', 'section', 'split']), theme());
     const byType = contentByType(blocks);
-    expect(Object.keys(byType).sort()).toEqual(['section', 'split']);
+    expect(Object.keys(byType).sort()).toEqual(['hero', 'section', 'split']);
     expect(byType.split).toEqual({ text: [1, 3] });
     expect(byType.section).not.toEqual(byType.split);
   });
 
-  it('reports nothing for a layout with no content block at all', () => {
+  it('reports only the first screen for a layout that holds nothing else', () => {
     const { blocks } = resolveLayout(layout(['hero', 'toc']), theme());
-    expect(contentByType(blocks)).toEqual({});
+    expect(Object.keys(contentByType(blocks))).toEqual(['hero']);
   });
 });
 
@@ -437,14 +440,14 @@ describe('planShape agrees with assemblePage about what takes a section', () => 
     const taken = new Map();
     const filled = new Map();
     LAYOUT.forEach((block, at) => {
-      if (block.auto || block.type === 'faq' || !block.heading) return;
+      if (block.auto || block.type === 'faq' || !(block.heading || block.h1)) return;
       const nth = (taken.get(block.type) ?? 0) + 1;
       taken.set(block.type, nth);
       if (nth > byType[block.type]) return;
       filled.set(at, { heading: `${block.type} ${nth}`, items: [{ kind: 'text', text: 'Body.' }] });
     });
     const { page } = assemblePage({
-      plan: { title: 'T', description: 'D', h1: 'H', heroText: ['Lead.'], images: [] },
+      plan: { title: 'T', description: 'D', h1: 'H', images: [] },
       blocks: LAYOUT,
       sections: filled,
       faq: [{ question: 'Q?', answer: 'A.' }],

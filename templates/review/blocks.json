@@ -15,7 +15,7 @@
   "blocks": {
     "hero": {
       "h1": true,
-      "image": true,
+      "image": "after-text",
       "content": { "text": [1, 2], "buttons": [0, 1], "info": [0, 1] }
     },
     "toc": { "auto": true },

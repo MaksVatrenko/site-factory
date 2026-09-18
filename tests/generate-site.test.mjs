@@ -55,13 +55,15 @@ function fakeOpenAi({
     const name = body.text.format.name;
     asked.push(name);
     if (name === 'faq_answers' && failFaq) return truncated();
-    if (name === 'section_content' && failFirstSection) {
+    // Once per run, not once per page: the tests that count what a run cost assume exactly one
+    // spoiled call, and the one that reads a written page reads the first page generated.
+    const forSection1 =
+      name === 'section_content' &&
+      /Section heading: Section 1$/m.test(String(body.input[0].content)) &&
+      sectionCalls === 0;
+    if (forSection1 && (failFirstSection || emptyFirstSection)) {
       sectionCalls += 1;
-      if (sectionCalls === 1) return truncated();
-    }
-    if (name === 'section_content' && emptyFirstSection) {
-      sectionCalls += 1;
-      if (sectionCalls === 1) return reply({ items: [] });
+      return failFirstSection ? truncated() : reply({ items: [] });
     }
     if (name === 'site_frame') {
       const size = body.text.format.schema.properties.navLabels.minItems;
@@ -94,7 +96,7 @@ function fakeOpenAi({
           Object.entries(byType).map(([type, list]) => [
             type,
             Array.from({ length: list.minItems }, (_, index) => ({
-              heading: `Section ${index + 1}`,
+              heading: type === 'section' ? `Section ${index + 1}` : `${type} ${index + 1}`,
               brief: 'b',
               elements: ['title', 'text'],
               links: [],
@@ -522,7 +524,8 @@ describe('a page made of more than one kind of block', () => {
       }),
     });
 
-    expect(Object.keys(byType).sort()).toEqual(['section', 'split', 'split-left']);
+    // The first screen is among them: it is a block the model writes, like the rest.
+    expect(Object.keys(byType).sort()).toEqual(['hero', 'section', 'split', 'split-left']);
     expect(byType.section.minItems).toBe(2);
     expect(byType.split.minItems).toBe(1);
     const offered = (type) => byType[type].items.properties.elements.items.enum;

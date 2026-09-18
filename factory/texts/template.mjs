@@ -74,6 +74,23 @@ export function loadTemplateBlocks(templateId, root = process.cwd()) {
     return value;
   };
 
+  // Where a picture sits inside its block, which is the block's business and not the model's. A
+  // bare `true` puts it directly under the heading, which is what a first-screen picture wants when
+  // the words are short and what most sections want always. "after-text" puts it below the block's
+  // paragraphs instead, so a call to action written under it is not separated from the words it
+  // belongs to. Written as a value of `image` rather than a field beside it: a block either has a
+  // picture or has not, and where it goes is nothing to say about a block that has none.
+  const IMAGE_PLACES = new Set(['top', 'after-text']);
+  const imageOf = (block, type) => {
+    const value = block.image;
+    if (value === undefined || value === false) return false;
+    if (value === true) return 'top';
+    if (typeof value === 'string' && IMAGE_PLACES.has(value)) return value;
+    throw new Error(
+      `признак «image» блока «${type}» шаблона «${templateId}» — это true, false или одно из: ${[...IMAGE_PLACES].join(', ')}`,
+    );
+  };
+
   const blocks = {};
   for (const [type, block] of Object.entries(raw.blocks)) {
     if (!isPlainObject(block)) {
@@ -120,7 +137,7 @@ export function loadTemplateBlocks(templateId, root = process.cwd()) {
       type,
       auto,
       h1: flag(block, 'h1', type),
-      image: flag(block, 'image', type),
+      image: imageOf(block, type),
       heading: flag(block, 'heading', type),
       content,
     };

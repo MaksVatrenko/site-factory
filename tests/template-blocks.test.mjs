@@ -44,11 +44,13 @@ describe('loadTemplateBlocks', () => {
       },
     });
 
+    // `image` says both that the block has a picture and where it sits: a bare true means
+    // directly under the heading, which is what most blocks want and what "top" spells out.
     expect(content.blocks.hero).toEqual({
       type: 'hero',
       auto: false,
       h1: true,
-      image: true,
+      image: 'top',
       heading: false,
       content: { text: [1, 2] },
     });
@@ -138,7 +140,15 @@ describe('loadTemplateBlocks', () => {
   });
 
   it('refuses a nature flag that is not a boolean', () => {
-    expect(() => load({ blocks: { hero: { image: 'yes' } } })).toThrow(/image/);
+    expect(() => load({ blocks: { hero: { heading: 'yes' } } })).toThrow(/heading/);
+  });
+
+  // A picture's place is one of a short list, and a typo in it would otherwise put the picture
+  // silently back at the top — the one place the block was asking for it not to be.
+  it('reads where a picture sits, and refuses a place it does not know', () => {
+    expect(load({ blocks: { hero: { image: 'after-text' } } }).blocks.hero.image).toBe('after-text');
+    expect(load({ blocks: { hero: { image: false } } }).blocks.hero.image).toBe(false);
+    expect(() => load({ blocks: { hero: { image: 'sideways' } } })).toThrow(/after-text/);
   });
 
   // The conservative default, not the permissive one: a theme that says nothing about links gets

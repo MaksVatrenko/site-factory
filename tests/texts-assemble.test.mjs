@@ -11,7 +11,6 @@ const PLAN = {
   title: 'Casino guide',
   description: 'A description of the page.',
   h1: 'Casino guide',
-  heroText: ['Opening words.'],
   images: [],
   sections: [
     { heading: 'Payments', brief: '', elements: ['title', 'text'], links: ['/bonus'] },
@@ -19,7 +18,11 @@ const PLAN = {
   ],
   faq: ['Is it safe?'],
 };
+// The first screen is a content block like any other now, so it has an entry of its own — first,
+// because that is where it stands in the layout.
+const HERO_ITEMS = { heading: 'Casino guide', items: [{ kind: 'text', text: 'Opening words.' }] };
 const SECTIONS = [
+  HERO_ITEMS,
   { heading: 'Payments', items: [{ kind: 'text', text: 'Pay with [the bonus](/bonus) first.' }] },
   { heading: 'Games', items: [{ kind: 'text', text: 'Many games.' }] },
 ];
@@ -53,7 +56,7 @@ const BLOCKS = [HERO, TOC, SECTION, SECTION, LINKS, FAQ_BLOCK];
 function byPlace(blocks, sections) {
   const places = blocks
     .map((block, at) => ({ block, at }))
-    .filter(({ block }) => !block.auto && block.type !== 'faq' && block.heading);
+    .filter(({ block }) => !block.auto && block.type !== 'faq' && (block.heading || block.h1));
   return new Map(sections.map((section, index) => [places[index]?.at ?? -1 - index, section]));
 }
 
@@ -127,7 +130,7 @@ describe('assemblePage', () => {
   it('builds as many blocks of a kind as the layout asked for', () => {
     const { page } = build({
       blocks: [HERO, TOC, SECTION],
-      sections: [SECTIONS[0]],
+      sections: [HERO_ITEMS, SECTIONS[1]],
     });
     expect(page.blocks.filter((block) => block.type === 'section')).toHaveLength(1);
   });
@@ -135,7 +138,7 @@ describe('assemblePage', () => {
   // A section that never came out is dropped upstream; its contents entry must go with it, or the
   // list points at a heading with nothing under it.
   it('drops a block that has nothing to show, and its contents entry with it', () => {
-    const { page } = build({ sections: [SECTIONS[0]] });
+    const { page } = build({ sections: [HERO_ITEMS, SECTIONS[1]] });
     expect(page.blocks.filter((block) => block.type === 'section')).toHaveLength(1);
     const list = blockOf(page, 'toc').content.find((item) => item.type === 'list');
     expect(list.items).toEqual(['Payments', 'Questions']);
@@ -176,8 +179,9 @@ describe('assemblePage', () => {
     const { page } = build({
       // Two picture-bearing blocks: the split comes first, so it owns the first name.
       blocks: [SPLIT, nature('hero', { h1: true, image: true })],
-      // Nothing filled the split, so it never reaches the page — and its name goes with it.
-      sections: [],
+      // Nothing filled the split, so it never reaches the page — and its name goes with it. The
+      // first screen, at layout position 1, did come out.
+      sections: new Map([[1, { heading: 'Lead', items: [{ kind: 'text', text: 'Words.' }] }]]),
       plan: { ...PLAN, images: ['split-picture', 'hero-picture'] },
     });
     expect(page.blocks.map((block) => block.type)).toEqual(['hero']);
@@ -196,6 +200,7 @@ describe('assemblePage', () => {
     // The section at layout position 1 came back empty and was dropped upstream; positions 2 and 3
     // survived. Keyed by place, so what belongs to the split is unmistakable.
     const filled = new Map([
+      [0, { heading: 'Lead', items: [{ kind: 'text', text: 'Lead words.' }] }],
       [2, { heading: 'Second section', items: [{ kind: 'text', text: 'Section words.' }] }],
       [3, { heading: 'The half block', items: [{ kind: 'text', text: 'Half words.' }] }],
     ]);
@@ -247,6 +252,7 @@ describe('assemblePage', () => {
   // rather than being unwrapped to plain words like a link to a page that truly does not exist.
   it('repairs a link spelled as a bare page name or a near-miss address, inside the prose', () => {
     const sections = [
+      HERO_ITEMS,
       { heading: 'Payments', items: [{ kind: 'text', text: 'Go to [home](home) or [home](/home) or [bonus](/bonus/) now.' }] },
       SECTIONS[1],
     ];
@@ -260,6 +266,7 @@ describe('assemblePage', () => {
 
   it('unwraps a link to a page that does not exist, keeping the words', () => {
     const sections = [
+      HERO_ITEMS,
       { heading: 'Payments', items: [{ kind: 'text', text: 'See [the app](/app) for more.' }] },
       SECTIONS[1],
     ];
@@ -273,6 +280,7 @@ describe('assemblePage', () => {
   // separately from "ведёт в никуда" (this page resolves fine — it is simply not a different page).
   it('unwraps a link to the page itself, keeping the words, with its own warning', () => {
     const sections = [
+      HERO_ITEMS,
       { heading: 'Payments', items: [{ kind: 'text', text: 'See [this page](/casino) or [bonus](/bonus) for more.' }] },
       SECTIONS[1],
     ];
@@ -287,6 +295,7 @@ describe('assemblePage', () => {
   // and must keep working even though, in a sense, its target is "this page" too.
   it('keeps an anchor to a heading on the same page', () => {
     const sections = [
+      HERO_ITEMS,
       { heading: 'Payments', items: [{ kind: 'text', text: 'Jump to [the FAQ](#faq) below.' }] },
       SECTIONS[1],
     ];
@@ -298,6 +307,7 @@ describe('assemblePage', () => {
 
   it('drops a picture the plan never asked for', () => {
     const sections = [
+      HERO_ITEMS,
       { heading: 'Payments', items: [{ kind: 'image', name: 'never-planned' }] },
       SECTIONS[1],
     ];
@@ -314,6 +324,7 @@ describe('assemblePage', () => {
   // one, whatever it happens to carry.
   it('gives a card no picture, even when one is handed to it', () => {
     const sections = [
+      HERO_ITEMS,
       {
         heading: 'Payments',
         items: [{ kind: 'cards', cards: [{ title: 'C', text: 't', image: 'casino-lobby' }] }],
@@ -325,7 +336,8 @@ describe('assemblePage', () => {
   });
 
 describe('the elements a call-to-action page is made of', () => {
-    const withItems = (item) => build({ sections: [{ heading: 'Payments', items: [item] }] });
+    const withItems = (item) =>
+      build({ sections: [HERO_ITEMS, { heading: 'Payments', items: [item] }] });
     const firstSection = (page) => page.blocks.filter((block) => block.type === 'section')[0];
 
     // A button with no href of its own is the ordinary case, not a broken one: it means the site's
@@ -399,6 +411,7 @@ describe('the elements a call-to-action page is made of', () => {
 
   it('turns every element kind into its own shape', () => {
     const sections = [
+      HERO_ITEMS,
       {
         heading: 'Everything',
         items: [
@@ -423,6 +436,7 @@ describe('the elements a call-to-action page is made of', () => {
   // paragraph, and the engine does not care either way.
   it('mentions a paragraph well outside the template length, without touching it', () => {
     const sections = [
+      HERO_ITEMS,
       { heading: 'Payments', items: [{ kind: 'text', text: 'Short.' }] },
       SECTIONS[1],
     ];
@@ -436,7 +450,7 @@ describe('the elements a call-to-action page is made of', () => {
   // строка в лог" — so these three, unlike the text/h1 lengths above, actually get trimmed.
   it('trims a list past the template maximum, and logs what was cut', () => {
     const items = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
-    const sections = [{ heading: 'Payments', items: [{ kind: 'list', items }] }, SECTIONS[1]];
+    const sections = [HERO_ITEMS, { heading: 'Payments', items: [{ kind: 'list', items }] }, SECTIONS[1]];
     const { page, warnings } = build({ sections });
     const list = page.blocks.filter((block) => block.type === 'section')[0].content[1];
     expect(list.items).toEqual(['1', '2', '3', '4', '5', '6', '7', '8']);
@@ -445,7 +459,7 @@ describe('the elements a call-to-action page is made of', () => {
 
   it('trims a table past the template row maximum, and logs what was cut', () => {
     const rows = Array.from({ length: 12 }, (_, index) => [`r${index + 1}`]);
-    const sections = [{ heading: 'Payments', items: [{ kind: 'table', columns: ['A'], rows }] }, SECTIONS[1]];
+    const sections = [HERO_ITEMS, { heading: 'Payments', items: [{ kind: 'table', columns: ['A'], rows }] }, SECTIONS[1]];
     const { page, warnings } = build({ sections });
     const table = page.blocks.filter((block) => block.type === 'section')[0].content[1];
     expect(table.rows).toEqual(rows.slice(0, 10));
@@ -454,7 +468,7 @@ describe('the elements a call-to-action page is made of', () => {
 
   it('trims a card set past the template maximum, and logs what was cut', () => {
     const cards = Array.from({ length: 6 }, (_, index) => ({ title: `C${index + 1}`, text: 'T', image: null }));
-    const sections = [{ heading: 'Payments', items: [{ kind: 'cards', cards }] }, SECTIONS[1]];
+    const sections = [HERO_ITEMS, { heading: 'Payments', items: [{ kind: 'cards', cards }] }, SECTIONS[1]];
     const { page, warnings } = build({ sections });
     const cardsBlock = page.blocks.filter((block) => block.type === 'section')[0].content[1];
     expect(cardsBlock.items).toHaveLength(4);
@@ -465,7 +479,7 @@ describe('the elements a call-to-action page is made of', () => {
   // Trimming only ever removes — it must never invent items to reach the minimum, the same rule
   // trimPlan already follows for elements and pictures.
   it('leaves a list under the template minimum alone, without inventing items', () => {
-    const sections = [{ heading: 'Payments', items: [{ kind: 'list', items: ['one'] }] }, SECTIONS[1]];
+    const sections = [HERO_ITEMS, { heading: 'Payments', items: [{ kind: 'list', items: ['one'] }] }, SECTIONS[1]];
     const { page, warnings } = build({ sections });
     const list = page.blocks.filter((block) => block.type === 'section')[0].content[1];
     expect(list.items).toEqual(['one']);

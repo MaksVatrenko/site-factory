@@ -201,7 +201,12 @@ export function assemblePage({ plan, blocks, layout = '', sections, faq, pages, 
       continue;
     }
 
-    if (block.heading) {
+    // Every block the model writes, the first screen included: it is an ordinary content block
+    // that happens to carry the page's own heading instead of a section heading. Filled any other
+    // way, it could only ever hold what that other way knew about — which is how its call to action
+    // and its row of claims came to be declared in blocks.json, described to the model, and then
+    // impossible to produce.
+    if (block.heading || block.h1) {
       // Looked up by the block's own place in the layout, not taken from the front of a queue. A
       // page can hold more than one kind of content block now, and they are not interchangeable: a
       // section dropped upstream would shift every later entry up by one, and a half-and-half block
@@ -221,15 +226,6 @@ export function assemblePage({ plan, blocks, layout = '', sections, faq, pages, 
             return toElement(item, context);
           })
           .filter(Boolean),
-      });
-      continue;
-    }
-
-    if (block.h1) {
-      built.push({
-        block,
-        at,
-        items: plan.heroText.map((text) => ({ type: 'text', text: keepLinks(text, pages, page, warnings) })),
       });
       continue;
     }
@@ -271,6 +267,21 @@ export function assemblePage({ plan, blocks, layout = '', sections, faq, pages, 
     break;
   }
 
+  // A picture belongs to the block by its nature, so the factory places it — and the block says
+  // where, because that is a fact about how the block is drawn and not something the model should
+  // be choosing page by page. "top" puts it straight under the heading; "after-text" puts it below
+  // the block's paragraphs, so a call to action written under it stays with the words it belongs to.
+  const withPicture = (block, at, items) => {
+    const picture = pictureAt.get(at);
+    if (!picture) return items;
+    if (block.image !== 'after-text') return [{ image: picture }, ...items];
+    // After the last paragraph, not after the first: a block whose lead runs to two paragraphs
+    // would otherwise have its picture wedged into the middle of its own sentence.
+    const lastText = items.map((item) => item.type).lastIndexOf('text');
+    const cut = lastText === -1 ? 0 : lastText + 1;
+    return [...items.slice(0, cut), { image: picture }, ...items.slice(cut)];
+  };
+
   const pageBlocks = built.map(({ block, at, heading, items = [] }, index) => ({
     type: block.type,
     content: block.auto
@@ -278,10 +289,7 @@ export function assemblePage({ plan, blocks, layout = '', sections, faq, pages, 
       : [
           ...(block.h1 ? [{ type: 'title', h1: plan.h1 }] : []),
           ...(block.heading ? [{ type: 'title', h2: heading }] : []),
-          // A picture belongs to the block by its nature, so the factory places it: straight under
-          // the heading, where every block that has one wants it. The model never chose where.
-          ...(pictureAt.get(at) ? [{ image: pictureAt.get(at) }] : []),
-          ...items,
+          ...withPicture(block, at, items),
         ],
   }));
 

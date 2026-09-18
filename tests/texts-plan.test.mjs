@@ -41,7 +41,7 @@ describe('trimPlan', () => {
   // trimmed against — how many pictures a page may hold, where they belong — is gone: the layout
   // settled it, and the schema pinned it, so there is nothing left here to ration.
   const links = { perBlock: [0, 5], perPage: [0, 10] };
-  const base = { title: 'T', description: 'D', h1: 'H', heroText: ['a'], images: [], faq: ['q1', 'q2'] };
+  const base = { title: 'T', description: 'D', h1: 'H', images: [], faq: ['q1', 'q2'] };
   const args = {
     links,
     pages: PAGES,
@@ -253,14 +253,14 @@ describe('planPage', () => {
     const fetchFn = async (_url, init) => {
       body = JSON.parse(init.body);
       return answer({
-        title: 'T', description: 'D', h1: 'H', heroText: ['a'], images: ['lobby'],
+        title: 'T', description: 'D', h1: 'H', images: ['lobby'],
         blocks: { section: [plannedSection()], faq: ['q1'] },
       });
     };
     const result = await planPage(
       {
         page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], heroText: [1, 1], images: 1, imageLabels: ['hero'] },
+        shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], images: 1, imageLabels: ['hero'] },
         contentByType: { section: SECTION_CONTENT },
         instructions: 'RULES',
       },
@@ -285,14 +285,14 @@ describe('planPage', () => {
     const fetchFn = async (_url, init) => {
       body = JSON.parse(init.body);
       return answer({
-        title: 'T', description: 'D', h1: 'H', heroText: ['a'], images: ['lobby'],
+        title: 'T', description: 'D', h1: 'H', images: ['lobby'],
         blocks: { section: [plannedSection()], faq: ['q1'] },
       });
     };
     await planPage(
       {
         page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], heroText: [1, 1], images: 1, imageLabels: ['hero'] },
+        shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], images: 1, imageLabels: ['hero'] },
         links: { perBlock: [0, 2], perPage: [0, 8] },
         contentByType: { section: SECTION_CONTENT },
         instructions: 'RULES',
@@ -319,14 +319,14 @@ describe('planPage', () => {
     const fetchFn = async (_url, init) => {
       body = JSON.parse(init.body);
       return answer({
-        title: 'T', description: 'D', h1: 'H', heroText: ['a'], images: ['lobby'],
+        title: 'T', description: 'D', h1: 'H', images: ['lobby'],
         blocks: { section: [plannedSection()], faq: ['q1'] },
       });
     };
     await planPage(
       {
         page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], heroText: [1, 1], images: 1, imageLabels: ['hero'] },
+        shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], images: 1, imageLabels: ['hero'] },
         links: { perBlock: [0, 2], perPage: [0, 8] },
         contentByType: { section: SECTION_CONTENT },
         instructions: 'RULES',
@@ -352,14 +352,14 @@ describe('planPage', () => {
     const fetchFn = async (_url, init) => {
       body = JSON.parse(init.body);
       return answer({
-        title: 'T', description: 'D', h1: 'H', heroText: ['a'], images: ['lobby'],
+        title: 'T', description: 'D', h1: 'H', images: ['lobby'],
         blocks: { section: [plannedSection()], faq: ['q1'] },
       });
     };
     await planPage(
       {
         page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], heroText: [1, 1], images: 1, imageLabels: ['hero'] },
+        shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], images: 1, imageLabels: ['hero'] },
         contentByType: { section: SECTION_CONTENT },
         instructions: 'RULES',
       },
@@ -381,14 +381,14 @@ describe('planPage', () => {
     const fetchFn = async (_url, init) => {
       body = JSON.parse(init.body);
       return answer({
-        title: 'T', description: 'D', h1: 'H', heroText: ['a'], images: ['lobby'],
+        title: 'T', description: 'D', h1: 'H', images: ['lobby'],
         blocks: { section: [plannedSection()], faq: ['q1'] },
       });
     };
     await planPage(
       {
         page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], heroText: [1, 1], images: 1, imageLabels: ['hero'] },
+        shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], images: 1, imageLabels: ['hero'] },
         contentByType: { section: { ...SECTION_CONTENT, table: [0, 0] } },
         instructions: 'RULES',
       },
@@ -411,7 +411,7 @@ describe('planPage', () => {
       planPage(
         {
           page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-          shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], heroText: [1, 1], images: 1, imageLabels: ['hero'] },
+          shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], images: 1, imageLabels: ['hero'] },
           contentByType: { section: {} },
           instructions: 'RULES',
         },
@@ -429,14 +429,14 @@ describe('planPage', () => {
     const fetchFn = async (_url, init) => {
       body = JSON.parse(init.body);
       return answer({
-        title: 'T', description: 'D', h1: 'H', heroText: ['a'], images: ['lobby'],
+        title: 'T', description: 'D', h1: 'H', images: ['lobby'],
         blocks: { section: [plannedSection()], faq: ['q1'] },
       });
     };
     await planPage(
       {
         page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], heroText: [1, 1], images: 1, imageLabels: ['hero'] },
+        shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], images: 1, imageLabels: ['hero'] },
         contentByType: { section: SECTION_CONTENT },
         instructions: 'RULES',
       },
@@ -456,14 +456,14 @@ describe('planPage', () => {
     const fetchFn = async (_url, init) => {
       body = JSON.parse(init.body);
       return answer({
-        title: 'T', description: 'D', h1: 'H', heroText: ['a'], images: [],
+        title: 'T', description: 'D', h1: 'H', images: [],
         blocks: { section: [plannedSection()], faq: ['q1'] },
       });
     };
     await planPage(
       {
         page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], heroText: [1, 1], images: 0, imageLabels: [] },
+        shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], images: 0, imageLabels: [] },
         contentByType: { section: SECTION_CONTENT },
         instructions: 'RULES',
       },
@@ -478,14 +478,14 @@ describe('planPage', () => {
     const fetchFn = async (_url, init) => {
       body = JSON.parse(init.body);
       return answer({
-        title: 'T', description: 'D', h1: 'H', heroText: ['a'], images: ['lobby'],
+        title: 'T', description: 'D', h1: 'H', images: ['lobby'],
         blocks: { section: [plannedSection()], faq: ['q1', 'q2', 'q3', 'q4', 'q5'] },
       });
     };
     await planPage(
       {
         page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        shape: { byType: { section: 1 }, order: ['section'], faq: [5, 8], heroText: [1, 2], images: 1, imageLabels: ['hero'] },
+        shape: { byType: { section: 1 }, order: ['section'], faq: [5, 8], images: 1, imageLabels: ['hero'] },
         contentByType: { section: SECTION_CONTENT },
         instructions: 'RULES',
       },

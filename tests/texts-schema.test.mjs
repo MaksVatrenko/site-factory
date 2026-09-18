@@ -27,7 +27,7 @@ function everyObjectIsStrict(node, path = 'schema') {
   return problems;
 }
 
-const SHAPE = { byType: { section: 9 }, faq: [5, 8], heroText: [1, 2], images: 1 };
+const SHAPE = { byType: { section: 9 }, faq: [5, 8], images: 1 };
 // What each kind of block may hold, which is what the schema builds its enums from.
 const SECTION = { title: [0, 1], text: [2, 6], list: [0, 1], table: [0, 1], cards: [0, 1] };
 const HALF = { title: [0, 1], text: [1, 3], buttons: [0, 1] };
@@ -74,8 +74,6 @@ describe('planSchema', () => {
     const schema = planSchema(SHAPE, { section: SECTION });
     expect(schema.properties.faq.minItems).toBe(5);
     expect(schema.properties.faq.maxItems).toBe(8);
-    expect(schema.properties.heroText.minItems).toBe(1);
-    expect(schema.properties.heroText.maxItems).toBe(2);
   });
 
   // A picture exists because a block carries one. The plan names each, and cannot name more or

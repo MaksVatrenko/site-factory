@@ -215,7 +215,8 @@ export function contentByType(blocks) {
 // Counting by name here ("blocks called section") and dispatching by nature there is how the two
 // lists would come to disagree: a second kind of content block would be planned for zero times and
 // then silently dropped when the page was put together, with nothing anywhere saying why.
-export const takesASection = (block) => !block.auto && block.type !== 'faq' && block.heading === true;
+export const takesASection = (block) =>
+  !block.auto && block.type !== 'faq' && (block.heading === true || block.h1 === true);
 
 export function planShape(blocks) {
   const imageLabels = [];
@@ -230,7 +231,6 @@ export function planShape(blocks) {
       imageLabels.push(at === 1 && countOf(blocks, block.type) === 1 ? block.type : `${block.type} ${at}`);
     }
   }
-  const lead = blocks.find((block) => block.h1);
   const faq = blocks.find((block) => block.type === 'faq');
   return {
     // One count per kind, not one total: each kind is asked for separately, so the plan can hold
@@ -245,7 +245,6 @@ export function planShape(blocks) {
     // spent top to bottom, and the plan's per-kind arrays cannot say what follows what.
     order: blocks.filter(takesASection).map((block) => block.type),
     faq: faq?.content?.toggle ?? [0, 0],
-    heroText: lead?.content?.text ?? [0, 0],
     images: imageLabels.length,
     imageLabels,
   };
