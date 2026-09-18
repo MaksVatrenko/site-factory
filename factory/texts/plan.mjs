@@ -21,6 +21,41 @@ export function buildInstructions({ rules, templateText, examples }) {
   return parts.join('\n\n');
 }
 
+// A picture "name" the model answers with becomes both a key in images.json and, later, a file
+// name (factory/images/generate.mjs's own fileBaseFor) — so it has to already look like one, not
+// like a sentence. Cut down to a short slug: lower-cased, its spaces and underscores turned to
+// hyphens, everything else that is not a letter, digit or hyphen dropped outright (not replaced —
+// "R&D" becomes "rd", not "r-d"), repeated hyphens collapsed, trimmed, and capped at a sensible
+// length. Unlike fileBaseFor, this never falls back to a placeholder name: a name with nothing
+// usable in it must be dropped by the caller, the same as one that is simply over budget.
+const MAX_IMAGE_NAME_LENGTH = 60;
+
+function slugifyImageName(raw) {
+  return raw
+    .toLowerCase()
+    .replace(/[ _]+/g, '-')
+    .replace(/[^a-z0-9-]+/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, MAX_IMAGE_NAME_LENGTH)
+    // A cut can land mid-hyphen-run, same reason fileBaseFor re-trims after its own slice.
+    .replace(/-+$/g, '');
+}
+
+// 'logo' and 'logo-square' are factory/images/logo.mjs's LOGO_NAME and SQUARE_NAME — the two keys
+// only the logo step is ever allowed to write into images.json (factory/images/generate.mjs's own
+// RESERVED_FOR_LOGO skips them for exactly this reason). Duplicated here as plain strings rather
+// than imported: this stage is meant to produce nothing but a folder of JSON and never reach into a
+// later stage's module (see docs/specs/2026-09-17-text-generation-design.md — logo, images and the
+// build "работают дальше как есть и об этом этапе не знают"), and importing logo.mjs would drag its
+// own dependencies (compose.mjs's `sharp`) into text generation for the sake of two string literals
+// that every downstream consumer already treats as fixed. If a plan's slug lands on either name
+// anyway it is dropped like any other unusable one: on a brand-new site the images step would drop
+// it too, but log it as "reserved for the logo" — confusing for a picture that was never meant to be
+// one; on a site that already has its logo, the images step would instead silently reuse that
+// actual logo image in the middle of a section, with no warning anywhere. Guarding here avoids both.
+const RESERVED_IMAGE_NAMES = new Set(['logo', 'logo-square']);
+
 // The schema already pins the number of sections and questions. What it cannot express is a budget
 // spread across the page (pictures) or a per-kind limit inside one list (at most one table), so
 // those are enforced here, by trimming rather than by refusing: a plan that is slightly too rich is
@@ -31,13 +66,30 @@ export function trimPlan(plan, { budgets, pages, sectionContent }) {
   const warnings = [];
 
   let imagesLeft = budgets.images;
-  let heroImage = plan.heroImage ?? null;
-  if (heroImage && imagesLeft > 0) {
+
+  // Normalises a picture name and only then spends the page's picture budget — in that order, so a
+  // name that turns out to be unusable or reserved for the logo never eats a slot that a later,
+  // real picture on the same page could have used instead.
+  const claimImage = (raw, where) => {
+    if (!raw) return null;
+    const slug = slugifyImageName(raw);
+    if (!slug) {
+      warnings.push(`картинка «${raw}» ${where} — от имени не осталось ярлыка — убрана`);
+      return null;
+    }
+    if (RESERVED_IMAGE_NAMES.has(slug)) {
+      warnings.push(`картинка «${raw}» ${where} — имя «${slug}» занято логотипом — убрана`);
+      return null;
+    }
+    if (imagesLeft <= 0) {
+      warnings.push(`картинка «${slug}» ${where} сверх бюджета — убрана`);
+      return null;
+    }
     imagesLeft -= 1;
-  } else if (heroImage) {
-    warnings.push(`картинка «${heroImage}» в шапке сверх бюджета — убрана`);
-    heroImage = null;
-  }
+    return slug;
+  };
+
+  const heroImage = claimImage(plan.heroImage ?? null, 'в шапке');
 
   // Two budgets, same reasoning as pictures above: a page that came back too rich in links is still
   // a good page once the excess is gone. `links` is optional on `budgets` — a caller that does not
@@ -47,12 +99,7 @@ export function trimPlan(plan, { budgets, pages, sectionContent }) {
   let pageLinksLeft = budgets.links?.page?.[1] ?? Infinity;
 
   const sections = plan.sections.map((section) => {
-    let image = section.image ?? null;
-    if (image && imagesLeft > 0) imagesLeft -= 1;
-    else if (image) {
-      warnings.push(`картинка «${image}» в разделе «${section.heading}» сверх бюджета — убрана`);
-      image = null;
-    }
+    const image = claimImage(section.image ?? null, `в разделе «${section.heading}»`);
 
     // A link that recognisably names a page of this site is repaired to that page's canonical
     // address rather than discarded — the brief hands the model page names, not a spelling rule
@@ -145,6 +192,7 @@ export async function planPage(
     budgetLine,
     'Plan the page: a heading and a one-line brief for each section, which elements suit it, where a',
     'picture belongs and which other pages are worth linking to. Do not write the body text yet.',
+    'Name every picture with a short hyphenated slug, such as "live-dealer-table" — never a sentence.',
   ].join('\n');
 
   const { data, cost, usage } = await askJson(

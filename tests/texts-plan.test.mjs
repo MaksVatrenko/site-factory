@@ -191,6 +191,52 @@ describe('trimPlan', () => {
     expect(result.plan.sections[0].image).toBe('a-real-picture');
     expect(result.plan.sections[0].elements).toContain('image');
   });
+
+  // Finding: games.json's picture came back named with a whole sentence, which becomes both a key
+  // in images.json and the file name the picture stage writes. Both the hero's name and a section's
+  // are slugged: lower case, spaces/underscores to hyphens, anything else dropped, repeated hyphens
+  // collapsed, trimmed, capped.
+  it('turns a sentence-shaped picture name into a short slug, for both the hero and a section', () => {
+    const plan = {
+      title: 'T', description: 'D', h1: 'H', heroText: ['a'],
+      heroImage: 'A clean illustration of a game lobby with category tabs and card-style game tiles.',
+      sections: [plannedSection({ image: 'Cozy_Live Dealer   Table!!' })],
+      faq: ['q1', 'q2'],
+    };
+    const result = trimPlan(plan, { budgets: { ...budgets, images: 2 }, pages: PAGES, sectionContent: SECTION_CONTENT });
+    expect(result.plan.heroImage).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+    expect(result.plan.heroImage.length).toBeLessThanOrEqual(60);
+    expect(result.plan.sections[0].image).toBe('cozy-live-dealer-table');
+    // Normalising successfully is not itself something to warn about.
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('drops a picture name with nothing usable left after stripping, and warns', () => {
+    const plan = {
+      title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: '!!! ??? ---',
+      sections: [plannedSection()], faq: ['q1', 'q2'],
+    };
+    const result = trimPlan(plan, { budgets, pages: PAGES, sectionContent: SECTION_CONTENT });
+    expect(result.plan.heroImage).toBeNull();
+    expect(result.warnings.join(' ')).toContain('!!! ??? ---');
+  });
+
+  // 'logo' and 'logo-square' are factory/images/logo.mjs's reserved names (see plan.mjs's own
+  // comment on RESERVED_IMAGE_NAMES for why they are duplicated here rather than imported). A slug
+  // landing on either would otherwise either be dropped downstream with a confusing "reserved for
+  // the logo" log line, or — on a site that already has its logo — silently reuse that actual logo
+  // image inside a content section. Guarded here, the same way an unusable or over-budget name is.
+  it("drops a picture name that collides with the logo's reserved names, and warns", () => {
+    const plan = {
+      title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: 'Logo',
+      sections: [plannedSection({ image: 'Logo Square' })],
+      faq: ['q1', 'q2'],
+    };
+    const result = trimPlan(plan, { budgets: { ...budgets, images: 5 }, pages: PAGES, sectionContent: SECTION_CONTENT });
+    expect(result.plan.heroImage).toBeNull();
+    expect(result.plan.sections[0].image).toBeNull();
+    expect(result.warnings.join(' ')).toContain('логотип');
+  });
 });
 
 describe('planPage', () => {
@@ -302,5 +348,30 @@ describe('planPage', () => {
         { config: CONFIG, fetchFn, sleep: async () => {} },
       ),
     ).rejects.toThrow(/элемент/);
+  });
+
+  // Fix for games.json naming its picture a whole sentence: corrected after the fact in trimPlan,
+  // but also asked for up front, so the model has less to be corrected on.
+  it('asks the model to name every picture with a short slug, not a sentence', async () => {
+    let body;
+    const fetchFn = async (_url, init) => {
+      body = JSON.parse(init.body);
+      return answer({
+        title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
+        sections: [plannedSection()], faq: ['q1'],
+      });
+    };
+    await planPage(
+      {
+        page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
+        budgets: { sections: 1, faq: 1, images: 1 },
+        sectionContent: SECTION_CONTENT,
+        instructions: 'RULES',
+      },
+      { config: CONFIG, fetchFn, sleep: async () => {} },
+    );
+    const content = String(body.input[0].content);
+    expect(content).toMatch(/short.*slug/i);
+    expect(content).toMatch(/never a sentence/i);
   });
 });
