@@ -16,7 +16,8 @@ import { generateMissingImages } from './images/generate.mjs';
 import { generateLogo } from './images/logo.mjs';
 import { readOpenAiConfig } from './texts/env.mjs';
 import { generateSite } from './texts/generate-site.mjs';
-import { loadTemplateContent } from './texts/template.mjs';
+import { loadTemplateBlocks } from './texts/template.mjs';
+import { loadLayouts } from './texts/layouts.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -30,6 +31,9 @@ const IMAGE_PROMPTS_FILE = join(HERE, 'prompts', 'images.json');
 const LOGO_PROMPTS_FILE = join(HERE, 'prompts', 'logo.json');
 const TEXTS_PROMPTS_FILE = join(HERE, 'prompts', 'texts.json');
 const GEOS_FILE = join(HERE, 'geos.json');
+// Layouts sit outside factory/ on purpose: they are the composition of a page, which does not
+// belong to one theme and is not a prompt — they are the owner's own files, like templates/.
+const LAYOUTS_DIR = join(ROOT, 'layouts');
 
 const builds = new Map();
 
@@ -340,6 +344,7 @@ export function createApp({
   promptFile = IMAGE_PROMPTS_FILE,
   logoPromptFile = LOGO_PROMPTS_FILE,
   geosFile = GEOS_FILE,
+  layoutsDir = LAYOUTS_DIR,
 } = {}) {
   const app = express();
   app.use(express.json());
@@ -369,6 +374,18 @@ export function createApp({
       });
     } catch {
       res.json({ countries: [], locales: [] });
+    }
+  });
+
+  // Fills the «Раскладка» list on the Тексты tab. Same reasoning as /api/geos above: a layouts
+  // folder that cannot be read must not stop somebody building a site on the other tab, so this
+  // reports an empty list instead of a 500. The generation itself still refuses to start, loudly,
+  // in generateSite — and that is the right place for it, since only a run actually needs a layout.
+  app.get('/api/layouts', (_req, res) => {
+    try {
+      res.json({ layouts: loadLayouts(layoutsDir).map(({ id, name }) => ({ id, name })) });
+    } catch {
+      res.json({ layouts: [] });
     }
   });
 
@@ -493,13 +510,35 @@ export function createApp({
       res.status(400).json({ error: `Шаблон «${template}» не найден` });
       return;
     }
-    // A template with no content.json cannot be generated for at all, and saying so now costs
+    // A template with no blocks.json cannot be generated for at all, and saying so now costs
     // nothing — finding out after the first paid request would not.
     try {
-      loadTemplateContent(template, ROOT);
+      loadTemplateBlocks(template, ROOT);
     } catch (error) {
       res.status(400).json({ error: error.message });
       return;
+    }
+
+    // Empty/absent layout stays valid — it means «Случайно», a layout drawn per page. A present
+    // value has to name one that exists, and that is checked here rather than inside the run: a
+    // typo must come back as a refused request, not as a job that starts and immediately gives up.
+    if (isPresentNonString(body.layout)) {
+      res.status(400).json({ error: 'Поле «layout» должно быть строкой' });
+      return;
+    }
+    const layout = trimmedString(body.layout);
+    if (layout !== '') {
+      let known;
+      try {
+        known = loadLayouts(layoutsDir);
+      } catch (error) {
+        res.status(400).json({ error: error.message });
+        return;
+      }
+      if (!known.some((candidate) => candidate.id === layout)) {
+        res.status(400).json({ error: `Раскладка «${layout}» не найдена` });
+        return;
+      }
     }
 
     const site = safeName(body.out, '');
@@ -554,6 +593,8 @@ export function createApp({
         root: ROOT,
         promptFile: TEXTS_PROMPTS_FILE,
         geosFile,
+        layoutsDir,
+        layout,
         fetchFn,
         log,
       });

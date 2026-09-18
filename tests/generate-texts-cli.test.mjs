@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { rmSync } from 'node:fs';
+import { existsSync, rmSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -75,5 +75,46 @@ describe('npm run generate:texts', () => {
     const result = runCli('--out', '.hidden', '--brand', 'Acme');
     expect(result.status).toBe(1);
     expect(result.stderr).toContain('недопустимо');
+  });
+
+  // A misspelt --layout is a mistake in what was *typed*, exactly like the two refusals above, so
+  // it belongs to the same category: stderr and exit 1, before anything is paid for. The pull the
+  // other way is real — everything that goes wrong *inside* a run (no key, a broken template) is
+  // deliberately a stdout line and exit 0 here, because generateSite never throws and half a
+  // written folder is still worth looking at — and following that rule for --layout too would turn
+  // a typo into a run that starts, writes nothing and reports success. The name has to be echoed
+  // back: "раскладка не найдена" alone leaves the reader guessing which of the two words they
+  // typed the shell mangled.
+  it('refuses a --layout that names no real layout', () => {
+    const out = 'texts-cli-bad-layout';
+    rmSync(join('data', 'sites', out), { recursive: true, force: true });
+    try {
+      const result = runCli('--out', out, '--brand', 'Acme', '--layout', 'no-such-layout');
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('no-such-layout');
+      // The other half of "before anything is paid for": refused at the argument stage, the run
+      // never starts, so no half-made site folder is left behind for the owner to wonder about.
+      expect(existsSync(join('data', 'sites', out))).toBe(false);
+    } finally {
+      rmSync(join('data', 'sites', out), { recursive: true, force: true });
+    }
+  });
+
+  // The other side of that check, and the reason it cannot simply refuse every --layout it does
+  // not recognise as a flag: a layout that really is on disk must reach generateSite untouched.
+  // Without this, "refuse an unknown layout" could be satisfied by refusing all of them.
+  it('lets a real --layout through to the run itself', () => {
+    const out = 'texts-cli-layout-fixture';
+    rmSync(join('data', 'sites', out), { recursive: true, force: true });
+    try {
+      const result = runCli('--out', out, '--brand', 'Acme', '--layout=long-review');
+      // Same "got this far" reasoning as the --flag=value test above: no key behind
+      // OPENAI_ENV_FILE, so a run that passed the argument checks stops at generateSite's own
+      // "no key" line and exits cleanly, without touching the network.
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain('ключ');
+    } finally {
+      rmSync(join('data', 'sites', out), { recursive: true, force: true });
+    }
   });
 });

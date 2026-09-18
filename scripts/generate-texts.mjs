@@ -2,6 +2,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readOpenAiConfig } from '../factory/texts/env.mjs';
 import { generateSite } from '../factory/texts/generate-site.mjs';
+import { loadLayouts } from '../factory/texts/layouts.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 // The same escape hatch generate-images.mjs has, so tests never read the owner's real .env.
@@ -10,7 +11,7 @@ const ENV_FILE = process.env.OPENAI_ENV_FILE || join(ROOT, '.env');
 // The only flags this script reads — the sole ones checked below for a shape the parser cannot
 // make sense of. An unrecognised flag is left alone, exactly as before: it lands in `values`
 // under whatever name was typed, but nothing ever reads it back out.
-const KNOWN_FLAGS = ['template', 'out', 'brand', 'geo', 'locale', 'pages'];
+const KNOWN_FLAGS = ['template', 'out', 'brand', 'geo', 'locale', 'pages', 'layout'];
 
 // Accepts `--flag value` and `--flag=value` alike — people type either, and the README shows the
 // `=` form for a comma list like --pages. The old, position-only parser only understood the space
@@ -48,11 +49,11 @@ try {
   process.exit(1);
 }
 
-const { template = 'review', out = '', brand = '', geo = '', locale = '', pages = '' } = parsed;
+const { template = 'review', out = '', brand = '', geo = '', locale = '', pages = '', layout = '' } = parsed;
 
 if (out === '' || brand === '') {
   console.error(
-    'Использование: npm run generate:texts -- --template review --out <папка> --brand <бренд> --geo <гео> [--locale en-US] [--pages home,casino]',
+    'Использование: npm run generate:texts -- --template review --out <папка> --brand <бренд> --geo <гео> [--locale en-US] [--pages home,casino] [--layout long-review]',
   );
   process.exit(1);
 }
@@ -64,6 +65,30 @@ if (out === '' || brand === '') {
 if (/[/\\]/.test(out) || out.startsWith('.')) {
   console.error(`Имя папки «${out}» недопустимо: без «/», «\\» и без точки в начале`);
   process.exit(1);
+}
+
+// An empty --layout means «Случайно» — a layout drawn per page — so only a named one is checked.
+// This sits with the argument checks above, and not with the run below, on purpose: a typo in a
+// layout name is a mistake in what was typed, like «--out ../../etc», and mistakes in arguments
+// leave through stderr with code 1. Everything that goes wrong *during* a run stays a line in
+// stdout and exit 0, because generateSite never throws and half a written folder is still worth
+// looking at — which is exactly why a typo must not be left to it: the run would start, write
+// nothing and report success. The available ids come along because what somebody who mistyped
+// «long-revew» needs next is the correct spelling, and it is one line away.
+if (layout !== '') {
+  let known;
+  try {
+    known = loadLayouts(join(ROOT, 'layouts'));
+  } catch (error) {
+    // A layouts folder that is missing or holds an unreadable file is still a reason this run
+    // cannot honour what was asked for, so it leaves the same way — with the reason, not a stack.
+    console.error(error.message);
+    process.exit(1);
+  }
+  if (!known.some((candidate) => candidate.id === layout)) {
+    console.error(`Раскладка «${layout}» не найдена. Есть: ${known.map((one) => one.id).join(', ')}`);
+    process.exit(1);
+  }
 }
 
 const list = pages
@@ -82,5 +107,7 @@ await generateSite({
   root: ROOT,
   promptFile: join(ROOT, 'factory', 'prompts', 'texts.json'),
   geosFile: join(ROOT, 'factory', 'geos.json'),
+  layoutsDir: join(ROOT, 'layouts'),
+  layout,
   log: (line) => console.log(line),
 });
