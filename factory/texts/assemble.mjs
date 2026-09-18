@@ -1,29 +1,35 @@
-import { resolveLink } from './links.mjs';
+import { resolveLink, isSelfLink } from './links.mjs';
 
 // Turns a plan and a pile of filled sections into one page of our own content format.
 //
 // Everything structural happens here rather than in the model: the table of contents is built from
 // the section headings, each section's own heading is written from the plan, and the service blocks
 // are labelled in the site's language. The couplings that a model breaks most often — a contents
-// list that does not match the sections, a second h1, a link to a page that was never made — are
-// not checked here so much as made impossible by construction.
+// list that does not match the sections, a second h1, a link to a page that was never made, a link
+// back to the page it is already on — are not checked here so much as made impossible by construction.
 
 // [words](/target). Deliberately narrow: no nesting, no whitespace tricks, the same shape the
 // engine's own link parser accepts (see docs/content-format.md).
 const LINK = /\[([^\]\n]+)\]\(([^)\s]+)\)/g;
 
-// A link is kept only when it points at a page this site actually has, or at an anchor on this one
-// — and when it does, it is rewritten to that page's canonical address, so `[words](/home)` reaches
-// the page as `[words](/)`. plan.mjs's brief tells the model the real addresses, but prose is not
-// the schema: a link the model writes inside a sentence is never validated the way plan.mjs's own
-// link list is, so the same repair belongs here too (see links.mjs). Anything that names no page of
-// this site — an invented external address, a page from the example site — loses its brackets and
-// stays as plain words, which reads fine and links nowhere.
-function keepLinks(text, pages, warnings) {
+// A link is kept only when it points at a page this site actually has and is not the page it
+// appears on, or at an anchor on this one — and when it does, it is rewritten to that page's
+// canonical address, so `[words](/home)` reaches the page as `[words](/)`. plan.mjs's brief tells
+// the model the real addresses, but prose is not the schema: a link the model writes inside a
+// sentence is never validated the way plan.mjs's own link list is, so the same repair belongs here
+// too (see links.mjs). Anything that names no page of this site — an invented external address, a
+// page from the example site — loses its brackets and stays as plain words, which reads fine and
+// links nowhere. A link back to this same page loses its brackets the same way, but is reported
+// with its own wording (see links.mjs's isSelfLink) — it did resolve, just to nowhere useful.
+function keepLinks(text, pages, page, warnings) {
   return String(text).replace(LINK, (whole, label, href) => {
     const canonical = resolveLink(href, pages);
     if (canonical === null) {
       warnings.push(`ссылка ${href} ведёт в никуда — осталась текстом`);
+      return label;
+    }
+    if (isSelfLink(canonical, page)) {
+      warnings.push(`ссылка ${canonical} ведёт на саму страницу — осталась текстом`);
       return label;
     }
     return `[${label}](${canonical})`;
@@ -42,8 +48,8 @@ function trimToMax(what, list, range, warnings) {
   return list.slice(0, max);
 }
 
-function toElement(item, { images, pages, warnings, lengths }) {
-  const link = (text) => keepLinks(text, pages, warnings);
+function toElement(item, { images, pages, page, warnings, lengths }) {
+  const link = (text) => keepLinks(text, pages, page, warnings);
   const picture = (name) => {
     if (name && images.has(name)) return name;
     if (name) warnings.push(`картинка «${name}» не объявлена планом — убрана`);
@@ -94,19 +100,19 @@ function noteLength(what, value, range, warnings) {
   else if (min > 0 && length < min) warnings.push(`${what}: ${length} знаков вместо ${min} — оставлено как есть`);
 }
 
-export function assemblePage({ plan, sections, faq, pages, labels, lengths = {} }) {
+export function assemblePage({ plan, sections, faq, pages, page, labels, lengths = {} }) {
   const warnings = [];
   const images = new Set(
     [plan.heroImage, ...plan.sections.map((section) => section.image)].filter(Boolean),
   );
-  const context = { images, pages, warnings, lengths };
+  const context = { images, pages, page, warnings, lengths };
 
   const hero = {
     type: 'hero',
     content: [
       { type: 'title', h1: plan.h1 },
       ...(plan.heroImage ? [{ image: plan.heroImage }] : []),
-      ...plan.heroText.map((text) => ({ type: 'text', text: keepLinks(text, pages, warnings) })),
+      ...plan.heroText.map((text) => ({ type: 'text', text: keepLinks(text, pages, page, warnings) })),
     ],
   };
 
@@ -142,7 +148,7 @@ export function assemblePage({ plan, sections, faq, pages, labels, lengths = {} 
       ...faq.map((entry) => ({
         type: 'toggle',
         title: entry.question,
-        text: keepLinks(entry.answer, pages, warnings),
+        text: keepLinks(entry.answer, pages, page, warnings),
       })),
     ],
   };

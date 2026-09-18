@@ -211,6 +211,7 @@ export async function generateSite({
         sections: filledSections,
         faq,
         pages,
+        page,
         labels,
         lengths: content.lengths,
       });

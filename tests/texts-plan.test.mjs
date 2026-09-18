@@ -86,6 +86,53 @@ describe('trimPlan', () => {
     expect(result.warnings.join(' ')).toContain('/nope');
   });
 
+  // The live-run bug this task exists to fix: slots.json spent five of its eight links pointing
+  // back at /slots. A page's own address, offered back as a link target, must be dropped — not kept
+  // as if it named some other page, and not reported with either of the two existing warnings,
+  // since it is neither unresolvable (links.mjs resolves it fine) nor merely late for the budget.
+  it('drops a link to the page itself, with its own warning', () => {
+    const plan = {
+      title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
+      sections: [plannedSection({ links: ['/casino', '/bonus'] }), plannedSection()],
+      faq: ['q1', 'q2'],
+    };
+    const result = trimPlan(plan, { budgets, pages: PAGES, page: 'casino', sectionContent: SECTION_CONTENT });
+    expect(result.plan.sections[0].links).toEqual(['/bonus']);
+    expect(result.warnings.join(' ')).toContain('саму страницу');
+    expect(result.warnings.join(' ')).not.toContain('никуда');
+    expect(result.warnings.join(' ')).not.toContain('бюджета');
+  });
+
+  // A self-link must not spend the very budget it exists to protect on its way out — if it did, it
+  // would still be displacing a link to a different page, just silently instead of by name, which is
+  // the same harm the live run had, one step removed.
+  it('does not spend the link budget on a link to the page itself', () => {
+    const withLinks = { ...budgets, links: { section: [0, 2], page: [0, 2] } };
+    const plan = {
+      title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
+      sections: [plannedSection({ links: ['/casino', '/casino', '/bonus', 'home'] })],
+      faq: ['q1', 'q2'],
+    };
+    const result = trimPlan(plan, {
+      budgets: withLinks, pages: PAGES, page: 'casino', sectionContent: SECTION_CONTENT,
+    });
+    expect(result.plan.sections[0].links).toEqual(['/bonus', '/']);
+  });
+
+  // resolveLink already collapses "home" and "/home" onto the one address "/" before this ever runs
+  // — proving that collapse happens before the self-link check, so a page planning itself as `home`
+  // is caught under either spelling, not just the one the model happened to write this time.
+  it('drops both spellings of home linking to itself, when the page being planned is home', () => {
+    const plan = {
+      title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
+      sections: [plannedSection({ links: ['home', '/home', '/casino'] }), plannedSection()],
+      faq: ['q1', 'q2'],
+    };
+    const result = trimPlan(plan, { budgets, pages: PAGES, page: 'home', sectionContent: SECTION_CONTENT });
+    expect(result.plan.sections[0].links).toEqual(['/casino']);
+    expect(result.warnings.filter((warning) => warning.includes('саму страницу'))).toHaveLength(2);
+  });
+
   // Finding: the brief hands the model file names ("home", "casino"), not addresses, so it echoes
   // them back, or the obvious slash-prefixed guess — neither of which used to be in the `allowed`
   // set this filter checked against. A recognisable spelling must be repaired to its canonical
@@ -292,11 +339,41 @@ describe('planPage', () => {
     );
 
     const content = String(body.input[0].content);
-    expect(content).toContain('Pages on this site: /, /casino, /bonus');
+    // "casino" is the page being planned, so it is left out of its own list of link targets (see
+    // the dedicated test below) — this test is about the other two things the brief must say:
+    // addresses, not file names, and the per-page link budget.
+    expect(content).toContain('Pages on this site: /, /bonus');
     // "home" the file name must be gone from that line entirely — only its address, "/", remains.
     expect(content).not.toMatch(/Pages on this site:.*\bhome\b/);
     expect(content).toMatch(/link.*must use one of those exact addresses/i);
     expect(content).toContain('at most 8 internal links');
+  });
+
+  // The live-run bug, caught before the model ever sees the brief: offering a page's own address
+  // back to it as something "worth linking to" invites exactly the self-link this task removes.
+  // Leaving it out of the list is cheaper than asking the model to notice and decline it every time.
+  it('leaves the page being planned out of its own list of addresses', async () => {
+    let body;
+    const fetchFn = async (_url, init) => {
+      body = JSON.parse(init.body);
+      return answer({
+        title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
+        sections: [plannedSection()], faq: ['q1'],
+      });
+    };
+    await planPage(
+      {
+        page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
+        budgets: { sections: 1, faq: 1, images: 1, links: { section: [0, 2], page: [0, 8] } },
+        sectionContent: SECTION_CONTENT,
+        instructions: 'RULES',
+      },
+      { config: CONFIG, fetchFn, sleep: async () => {} },
+    );
+
+    const content = String(body.input[0].content);
+    expect(content).toContain('Pages on this site: /, /bonus');
+    expect(content).not.toMatch(/Pages on this site:.*\/casino/);
   });
 
   // Finding: planPage used to take a manifest-wide `elements` list as well as `sectionContent`, and

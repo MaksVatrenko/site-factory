@@ -1,6 +1,6 @@
 import { askJson } from './openai.mjs';
 import { planSchema } from './schema.mjs';
-import { pageAddress, resolveLink } from './links.mjs';
+import { pageAddress, resolveLink, isSelfLink } from './links.mjs';
 
 // Stage one: what the page is about, before a word of it is written. The answer is small and cheap,
 // which is the point — it buys coherence (sections that do not repeat one another, links spread
@@ -62,7 +62,7 @@ const RESERVED_IMAGE_NAMES = new Set(['logo', 'logo-square']);
 // still a good plan once the extras are taken off. Trimming only ever removes — it cannot manufacture
 // a missing element out of nothing — so there is no matching check for too few; every removal is
 // still written to `warnings` so the run's log says what happened.
-export function trimPlan(plan, { budgets, pages, sectionContent }) {
+export function trimPlan(plan, { budgets, pages, page, sectionContent }) {
   const warnings = [];
 
   let imagesLeft = budgets.images;
@@ -107,12 +107,22 @@ export function trimPlan(plan, { budgets, pages, sectionContent }) {
     // thing, not a mistake. Only a target that names no page of this site is still reported and
     // dropped. Budgets are spent in the order links arrive, section by section: the earliest link on
     // the page is worth more than a repeat further down, so it is the later ones that give way.
+    //
+    // A link back to this same page is checked before either budget: planPage's brief already
+    // leaves this page's own address out of what it offers, so a self-link only ever reaches here
+    // when the model writes one anyway, and it must not be allowed to spend a budget slot on its way
+    // out — doing so would still displace a link to a different page, just silently instead of by
+    // name, which is exactly the harm this whole budget exists to prevent (see links.mjs).
     let sectionLinksLeft = maxLinksPerSection;
     const links = section.links
       .map((href) => {
         const canonical = resolveLink(href, pages);
         if (canonical === null) {
           warnings.push(`ссылка ${href} в разделе «${section.heading}» ведёт в никуда — убрана`);
+          return null;
+        }
+        if (isSelfLink(canonical, page)) {
+          warnings.push(`ссылка ${canonical} в разделе «${section.heading}» ведёт на саму страницу — убрана`);
           return null;
         }
         if (sectionLinksLeft <= 0) {
@@ -177,7 +187,13 @@ export async function planPage(
   // trimPlan threw both away. Telling it the real addresses, and saying plainly that a link must
   // spell one of them, fixes the instruction rather than the symptom; resolveLink in trimPlan below
   // still repairs a near-miss, for whatever the model does anyway.
-  const addresses = pages.map(pageAddress);
+  //
+  // This page's own address is left out of the list: offering a page a link to itself as something
+  // "worth linking to" is exactly how the live run spent five of slots.json's eight links pointing
+  // back at /slots. trimPlan's own isSelfLink check below still catches one the model writes anyway.
+  const addresses = pages
+    .filter((candidate) => pageAddress(candidate) !== pageAddress(page))
+    .map(pageAddress);
   const maxPageLinks = budgets.links?.page?.[1];
   const budgetLine = Number.isFinite(maxPageLinks)
     ? `This page has ${budgets.sections} sections, ${budgets.faq} FAQ questions, at most ${budgets.images} pictures and at most ${maxPageLinks} internal links.`
@@ -208,6 +224,6 @@ export async function planPage(
     options,
   );
 
-  const { plan, warnings } = trimPlan(data, { budgets, pages, sectionContent });
+  const { plan, warnings } = trimPlan(data, { budgets, pages, page, sectionContent });
   return { plan, warnings, cost, usage };
 }

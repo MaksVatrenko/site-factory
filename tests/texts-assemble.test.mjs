@@ -3,6 +3,9 @@ import { assemblePage } from '../factory/texts/assemble.mjs';
 
 const LABELS = { toc: 'Contents', links: 'Other pages', faq: 'Questions' };
 const PAGES = ['home', 'casino', 'bonus'];
+// The page being assembled throughout this fixture — matches PLAN's own subject below, so a link
+// to /bonus (a different page) is never mistaken for a self-link by the tests that do not care.
+const PAGE = 'casino';
 
 const PLAN = {
   title: 'Casino guide',
@@ -32,7 +35,10 @@ const LENGTHS = {
   cards: [2, 4],
 };
 const build = (overrides = {}) =>
-  assemblePage({ plan: PLAN, sections: SECTIONS, faq: FAQ, pages: PAGES, labels: LABELS, lengths: LENGTHS, ...overrides });
+  assemblePage({
+    plan: PLAN, sections: SECTIONS, faq: FAQ, pages: PAGES, page: PAGE, labels: LABELS, lengths: LENGTHS,
+    ...overrides,
+  });
 
 const blockOf = (page, type) => page.blocks.find((block) => block.type === type);
 
@@ -104,6 +110,33 @@ describe('assemblePage', () => {
     const text = page.blocks.filter((block) => block.type === 'section')[0].content[1];
     expect(text.text).toBe('See the app for more.');
     expect(warnings.join(' ')).toContain('/app');
+  });
+
+  // The live-run bug this task exists to fix: a page linking to itself mid-sentence, reported
+  // separately from "ведёт в никуда" (this page resolves fine — it is simply not a different page).
+  it('unwraps a link to the page itself, keeping the words, with its own warning', () => {
+    const sections = [
+      { heading: 'Payments', items: [{ kind: 'text', text: 'See [this page](/casino) or [bonus](/bonus) for more.' }] },
+      SECTIONS[1],
+    ];
+    const { page, warnings } = build({ sections });
+    const text = page.blocks.filter((block) => block.type === 'section')[0].content[1];
+    expect(text.text).toBe('See this page or [bonus](/bonus) for more.');
+    expect(warnings.join(' ')).toContain('саму страницу');
+    expect(warnings.join(' ')).not.toContain('никуда');
+  });
+
+  // An anchor reaches a heading further down this same page — the one in-page link worth having —
+  // and must keep working even though, in a sense, its target is "this page" too.
+  it('keeps an anchor to a heading on the same page', () => {
+    const sections = [
+      { heading: 'Payments', items: [{ kind: 'text', text: 'Jump to [the FAQ](#faq) below.' }] },
+      SECTIONS[1],
+    ];
+    const { page, warnings } = build({ sections });
+    const text = page.blocks.filter((block) => block.type === 'section')[0].content[1];
+    expect(text.text).toBe('Jump to [the FAQ](#faq) below.');
+    expect(warnings.join(' ')).not.toContain('саму страницу');
   });
 
   it('drops a picture the plan never asked for', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { pageAddress, resolveLink } from '../factory/texts/links.mjs';
+import { pageAddress, resolveLink, isSelfLink } from '../factory/texts/links.mjs';
 
 const PAGES = ['home', 'casino', 'slots', 'games'];
 
@@ -47,5 +47,31 @@ describe('resolveLink', () => {
 
   it('refuses an invented external address', () => {
     expect(resolveLink('https://example.com', PAGES)).toBeNull();
+  });
+});
+
+describe('isSelfLink', () => {
+  it('recognises a resolved address as the page it would appear on', () => {
+    expect(isSelfLink('/casino', 'casino')).toBe(true);
+  });
+
+  it('recognises the site root as home linking to itself', () => {
+    expect(isSelfLink('/', 'home')).toBe(true);
+  });
+
+  it('is false for a link to a genuinely different page', () => {
+    expect(isSelfLink('/casino', 'slots')).toBe(false);
+    expect(isSelfLink('/', 'casino')).toBe(false);
+  });
+
+  // An anchor reaches a heading further down this same page — the one in-page link worth having —
+  // so it must never be judged a self-link, even on the page it would technically "point back to".
+  it('never treats an anchor as a self-link', () => {
+    expect(isSelfLink('#faq', 'home')).toBe(false);
+    expect(isSelfLink('#faq', 'casino')).toBe(false);
+  });
+
+  it('is false for an unresolved target', () => {
+    expect(isSelfLink(null, 'home')).toBe(false);
   });
 });
