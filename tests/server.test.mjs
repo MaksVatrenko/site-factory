@@ -136,6 +136,13 @@ function schemeIdsOnDisk() {
     .sort();
 }
 
+// Same "read the filesystem independently" principle as the two helpers above: parses
+// factory/geos.json itself rather than calling loadGeos, so the /api/geos assertions below do
+// not just check that function against itself.
+function geosOnDisk() {
+  return JSON.parse(readFileSync(join('factory', 'geos.json'), 'utf8'));
+}
+
 // Same "read the filesystem independently" principle as the two helpers above, applied to a site
 // folder under data/sites: the page count is every *.json file in the folder except the two
 // service files, site.json and images.json — spelled out here rather than imported from
@@ -164,6 +171,17 @@ describe('factory API', () => {
   it('lists colour schemes read from disk', async () => {
     const data = await fetch(`${base}/api/schemes`).then((r) => r.json());
     expect(data.schemes).toEqual(schemeIdsOnDisk());
+  });
+
+  // The order matters as much as the content: the owner puts the countries they use most at the
+  // top of factory/geos.json on purpose, and that order is meant to survive all the way into the
+  // dropdown — so this checks countries as an ordered array (toEqual), not merely which ones
+  // showed up.
+  it('lists geos read from disk, each country with its locale, and the distinct locales', async () => {
+    const data = await fetch(`${base}/api/geos`).then((r) => r.json());
+    const raw = geosOnDisk();
+    expect(data.countries).toEqual(Object.entries(raw).map(([name, locale]) => ({ name, locale })));
+    expect(data.locales).toEqual([...new Set(Object.values(raw))]);
   });
 
   it('lists site folders read from disk, each with its page count and brand name', async () => {
@@ -500,6 +518,49 @@ function fixtureSchemeCss() {
     `--c-primary: ${FIXTURE_PRIMARY};`,
   );
 }
+
+// A dedicated app per test, pointed at a throwaway geosFile instead of the real
+// factory/geos.json — the same isolation pattern the picture- and logo-generation describe
+// blocks below use for their own tmp .env. GET /api/geos must survive a geos.json that cannot be
+// read at all, exactly as badly as it must survive one that parses but fails validation: a broken
+// file on this tab must not stop someone building a site on the Генерация tab.
+describe('GET /api/geos survives a broken geos.json', () => {
+  let dir;
+  afterAll(() => {
+    if (dir) rmSync(dir, { recursive: true, force: true });
+  });
+
+  async function geosResponseFor(geosFile) {
+    const app = createApp({ envFile: NO_ENV_FILE, fetchFn: refuseNetwork, geosFile });
+    const brokenServer = app.listen(0);
+    await new Promise((resolve) => brokenServer.once('listening', resolve));
+    const origin = `http://127.0.0.1:${brokenServer.address().port}`;
+    try {
+      const response = await fetch(`${origin}/api/geos`);
+      return { status: response.status, body: await response.json() };
+    } finally {
+      brokenServer.close();
+    }
+  }
+
+  it('answers with empty lists, not an error, when the file is not valid JSON', async () => {
+    dir = mkdtempSync(join(tmpdir(), 'site-factory-broken-geos-'));
+    const geosFile = join(dir, 'geos.json');
+    writeFileSync(geosFile, '{ not json');
+
+    const { status, body } = await geosResponseFor(geosFile);
+    expect(status).toBe(200);
+    expect(body).toEqual({ countries: [], locales: [] });
+  });
+
+  it('answers with empty lists, not an error, when the file does not exist at all', async () => {
+    const geosFile = join(tmpdir(), 'site-factory-geos-does-not-exist', 'geos.json');
+
+    const { status, body } = await geosResponseFor(geosFile);
+    expect(status).toBe(200);
+    expect(body).toEqual({ countries: [], locales: [] });
+  });
+});
 
 describe('site, template and scheme are validated against the real lists, not rewritten (M2)', () => {
   it('accepts a site folder name safeName would mangle into a 404', async () => {

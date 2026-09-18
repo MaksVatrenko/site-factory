@@ -7,6 +7,7 @@ import { generateSiteJson } from './site-json.mjs';
 import { rollSkeleton } from './skeleton.mjs';
 import { describeTemplate, loadTemplateContent, loadTemplateExamples } from './template.mjs';
 import { languageFor, loadTextsPromptFile } from './texts-prompts.mjs';
+import { loadGeos } from '../geos.mjs';
 import { readManifest } from '../../src/lib/templates.mjs';
 
 // The whole stage, start to finish. Like the picture and logo steps it never throws: every problem
@@ -37,6 +38,7 @@ export async function generateSite({
   config,
   root = process.cwd(),
   promptFile,
+  geosFile,
   fetchFn,
   sleep,
   log = () => {},
@@ -56,11 +58,13 @@ export async function generateSite({
   let examples;
   let promptSet;
   let elements;
+  let geos;
   try {
     content = loadTemplateContent(templateId, root);
     examples = loadTemplateExamples(templateId, root);
     elements = readManifest(templateId, root).elements;
     promptSet = loadTextsPromptFile(promptFile);
+    geos = loadGeos(geosFile);
   } catch (error) {
     log(`Тексты: ${error.message} — пропущены`);
     return summary;
@@ -70,7 +74,7 @@ export async function generateSite({
     return summary;
   }
 
-  const byGeo = languageFor(geo, promptSet.languageByGeo);
+  const byGeo = languageFor(geo, geos.languageByGeo);
   const language = locale.trim() || byGeo.locale;
   if (locale.trim() === '' && !byGeo.known) {
     log(`Тексты: гео «${geo}» незнакомое — язык взят английский`);

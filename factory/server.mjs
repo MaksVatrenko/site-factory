@@ -10,6 +10,7 @@ import express from 'express';
 import { listTemplates } from '../src/lib/templates.mjs';
 import { listSchemes } from '../src/lib/schemes.mjs';
 import { isPageFileName } from '../src/lib/site-dir.mjs';
+import { loadGeos } from './geos.mjs';
 import { readRunwareConfig } from './images/env.mjs';
 import { generateMissingImages } from './images/generate.mjs';
 import { generateLogo } from './images/logo.mjs';
@@ -28,6 +29,7 @@ const ENV_FILE = join(ROOT, '.env');
 const IMAGE_PROMPTS_FILE = join(HERE, 'prompts', 'images.json');
 const LOGO_PROMPTS_FILE = join(HERE, 'prompts', 'logo.json');
 const TEXTS_PROMPTS_FILE = join(HERE, 'prompts', 'texts.json');
+const GEOS_FILE = join(HERE, 'geos.json');
 
 const builds = new Map();
 
@@ -329,14 +331,15 @@ export function guardArchiveCompleteness(archive, res, expectedEntryCount) {
   });
 }
 
-// envFile, fetchFn, promptFile and logoPromptFile exist for tests: they let a test app read a
-// temporary .env and answer Runware requests itself, so no test ever sees the owner's real key or
-// spends money.
+// envFile, fetchFn, promptFile, logoPromptFile and geosFile exist for tests: they let a test app
+// read a temporary .env, answer Runware/OpenAI requests itself and load a throwaway geos file, so
+// no test ever sees the owner's real key, spends money, or depends on the real factory/geos.json.
 export function createApp({
   envFile = ENV_FILE,
   fetchFn = fetch,
   promptFile = IMAGE_PROMPTS_FILE,
   logoPromptFile = LOGO_PROMPTS_FILE,
+  geosFile = GEOS_FILE,
 } = {}) {
   const app = express();
   app.use(express.json());
@@ -351,6 +354,22 @@ export function createApp({
 
   app.get('/api/sites', (_req, res) => {
     res.json({ sites: listSites() });
+  });
+
+  // Fills the geo/language dropdowns on both the Генерация and Тексты tabs. A geos.json that
+  // cannot be read or fails validation must not stop someone building a site on the other tab —
+  // the same reasoning as listTemplates/listSchemes answering [] instead of throwing when their
+  // own directory is missing — so this reports an empty pair of lists instead of a 500.
+  app.get('/api/geos', (_req, res) => {
+    try {
+      const { languageByGeo, countries, locales } = loadGeos(geosFile);
+      res.json({
+        countries: countries.map((name) => ({ name, locale: languageByGeo[name] })),
+        locales,
+      });
+    } catch {
+      res.json({ countries: [], locales: [] });
+    }
   });
 
   app.post('/api/generate', (req, res) => {
@@ -534,6 +553,7 @@ export function createApp({
         config: readOpenAiConfig(envFile),
         root: ROOT,
         promptFile: TEXTS_PROMPTS_FILE,
+        geosFile,
         fetchFn,
         log,
       });

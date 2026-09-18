@@ -119,6 +119,7 @@ const run = (dir, overrides = {}) => {
     siteDir: dir, templateId: 'review', brand: 'Acme', geo: 'Bangladesh', locale: '',
     pages: PAGES, config: CONFIG, root: process.cwd(),
     promptFile: join('factory', 'prompts', 'texts.json'),
+    geosFile: join('factory', 'geos.json'),
     sleep: async () => {}, log: (line) => lines.push(line),
     ...overrides,
   }).then((summary) => ({ summary, lines }));
@@ -143,6 +144,16 @@ describe('generateSite', () => {
     const dir = siteDir();
     await run(dir, fakeOpenAi());
     expect(JSON.parse(readFileSync(join(dir, 'site.json'), 'utf8')).locale).toBe('en-US');
+  });
+
+  // The geo table itself now comes from factory/geos.mjs/geos.json (see tests/geos.test.mjs) —
+  // this is the end-to-end proof that the texts stage still resolves a language through it, and
+  // that a geo the table does not know still degrades to English instead of stopping the run.
+  it('falls back to English and logs it when the geo is unknown', async () => {
+    const dir = siteDir();
+    const { lines } = await run(dir, { ...fakeOpenAi(), geo: 'Atlantis' });
+    expect(JSON.parse(readFileSync(join(dir, 'site.json'), 'utf8')).locale).toBe('en-US');
+    expect(lines.join('\n')).toContain('незнакомое');
   });
 
   it('reports what the run cost', async () => {
@@ -397,6 +408,19 @@ describe('generateSite', () => {
     expect(fake.asked).toEqual([]);
     expect(summary.cost).toBe(0);
     expect(lines.join('\n')).toContain('no-such-template');
+  });
+
+  // Same free-check treatment as the template above: a geos.json that cannot be read is caught
+  // before the first paid request, not partway through the run.
+  it('refuses when the geos file cannot be read, without spending anything', async () => {
+    const dir = siteDir();
+    const fake = fakeOpenAi();
+    const missingGeosFile = join(dir, 'no-such-geos.json');
+    const { summary, lines } = await run(dir, { ...fake, geosFile: missingGeosFile });
+    expect(fake.asked).toEqual([]);
+    expect(summary.cost).toBe(0);
+    expect(lines.join('\n')).toContain('гео');
+    expect(existsSync(dir)).toBe(false);
   });
 });
 

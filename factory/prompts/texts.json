@@ -7,14 +7,5 @@
     "Avoid unsupported first-person experience, fabricated testimonials and absolute promises.",
     "Keep the meta title and description accurate and natural, without keyword stuffing.",
     "Do not use the brand name that appears in the examples — write only about the brand you were given."
-  ],
-  "languageByGeo": {
-    "Bangladesh": "en-US",
-    "Philippines": "en-US",
-    "Pakistan": "en-US",
-    "India": "en-IN",
-    "Indonesia": "id-ID",
-    "Mexico": "es-MX",
-    "Brazil": "pt-BR"
-  }
+  ]
 }

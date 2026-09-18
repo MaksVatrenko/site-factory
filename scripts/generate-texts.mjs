@@ -81,5 +81,6 @@ await generateSite({
   config: readOpenAiConfig(ENV_FILE),
   root: ROOT,
   promptFile: join(ROOT, 'factory', 'prompts', 'texts.json'),
+  geosFile: join(ROOT, 'factory', 'geos.json'),
   log: (line) => console.log(line),
 });

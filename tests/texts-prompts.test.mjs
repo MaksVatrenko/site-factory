@@ -20,14 +20,13 @@ function promptFile(body) {
 
 const GOOD = {
   rules: ['Write clear, useful content.', 'Do not copy text from the examples.'],
-  languageByGeo: { Bangladesh: 'en-US', Mexico: 'es-MX' },
 };
 
 describe('loadTextsPromptFile', () => {
-  it('reads the rules and the language table', () => {
+  it('reads the rules', () => {
     const loaded = loadTextsPromptFile(promptFile(GOOD));
     expect(loaded.rules).toHaveLength(2);
-    expect(loaded.languageByGeo.Mexico).toBe('es-MX');
+    expect(loaded.rules[1]).toBe('Do not copy text from the examples.');
   });
 
   it('refuses a file with no rules', () => {
@@ -38,34 +37,34 @@ describe('loadTextsPromptFile', () => {
     expect(() => loadTextsPromptFile(promptFile({ ...GOOD, rules: ['ok', '  '] }))).toThrow(/rules/);
   });
 
-  it('refuses a language table that is not a map of strings', () => {
-    expect(() => loadTextsPromptFile(promptFile({ ...GOOD, languageByGeo: { Mexico: 5 } }))).toThrow(
-      /languageByGeo/,
-    );
-  });
-
   it('refuses a file that is not JSON, naming it', () => {
     const file = promptFile('{ not json');
     expect(() => loadTextsPromptFile(file)).toThrow(new RegExp(file.replace(/[/\\]/g, '.')));
   });
 });
 
+// languageFor takes its table as a plain argument and never reads a file itself, so these use a
+// table literal instead of loadTextsPromptFile's output — the geo → locale table it used to
+// return moved to factory/geos.mjs (see tests/geos.test.mjs), but languageFor's own behaviour is
+// unchanged and does not depend on where the table came from.
+const TABLE = { Mexico: 'es-MX', Bangladesh: 'en-US' };
+
 describe('languageFor', () => {
   it('finds the language of a known geo', () => {
-    expect(languageFor('Mexico', GOOD.languageByGeo)).toEqual({ locale: 'es-MX', known: true });
+    expect(languageFor('Mexico', TABLE)).toEqual({ locale: 'es-MX', known: true });
   });
 
   it('ignores case and surrounding spaces', () => {
-    expect(languageFor('  mexico ', GOOD.languageByGeo)).toEqual({ locale: 'es-MX', known: true });
+    expect(languageFor('  mexico ', TABLE)).toEqual({ locale: 'es-MX', known: true });
   });
 
   // An unknown geo must not stop a run: English is a defensible default, and the caller says so in
   // the log so nobody is surprised by an English site for a country that wanted another language.
   it('falls back to English and says the geo was unknown', () => {
-    expect(languageFor('Atlantis', GOOD.languageByGeo)).toEqual({ locale: 'en-US', known: false });
+    expect(languageFor('Atlantis', TABLE)).toEqual({ locale: 'en-US', known: false });
   });
 
   it('treats an empty geo as unknown too', () => {
-    expect(languageFor('', GOOD.languageByGeo)).toEqual({ locale: 'en-US', known: false });
+    expect(languageFor('', TABLE)).toEqual({ locale: 'en-US', known: false });
   });
 });
