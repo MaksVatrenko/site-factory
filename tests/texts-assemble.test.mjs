@@ -47,12 +47,26 @@ const LINKS = nature('links', { auto: true });
 const FAQ_BLOCK = nature('faq', { heading: true, content: { toggle: [5, 8] } });
 const BLOCKS = [HERO, TOC, SECTION, SECTION, LINKS, FAQ_BLOCK];
 
-const build = (overrides = {}) =>
-  assemblePage({
-    plan: PLAN, blocks: BLOCKS, sections: SECTIONS, faq: FAQ, pages: PAGES, page: PAGE,
-    labels: LABELS, lengths: LENGTHS,
+// The assembler looks a filled block up by its place in the layout, not by its turn in a queue:
+// a page can hold more than one kind of content block, and they are not interchangeable. Tests
+// still write a plain list, and this pairs it with the layout's own content blocks in order.
+function byPlace(blocks, sections) {
+  const places = blocks
+    .map((block, at) => ({ block, at }))
+    .filter(({ block }) => !block.auto && block.type !== 'faq' && block.heading);
+  return new Map(sections.map((section, index) => [places[index]?.at ?? -1 - index, section]));
+}
+
+const build = (overrides = {}) => {
+  const blocks = overrides.blocks ?? BLOCKS;
+  const sections = overrides.sections ?? SECTIONS;
+  return assemblePage({
+    plan: PLAN, faq: FAQ, pages: PAGES, page: PAGE, labels: LABELS, lengths: LENGTHS,
     ...overrides,
+    blocks,
+    sections: sections instanceof Map ? sections : byPlace(blocks, sections),
   });
+};
 
 const blockOf = (page, type) => page.blocks.find((block) => block.type === type);
 
@@ -169,6 +183,31 @@ describe('assemblePage', () => {
     expect(page.blocks.map((block) => block.type)).toEqual(['hero']);
     expect(page.blocks[0].content).toContainEqual({ image: 'hero-picture' });
     expect(JSON.stringify(page)).not.toContain('split-picture');
+  });
+
+  // A page can hold more than one kind of content block, and they are not interchangeable: a
+  // half-and-half block draws its words in a column half as wide, so a section's table landing in
+  // one would be unreadable. Taking the next entry off a queue instead of the one belonging to this
+  // block's own place does exactly that the moment an earlier block is dropped — every later entry
+  // moves up by one, the last block gets nothing, and the page still looks plausible.
+  it('gives each block the content planned for its own place, past a dropped one', () => {
+    const SPLIT = nature('split', { heading: true, image: true, content: { text: [1, 3] } });
+    const blocks = [HERO, SECTION, SECTION, SPLIT];
+    // The section at layout position 1 came back empty and was dropped upstream; positions 2 and 3
+    // survived. Keyed by place, so what belongs to the split is unmistakable.
+    const filled = new Map([
+      [2, { heading: 'Second section', items: [{ kind: 'text', text: 'Section words.' }] }],
+      [3, { heading: 'The half block', items: [{ kind: 'text', text: 'Half words.' }] }],
+    ]);
+    const { page } = build({ blocks, sections: filled, plan: { ...PLAN, images: ['a', 'b'] } });
+
+    expect(page.blocks.map((block) => block.type)).toEqual(['hero', 'section', 'split']);
+    const split = page.blocks.find((block) => block.type === 'split');
+    expect(split.content[0]).toEqual({ type: 'title', h2: 'The half block' });
+    expect(JSON.stringify(split)).toContain('Half words.');
+    // And the section that survived kept its own words rather than the split's.
+    const section = page.blocks.find((block) => block.type === 'section');
+    expect(JSON.stringify(section)).toContain('Section words.');
   });
 
   it('says so instead of emitting an empty block it has nothing to fill', () => {

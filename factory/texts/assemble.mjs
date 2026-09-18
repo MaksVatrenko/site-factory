@@ -171,7 +171,6 @@ export function assemblePage({ plan, blocks, layout = '', sections, faq, pages, 
   // and a block with nothing to show is dropped along the way — so the auto blocks are filled over
   // what actually survived rather than over what the layout asked for.
   const built = [];
-  let sectionIndex = 0;
   for (const [at, block] of blocks.entries()) {
     if (block.auto) {
       // layouts.mjs refuses this before the first paid request; by the time a page is assembled it
@@ -203,12 +202,15 @@ export function assemblePage({ plan, blocks, layout = '', sections, faq, pages, 
     }
 
     if (block.heading) {
-      const section = sections[sectionIndex];
+      // Looked up by the block's own place in the layout, not taken from the front of a queue. A
+      // page can hold more than one kind of content block now, and they are not interchangeable: a
+      // section dropped upstream would shift every later entry up by one, and a half-and-half block
+      // would end up drawing a section's table in a column half as wide.
+      const section = sections.get(at);
       // Dropped upstream because it came back empty. Its contents entry goes with it, which is the
       // whole reason the contents is built from what survived: no entry may point at a heading with
       // nothing under it.
       if (!section) continue;
-      sectionIndex += 1;
       built.push({
         block,
         at,

@@ -88,13 +88,39 @@ export const ELEMENT_KINDS = Object.freeze(Object.keys(ELEMENT_DEFS));
 // sections when the page is meant to have nine. Where the layout left a range — what it did not
 // pin down — the range reaches the schema as minItems/maxItems and the model chooses inside it, by
 // the subject of the page. `sections` is always exact: a layout says how many blocks it has.
-export function planSchema({ sections, faq, heroText, images }, elements) {
-  // Same guard as sectionSchema, for the same reason: an empty `known` would leave every section's
-  // `elements` field an `enum: []` — a schema nothing can ever satisfy, so the request would be
-  // paid for and fail every single time.
-  const known = elements.filter((element) => Object.hasOwn(ELEMENT_DEFS, element));
-  if (known.length === 0) {
-    throw new Error('ни один элемент шаблона не описан схемой — генерировать нечего');
+export function planSchema({ byType, faq, heroText, images }, contentByType) {
+  // One array per kind of content block, each offering only what that kind may hold. Two kinds are
+  // two different questions — a half-and-half block holds a heading, a paragraph or two and a call
+  // to action, a section holds tables and card sets besides — and one shared list would offer the
+  // half-block a table it cannot hold, only for trimPlan to take every copy back off on arrival.
+  const blockTypes = Object.entries(byType).map(([type, count]) => {
+    const known = Object.entries(contentByType[type] ?? {})
+      // An element the layout pinned to zero is not on offer either: the model would spend output
+      // on it and trimPlan would strip it, leaving a shorter block and a log full of removals.
+      .filter(([element, range]) => range[1] > 0 && Object.hasOwn(ELEMENT_DEFS, element))
+      .map(([element]) => element);
+    // Same guard as sectionSchema, for the same reason: an empty `known` leaves `elements` an
+    // `enum: []` — a schema nothing can satisfy, so the request is paid for and fails every time.
+    if (known.length === 0) {
+      throw new Error(`ни один элемент блока «${type}» не описан схемой — генерировать нечего`);
+    }
+    return [
+      type,
+      {
+        type: 'array',
+        minItems: count,
+        maxItems: count,
+        items: object({
+          heading: string,
+          brief: string,
+          elements: { type: 'array', items: { type: 'string', enum: known } },
+          links: strings,
+        }),
+      },
+    ];
+  });
+  if (blockTypes.length === 0) {
+    throw new Error('в раскладке нет ни одного блока, который пишет модель — генерировать нечего');
   }
   return object({
     title: { type: 'string' },
@@ -106,17 +132,10 @@ export function planSchema({ sections, faq, heroText, images }, elements) {
     // Nothing here is nullable: a block with a picture has one. There is no budget to overshoot, no
     // optional field to leave null, and no way to name a picture for a block that has none.
     images: { type: 'array', minItems: images, maxItems: images, items: string },
-    sections: {
-      type: 'array',
-      minItems: sections,
-      maxItems: sections,
-      items: object({
-        heading: { type: 'string' },
-        brief: { type: 'string' },
-        elements: { type: 'array', items: { type: 'string', enum: known } },
-        links: strings,
-      }),
-    },
+    // Nested under one field rather than spread across the top level, because a block's type is
+    // the theme's word and not ours: a theme is free to call a block `title`, and at the top level
+    // that would collide with the page's own title.
+    blocks: object(Object.fromEntries(blockTypes)),
     faq: { type: 'array', minItems: faq[0], maxItems: faq[1], items: { type: 'string' } },
   });
 }

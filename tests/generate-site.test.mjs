@@ -76,7 +76,9 @@ function fakeOpenAi({
       if (failPlanFor && String(body.input[0].content).includes(`Page: ${failPlanFor}`)) {
         return new Response(JSON.stringify({ error: { message: 'no' } }), { status: 400 });
       }
-      const sections = body.text.format.schema.properties.sections.minItems;
+      // One array per kind of content block, each with its own list of what may go inside it —
+      // read off the schema the way a real model would, so a fake cannot know more than it is told.
+      const byType = body.text.format.schema.properties.blocks.properties;
       const faq = body.text.format.schema.properties.faq.minItems;
       return reply({
         title: 'T', description: 'D', h1: 'H', heroText: ['Hero.'],
@@ -88,12 +90,17 @@ function fakeOpenAi({
           { length: body.text.format.schema.properties.images.minItems },
           (_, index) => (heroImageName && index === 0 ? heroImageName : `picture-${index + 1}`),
         ),
-        sections: Array.from({ length: sections }, (_, index) => ({
-          heading: `Section ${index + 1}`,
-          brief: 'b',
-          elements: ['title', 'text'],
-          links: [],
-        })),
+        blocks: Object.fromEntries(
+          Object.entries(byType).map(([type, list]) => [
+            type,
+            Array.from({ length: list.minItems }, (_, index) => ({
+              heading: `Section ${index + 1}`,
+              brief: 'b',
+              elements: ['title', 'text'],
+              links: [],
+            })),
+          ]),
+        ),
         faq: Array.from({ length: faq }, (_, index) => `Question ${index + 1}?`),
       });
     }
@@ -454,7 +461,9 @@ describe('the layout decides what goes inside a block', () => {
     const fetchFn = async (url, init) => {
       const body = JSON.parse(init.body);
       if (body.text.format.name === 'page_plan') {
-        asked.push(body.text.format.schema.properties.sections.items.properties.elements.items.enum);
+        asked.push(
+          body.text.format.schema.properties.blocks.properties.section.items.properties.elements.items.enum,
+        );
       }
       return fake.fetchFn(url, init);
     };
@@ -485,6 +494,62 @@ describe('the layout decides what goes inside a block', () => {
     const section = page.blocks.find((block) => block.type === 'section');
     expect(section.content.map((item) => item.type)).toEqual(['title', 'text']); // h2 heading + one text
     expect(page.blocks.filter((block) => block.type === 'section')).toHaveLength(2);
+  });
+});
+
+describe('a page made of more than one kind of block', () => {
+  // The whole reason the plan is keyed by kind rather than holding one list of "sections". Two
+  // kinds are two different questions: a half-and-half block holds a heading, a paragraph or two,
+  // a list and a call to action; a section holds tables, card sets and numbered steps besides. One
+  // shared list would offer the half-block a table it cannot hold — the model paying for output
+  // that trimPlan then strips back out, which is the defect this whole shape exists to prevent.
+  it('asks for each kind with its own list of what may go inside it', async () => {
+    const dir = siteDir();
+    const fake = fakeOpenAi();
+    let byType;
+    const fetchFn = async (url, init) => {
+      const body = JSON.parse(init.body);
+      if (body.text.format.name === 'page_plan') {
+        byType = body.text.format.schema.properties.blocks.properties;
+      }
+      return fake.fetchFn(url, init);
+    };
+    await run(dir, {
+      fetchFn,
+      layoutsDir: layoutsDirWith({
+        name: 'Витрина',
+        blocks: ['hero', 'toc', { type: 'section', count: 2 }, 'split', 'split-left', 'links', 'faq'],
+      }),
+    });
+
+    expect(Object.keys(byType).sort()).toEqual(['section', 'split', 'split-left']);
+    expect(byType.section.minItems).toBe(2);
+    expect(byType.split.minItems).toBe(1);
+    const offered = (type) => byType[type].items.properties.elements.items.enum;
+    expect(offered('section')).toContain('table');
+    expect(offered('split')).not.toContain('table');
+    expect(offered('split')).not.toContain('cards');
+    expect(offered('split')).toContain('buttons');
+    // Mirrored or not, the two halves hold the same things: the side the picture takes is the
+    // block's identity, not a different kind of content.
+    expect(offered('split-left')).toEqual(offered('split'));
+  });
+
+  it('builds every kind the layout named, in the order the layout gave', async () => {
+    const dir = siteDir();
+    await run(dir, {
+      ...fakeOpenAi(),
+      layoutsDir: layoutsDirWith({
+        name: 'Витрина',
+        blocks: ['hero', 'toc', 'section', 'split', 'split-left', 'links', 'faq'],
+      }),
+    });
+    const page = JSON.parse(readFileSync(join(dir, 'home.json'), 'utf8'));
+    expect(page.blocks.map((block) => block.type)).toEqual([
+      'hero', 'toc', 'section', 'split', 'split-left', 'links', 'faq',
+    ]);
+    // One picture per block that carries one by nature: the first screen and both halves.
+    expect((JSON.stringify(page).match(/"image":/g) ?? [])).toHaveLength(3);
   });
 });
 

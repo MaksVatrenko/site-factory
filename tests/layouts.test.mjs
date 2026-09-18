@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { loadLayouts, pickLayouts, planShape, resolveLayout, sectionContentOf } from '../factory/texts/layouts.mjs';
+import { loadLayouts, pickLayouts, planShape, resolveLayout, contentByType } from '../factory/texts/layouts.mjs';
 import { assemblePage } from '../factory/texts/assemble.mjs';
 
 let dirs = [];
@@ -252,12 +252,26 @@ describe('planShape', () => {
       theme(),
     );
     expect(planShape(blocks)).toEqual({
-      sections: 9,
+      byType: { section: 9 },
+      order: Array.from({ length: 9 }, () => 'section'),
       faq: [5, 8],
       heroText: [1, 2],
       images: 1,
       imageLabels: ['hero'],
     });
+  });
+
+  // Counted by kind and listed in page order, which are two different facts. The counts say how
+  // many of each to ask the model for; the order says which stands where, and the per-page link
+  // budget is spent top to bottom — a fact the per-kind arrays cannot carry on their own.
+  it('counts each kind separately and remembers the order they stand in', () => {
+    const { blocks } = resolveLayout(
+      layout(['hero', 'toc', 'section', 'split', 'section', 'faq']),
+      theme(),
+    );
+    const shape = planShape(blocks);
+    expect(shape.byType).toEqual({ section: 2, split: 1 });
+    expect(shape.order).toEqual(['section', 'split', 'section']);
   });
 
   // A layout without a FAQ asks for no questions rather than for an unspecified number of them: the
@@ -266,7 +280,7 @@ describe('planShape', () => {
     const { blocks } = resolveLayout(layout(['hero', { type: 'section', count: 2 }]), theme());
     expect(planShape(blocks).faq).toEqual([0, 0]);
     expect(planShape(blocks).images).toBe(1);
-    expect(planShape(blocks).sections).toBe(2);
+    expect(planShape(blocks).byType).toEqual({ section: 2 });
   });
 
   // The label goes into the brief, so the model knows what the picture is of. A bare type is enough
@@ -283,7 +297,7 @@ describe('planShape', () => {
   });
 });
 
-describe('sectionContentOf', () => {
+describe('contentByType', () => {
   // The defect this exists for: resolveLayout worked out the layout's exact numbers, wrote them
   // into every block, and generate-site.mjs then handed the plan the theme's ranges instead. A
   // layout pinning "no tables here" built a page with tables in it, byte for byte the same page as
@@ -293,12 +307,23 @@ describe('sectionContentOf', () => {
       layout(['hero', { type: 'section', count: 2, content: { text: 2, title: 0 } }]),
       theme(),
     );
-    expect(sectionContentOf(blocks)).toEqual({ text: [2, 2], title: [0, 0] });
+    expect(contentByType(blocks)).toEqual({ section: { text: [2, 2], title: [0, 0] } });
+  });
+
+  // One entry per kind, because each kind is a different question to ask the model. Collapsing them
+  // to one would offer a half-and-half block the section's tables and card sets, which it cannot
+  // hold — and the answer would be trimmed back out on arrival, paid for and thrown away.
+  it('keeps the two kinds of content block apart', () => {
+    const { blocks } = resolveLayout(layout(['hero', 'section', 'split']), theme());
+    const byType = contentByType(blocks);
+    expect(Object.keys(byType).sort()).toEqual(['section', 'split']);
+    expect(byType.split).toEqual({ text: [1, 3] });
+    expect(byType.section).not.toEqual(byType.split);
   });
 
   it('reports nothing for a layout with no content block at all', () => {
     const { blocks } = resolveLayout(layout(['hero', 'toc']), theme());
-    expect(sectionContentOf(blocks)).toEqual({});
+    expect(contentByType(blocks)).toEqual({});
   });
 });
 
@@ -308,14 +333,6 @@ describe('resolveLayout refuses what cannot be built', () => {
   // would carry the same entry twice.
   it('refuses a second faq block', () => {
     expect(() => resolveLayout(layout(['hero', 'faq', 'faq']), theme())).toThrow(/faq/);
-  });
-
-  // The plan describes every content block with one shape, so the blocks drawing from it have to
-  // agree about what may go inside them. While they are all «section» they agree by construction;
-  // the moment a theme adds a second kind, the silent outcome is the new block planned with the old
-  // block's vocabulary — a table inside something whose nature allows none.
-  it('refuses two kinds of content block whose insides are described differently', () => {
-    expect(() => resolveLayout(layout(['hero', 'section', 'split']), theme())).toThrow(/по-разному/);
   });
 
   it('names the theme, not only the layout, when the theme cannot draw a block', () => {
@@ -412,14 +429,22 @@ describe('planShape agrees with assemblePage about what takes a section', () => 
     nature('faq', { heading: true, content: { toggle: [1, 1] } }),
   ];
 
-  it('plans exactly as many sections as the assembler asks for', () => {
-    const { sections } = planShape(LAYOUT);
-    const filled = Array.from({ length: sections }, (_, index) => ({
-      heading: `H${index + 1}`,
-      items: [{ kind: 'text', text: 'Body.' }],
-    }));
+  it('plans exactly as many blocks as the assembler asks for, of every kind', () => {
+    const { byType } = planShape(LAYOUT);
+    // The assembler looks a block up by its place in the layout, so the filled blocks are keyed by
+    // it. Built here from planShape's own counts: if the two ever disagreed about how many blocks
+    // of a kind a page holds, a block would go unplanned and be dropped without a word.
+    const taken = new Map();
+    const filled = new Map();
+    LAYOUT.forEach((block, at) => {
+      if (block.auto || block.type === 'faq' || !block.heading) return;
+      const nth = (taken.get(block.type) ?? 0) + 1;
+      taken.set(block.type, nth);
+      if (nth > byType[block.type]) return;
+      filled.set(at, { heading: `${block.type} ${nth}`, items: [{ kind: 'text', text: 'Body.' }] });
+    });
     const { page } = assemblePage({
-      plan: { title: 'T', description: 'D', h1: 'H', heroText: ['Lead.'], heroImage: null, sections: [] },
+      plan: { title: 'T', description: 'D', h1: 'H', heroText: ['Lead.'], images: [] },
       blocks: LAYOUT,
       sections: filled,
       faq: [{ question: 'Q?', answer: 'A.' }],

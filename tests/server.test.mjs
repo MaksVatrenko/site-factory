@@ -1485,13 +1485,21 @@ describe('the texts tab writes a whole site folder', () => {
         });
       }
       if (name === 'page_plan') {
-        const sections = schema.properties.sections.minItems;
+        // One array per kind of content block the layout holds, read off the schema the way a real
+        // model would rather than assumed — a page can hold more than one kind now.
+        const byType = schema.properties.blocks.properties;
         const faq = schema.properties.faq.minItems;
         return reply({
-          title: 'T', description: 'D', h1: 'H', heroText: ['Hero.'], heroImage: null,
-          sections: Array.from({ length: sections }, (_, i) => ({
-            heading: `Section ${i + 1}`, brief: 'b', elements: ['title', 'text'], image: null, links: [],
-          })),
+          title: 'T', description: 'D', h1: 'H', heroText: ['Hero.'],
+          images: Array.from({ length: schema.properties.images.minItems }, (_, i) => `picture-${i + 1}`),
+          blocks: Object.fromEntries(
+            Object.entries(byType).map(([type, list]) => [
+              type,
+              Array.from({ length: list.minItems }, (_, i) => ({
+                heading: `Section ${i + 1}`, brief: 'b', elements: ['title', 'text'], links: [],
+              })),
+            ]),
+          ),
           faq: Array.from({ length: faq }, (_, i) => `Question ${i + 1}?`),
         });
       }

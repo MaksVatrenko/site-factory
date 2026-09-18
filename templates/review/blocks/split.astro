@@ -1,0 +1,86 @@
+---
+import { asEntries, asText } from '../../_shared/props.mjs';
+import Content from '../Content.astro';
+
+// A block cut in half: words on one side, a picture on the other. The picture is not decoration
+// beside the text — it is half the block, and the block exists to be read as one thing.
+//
+// Both halves come out of the same `content` array, because that is the one shape every block of
+// this template has (see Content.astro). The first picture in it is lifted out and given its own
+// half; everything else stays where it was written, in order. So content written for an ordinary
+// section renders here without being rewritten, and the split is a matter of how it is drawn.
+//
+// `imageFirst` is what templates/review/blocks/split-left.astro passes: the same block, mirrored.
+// Two block types rather than one with a switch, because a layout may choose which blocks a page is
+// made of but not change what a block is — so "which side" has to be part of the block's own
+// identity for a layout to be able to ask for it.
+const { content, anchor, site, templateId, imageFirst = false } = Astro.props;
+const entries = asEntries(content);
+const anchorId = asText(anchor);
+const idAttrs = anchorId ? { id: anchorId } : {};
+
+const isPicture = (entry) => entry?.image && typeof entry.image === 'object';
+const picture = entries.find(isPicture)?.image ?? null;
+const words = entries.filter((entry) => !isPicture(entry));
+const context = { partnerUrl: asText(site?.partnerUrl) };
+---
+
+{words.length > 0 && (
+  <section class="rsplit section" {...idAttrs}>
+    <div class={imageFirst ? 'container rsplit__inner rsplit__inner--flipped' : 'container rsplit__inner'}>
+      <div class="rsplit__words">
+        <Content content={words} templateId={templateId} context={context} />
+      </div>
+      {picture && (
+        <img
+          class="rsplit__image"
+          src={picture.src}
+          alt={picture.alt}
+          width={picture.width}
+          height={picture.height}
+          loading="lazy"
+          decoding="async"
+        />
+      )}
+    </div>
+  </section>
+)}
+
+<style>
+  .rsplit {
+    scroll-margin-top: 5.5rem;
+  }
+
+  .rsplit__inner {
+    display: grid;
+    /* One column until there is room for two. Half a column of prose beside half a column of
+       picture is unreadable on a phone, and this template is read on phones. */
+    grid-template-columns: 1fr;
+    align-items: center;
+    gap: 1.75rem;
+  }
+
+  @media (min-width: 56rem) {
+    .rsplit__inner {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    /* Mirrored by moving the halves, not by reordering the markup: the words come first in the
+       document either way, so a screen reader and a search engine read the block the same however
+       it is drawn. */
+    .rsplit__inner--flipped > .rsplit__words {
+      order: 2;
+    }
+  }
+
+  .rsplit__words {
+    display: grid;
+    gap: 1.1rem;
+  }
+
+  .rsplit__image {
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius);
+  }
+</style>

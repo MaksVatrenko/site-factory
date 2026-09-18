@@ -185,32 +185,24 @@ export function resolveLayout(layout, { content, autoBlocks }) {
     );
   }
 
-  // Everything the plan writes for a content block is described by one shape — planSchema has a
-  // single list of allowed elements for all of them — so the blocks drawing from that pool have to
-  // agree about what may go inside them. While they are all `section` they agree by construction.
-  // The moment a theme adds a second kind (the half-and-half block the spec leaves for later) that
-  // stops being true, and the silent outcome would be the new block planned with the old block's
-  // vocabulary: a table and a card set inside something whose nature allows neither.
-  const pools = new Set(blocks.filter(takesASection).map((block) => JSON.stringify(block.content)));
-  if (pools.size > 1) {
-    throw new Error(
-      `в раскладке «${layout.id}» блоки с заголовком описаны по-разному — план пишет их все по одному образцу, поэтому состав у них должен совпадать`,
-    );
-  }
-
   return { id: layout.id, name: layout.name, blocks };
 }
 
 const countOf = (blocks, type) => blocks.filter((block) => block.type === type).length;
 
-// What the plan may put inside a content block of this page, once the layout has had its say. Read
-// off the resolved layout rather than off the theme: the theme states the ceiling, the layout picks
-// out of it, and reading the theme here would quietly discard every exact number a layout wrote —
-// `{ "type": "section", "content": { "table": 0 } }` would build a page with tables in it anyway.
-// resolveLayout has already refused a layout whose content blocks disagree, so the first speaks
-// for all of them.
-export function sectionContentOf(blocks) {
-  return blocks.find(takesASection)?.content ?? {};
+// What the plan may put inside each kind of content block on this page, once the layout has had
+// its say — one entry per type, because two kinds of block are two different questions to ask. A
+// half-and-half block holds a heading, a paragraph or two and a call to action; a section holds
+// tables and card sets besides. Asking for both with one list would offer the half-block a table
+// it cannot hold, and the answer would be trimmed back out on arrival.
+//
+// Read off the resolved layout rather than off the theme: the theme states the ceiling, the layout
+// picks out of it, and reading the theme here would quietly discard every exact number a layout
+// wrote — `{ "type": "section", "content": { "table": 0 } }` would build a page with tables in it.
+export function contentByType(blocks) {
+  const byType = {};
+  for (const block of blocks.filter(takesASection)) byType[block.type] ??= block.content;
+  return byType;
 }
 
 // What the plan request has to pin down, read off a resolved layout. Sections are an exact number —
@@ -241,7 +233,17 @@ export function planShape(blocks) {
   const lead = blocks.find((block) => block.h1);
   const faq = blocks.find((block) => block.type === 'faq');
   return {
-    sections: blocks.filter(takesASection).length,
+    // One count per kind, not one total: each kind is asked for separately, so the plan can hold
+    // nine sections and two half-blocks without either being described as the other.
+    byType: Object.fromEntries(
+      Object.entries(Object.groupBy(blocks.filter(takesASection), (block) => block.type)).map(
+        ([type, list]) => [type, list.length],
+      ),
+    ),
+    // The same blocks again, as the order they stand in on the page. The counts above say how many
+    // of each to ask for; this says which comes first, which the per-page link budget needs — it is
+    // spent top to bottom, and the plan's per-kind arrays cannot say what follows what.
+    order: blocks.filter(takesASection).map((block) => block.type),
     faq: faq?.content?.toggle ?? [0, 0],
     heroText: lead?.content?.text ?? [0, 0],
     images: imageLabels.length,

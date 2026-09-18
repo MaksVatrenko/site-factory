@@ -1,0 +1,10 @@
+---
+import Split from './split.astro';
+
+// The same block with the picture on the other side. A separate block type rather than a field,
+// because a layout chooses which blocks a page is made of and may not change what a block is — so
+// "which side the picture takes" has to be part of the block's identity for a layout to ask for it.
+// Everything else, down to the markup, is split.astro's.
+---
+
+<Split {...Astro.props} imageFirst />

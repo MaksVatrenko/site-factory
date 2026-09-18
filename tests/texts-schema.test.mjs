@@ -27,19 +27,51 @@ function everyObjectIsStrict(node, path = 'schema') {
   return problems;
 }
 
-const SHAPE = { sections: 9, faq: [5, 8], heroText: [1, 2], images: 1 };
+const SHAPE = { byType: { section: 9 }, faq: [5, 8], heroText: [1, 2], images: 1 };
+// What each kind of block may hold, which is what the schema builds its enums from.
+const SECTION = { title: [0, 1], text: [2, 6], list: [0, 1], table: [0, 1], cards: [0, 1] };
+const HALF = { title: [0, 1], text: [1, 3], buttons: [0, 1] };
 
 describe('planSchema', () => {
-  it('pins the section count to exactly what the layout said', () => {
-    const schema = planSchema(SHAPE, ELEMENTS);
-    expect(schema.properties.sections.minItems).toBe(9);
-    expect(schema.properties.sections.maxItems).toBe(9);
+  const blocksOf = (schema) => schema.properties.blocks.properties;
+
+  it('pins the count of each kind of block to exactly what the layout said', () => {
+    const schema = planSchema(SHAPE, { section: SECTION });
+    expect(blocksOf(schema).section.minItems).toBe(9);
+    expect(blocksOf(schema).section.maxItems).toBe(9);
+  });
+
+  // The whole reason the plan is keyed by kind. Two kinds of content block are two different
+  // questions: a half-and-half block holds a heading, a paragraph and a call to action; a section
+  // holds tables and card sets besides. One shared list would offer the half-block a table it
+  // cannot hold, and trimPlan would take every copy back off on arrival — the model paying for
+  // output that is thrown away, which is the defect this whole argument exists to prevent.
+  it('gives each kind of block its own list of what may go inside it', () => {
+    const schema = planSchema(
+      { ...SHAPE, byType: { section: 9, split: 2 } },
+      { section: SECTION, split: HALF },
+    );
+    expect(blocksOf(schema).section.items.properties.elements.items.enum).toEqual([
+      'title', 'text', 'list', 'table', 'cards',
+    ]);
+    expect(blocksOf(schema).split.items.properties.elements.items.enum).toEqual([
+      'title', 'text', 'buttons',
+    ]);
+    expect(blocksOf(schema).split.minItems).toBe(2);
+  });
+
+  // The type is the theme's word, and a theme may call a block anything — including "title", which
+  // at the top level would collide with the page's own title and quietly overwrite it.
+  it('keeps the block kinds out of the page fields, so a block may be called anything', () => {
+    const schema = planSchema({ ...SHAPE, byType: { title: 1 } }, { title: HALF });
+    expect(schema.properties.title.type).toBe('string');
+    expect(blocksOf(schema).title.minItems).toBe(1);
   });
 
   // What the layout did not pin down stays a range, and the model chooses inside it by the subject
   // of the page. A schema that collapsed every range to one number would take that choice away.
   it('leaves a range a range, so the model still chooses inside it', () => {
-    const schema = planSchema(SHAPE, ELEMENTS);
+    const schema = planSchema(SHAPE, { section: SECTION });
     expect(schema.properties.faq.minItems).toBe(5);
     expect(schema.properties.faq.maxItems).toBe(8);
     expect(schema.properties.heroText.minItems).toBe(1);
@@ -49,39 +81,45 @@ describe('planSchema', () => {
   // A picture exists because a block carries one. The plan names each, and cannot name more or
   // fewer: no budget to overshoot, no optional field to leave null, no name for a block with none.
   it('asks for exactly one name per picture the layout has', () => {
-    const schema = planSchema({ ...SHAPE, images: 3 }, ELEMENTS);
+    const schema = planSchema({ ...SHAPE, images: 3 }, { section: SECTION });
     expect(schema.properties.images.minItems).toBe(3);
     expect(schema.properties.images.maxItems).toBe(3);
     expect(schema.properties.images.items.type).toBe('string');
   });
 
   it('asks for no names at all when the layout has no pictures', () => {
-    const schema = planSchema({ ...SHAPE, images: 0 }, ELEMENTS);
+    const schema = planSchema({ ...SHAPE, images: 0 }, { section: SECTION });
     expect(schema.properties.images.maxItems).toBe(0);
   });
 
-  it('offers only the elements this template can render', () => {
-    const schema = planSchema(SHAPE, ['text', 'list']);
-    expect(schema.properties.sections.items.properties.elements.items.enum).toEqual(['text', 'list']);
+  // An element the layout pinned to zero is not on offer: the model would spend output on it and
+  // trimPlan would take every copy back off, leaving a shorter block and a log full of removals.
+  it('never offers an element the layout pinned to zero', () => {
+    const schema = planSchema(SHAPE, { section: { ...SECTION, table: [0, 0] } });
+    expect(blocksOf(schema).section.items.properties.elements.items.enum).not.toContain('table');
   });
 
   // The model used to choose where a picture belonged, section by section. It no longer can: the
   // field it chose with is gone, and with it the whole class of pictures placed where no block of
   // the theme was ever meant to hold one.
-  it('no longer lets a section ask for a picture of its own', () => {
-    const schema = planSchema(SHAPE, ELEMENTS);
-    expect(schema.properties.sections.items.properties).not.toHaveProperty('image');
+  it('no longer lets a block ask for a picture of its own', () => {
+    const schema = planSchema(SHAPE, { section: SECTION });
+    expect(blocksOf(schema).section.items.properties).not.toHaveProperty('image');
     expect(schema.properties).not.toHaveProperty('heroImage');
   });
 
   it('is strict everywhere', () => {
-    expect(everyObjectIsStrict(planSchema(SHAPE, ELEMENTS))).toEqual([]);
+    expect(everyObjectIsStrict(planSchema(SHAPE, { section: SECTION }))).toEqual([]);
   });
 
   // An empty enum is a schema nothing can ever satisfy — a request that gets paid for and can only
-  // ever fail. sectionSchema already refuses to build one; planSchema must refuse the same way.
-  it('refuses to build a schema with nothing usable in the whole template', () => {
-    expect(() => planSchema(SHAPE, ['video'])).toThrow(/элемент/);
+  // ever fail. The kind that has nothing usable is named, since a page can hold several.
+  it('refuses to build a schema for a kind with nothing usable in it, naming it', () => {
+    expect(() => planSchema(SHAPE, { section: { video: [0, 1] } })).toThrow(/section/);
+  });
+
+  it('refuses a layout with no block the model writes at all', () => {
+    expect(() => planSchema({ ...SHAPE, byType: {} }, {})).toThrow(/раскладке/);
   });
 });
 

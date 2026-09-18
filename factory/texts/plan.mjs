@@ -72,7 +72,7 @@ const RESERVED_IMAGE_NAMES = new Set(['logo', 'logo-square']);
 // off. Trimming only ever removes — it cannot manufacture a missing element out of nothing — so
 // there is no matching check for too few; every removal is written to `warnings` so the run's log
 // says what happened.
-export function trimPlan(plan, { links, pages, page, sectionContent, imageLabels = [] }) {
+export function trimPlan(plan, { links, pages, page, contentByType, order = [], imageLabels = [] }) {
   const warnings = [];
 
   // No budget left to spend: a picture exists because a block carries one by its nature, and the
@@ -117,7 +117,29 @@ export function trimPlan(plan, { links, pages, page, sectionContent, imageLabels
   const maxLinksPerSection = links?.perBlock?.[1] ?? Infinity;
   let pageLinksLeft = links?.perPage?.[1] ?? Infinity;
 
-  const sections = plan.sections.map((section) => {
+  // Walked in the order the blocks stand on the page, not in the order the plan lists them. The
+  // plan holds one array per kind of block, because each kind is asked for with its own list of
+  // elements — but the per-page link budget is spent top to bottom, so a block near the top is
+  // worth more than a repeat further down, whatever kind either of them is.
+  // With no order given — a caller that has no layout in hand, which is every direct caller outside
+  // generateSite — each kind is walked in turn. That is the right answer whenever a page holds one
+  // kind, and the only sensible one when nothing says what follows what.
+  const pageOrder = order.length > 0
+    ? order
+    : Object.entries(plan.blocks ?? {}).flatMap(([type, list]) => list.map(() => type));
+
+  const next = new Map();
+  const blocks = {};
+  for (const type of pageOrder) {
+    const at = next.get(type) ?? 0;
+    next.set(type, at + 1);
+    const section = plan.blocks?.[type]?.[at];
+    if (!section) continue;
+    const allowed = contentByType[type] ?? {};
+    (blocks[type] ??= []).push(trimOne(section, allowed));
+  }
+
+  function trimOne(section, sectionContent) {
     // A link that recognisably names a page of this site is repaired to that page's canonical
     // address rather than discarded — the brief hands the model page names, not a spelling rule
     // (see planPage below), so a bare name or an obvious near-miss is the model doing the expected
@@ -172,31 +194,22 @@ export function trimPlan(plan, { links, pages, page, sectionContent, imageLabels
     });
 
     return { ...section, links, elements };
-  });
+  }
 
-  return { plan: { ...plan, images, sections }, warnings };
+  return { plan: { ...plan, images, blocks }, warnings };
 }
 
 export async function planPage(
-  { page, pages, brand, geo, locale, shape, links, sectionContent, instructions },
+  { page, pages, brand, geo, locale, shape, links, contentByType, instructions },
   options,
 ) {
-  // The elements a plan may offer for a section come from sectionContent itself, never from the
-  // template's whole vocabulary (manifest.json's `elements`) — a template can genuinely support an
-  // element only inside some other block (this template's `toggle`, real for its `faq` block), and
-  // trimPlan below measures a section only against sectionContent. Manifest and sectionContent used
-  // to be handed in separately, and the two disagreeing is exactly how a plan got offered `toggle`
-  // for an ordinary section, had all six copies stripped by trimPlan for being over the template's
-  // (zero) allowance, and lost the section entirely. One source here leaves nothing to disagree with.
-  // Only elements the block may actually hold. A layout can pin an element to zero — that is the
-  // whole point of «точные количества вместо диапазонов» — and offering the model something
-  // trimPlan will strip back out on arrival is the exact shape of the defect this argument was
-  // narrowed to fix in the first place: the model spends output on it, the log fills with removals,
-  // and the section comes back shorter than the page asked for.
-  const elements = Object.entries(sectionContent)
-    .filter(([, range]) => range[1] > 0)
-    .map(([element]) => element);
-
+  // What each kind of block may hold comes from contentByType and from nowhere else — never from
+  // the theme's whole vocabulary (manifest.json's `elements`), which a block can support only in
+  // some other block (this theme's `toggle`, real only for its `faq`). The manifest and the block's
+  // own allowance used to be handed in separately, and the two disagreeing is exactly how a plan got
+  // offered `toggle` for an ordinary section, had all six copies stripped by trimPlan for being over
+  // the (zero) allowance, and lost the section entirely. planSchema below reads one source, and
+  // trimPlan measures against that same source, so there is nothing left to disagree.
   // What we hand the model here used to be the bare file names ("home", "casino"), while trimPlan
   // accepted only written addresses ("/", "/casino") — home's above all, since it is never "/home".
   // The model then echoed back exactly what it was given, or the obvious slash-prefixed guess, and
@@ -214,9 +227,15 @@ export async function planPage(
   // The layout decided the composition, so the brief states it rather than asking for it. A range
   // left over is one the layout did not pin down and the model is free to choose inside.
   const count = ([min, max]) => (min === max ? String(min) : `${min}–${max}`);
+  // Named by kind, because a page can hold more than one: nine sections and two half-and-half
+  // blocks are nine plus two different things to plan, and calling them all "sections" would tell
+  // the model that eleven interchangeable blocks are what it is writing.
+  const composition = Object.entries(shape.byType)
+    .map(([type, howMany]) => `${howMany} ${type}`)
+    .join(', ');
   const shapeLine = Number.isFinite(maxPageLinks)
-    ? `This page has ${shape.sections} sections and ${count(shape.faq)} FAQ questions, and at most ${maxPageLinks} internal links.`
-    : `This page has ${shape.sections} sections and ${count(shape.faq)} FAQ questions.`;
+    ? `This page is made of: ${composition}. It has ${count(shape.faq)} FAQ questions and at most ${maxPageLinks} internal links.`
+    : `This page is made of: ${composition}. It has ${count(shape.faq)} FAQ questions.`;
   // Where the pictures go is settled: each one belongs to a block that carries one by nature. The
   // model is asked only to name them, and told which block each name is for, so a name can mean
   // something — "hero" says nothing about a picture, "slot-reels" says what to draw.
@@ -250,7 +269,7 @@ export async function planPage(
       instructions,
       input: brief,
       schemaName: 'page_plan',
-      schema: planSchema(shape, elements),
+      schema: planSchema(shape, contentByType),
       // One cache per call type: the schema is part of the cached prefix, and plan and fill have
       // different schemas, so they cannot share an entry anyway.
       cacheKey: 'site-factory-plan',
@@ -262,7 +281,8 @@ export async function planPage(
     links,
     pages,
     page,
-    sectionContent,
+    contentByType,
+    order: shape.order,
     imageLabels: shape.imageLabels,
   });
   return { plan, warnings, cost, usage };

@@ -4,7 +4,7 @@ import { buildInstructions, planPage } from './plan.mjs';
 import { fillFaq, fillSection } from './fill.mjs';
 import { assemblePage, AUTO_BLOCKS } from './assemble.mjs';
 import { generateSiteJson } from './site-json.mjs';
-import { loadLayouts, pickLayouts, planShape, resolveLayout, sectionContentOf } from './layouts.mjs';
+import { contentByType, loadLayouts, pickLayouts, planShape, resolveLayout, takesASection } from './layouts.mjs';
 import { describeBlocks, loadTemplateBlocks, loadTemplateExamples } from './template.mjs';
 import { languageFor, loadTextsPromptFile } from './texts-prompts.mjs';
 import { loadGeos } from '../geos.mjs';
@@ -168,8 +168,8 @@ export async function generateSite({
           links: content.links,
           // From the resolved layout, not from the theme: the theme states the ceiling and the
           // layout picks out of it, so reading the theme here would discard every exact number a
-          // layout wrote.
-          sectionContent: sectionContentOf(pageLayout.blocks),
+          // layout wrote. One entry per kind of block, because each kind is asked for separately.
+          contentByType: contentByType(pageLayout.blocks),
           instructions,
         },
         options,
@@ -179,10 +179,24 @@ export async function generateSite({
       // The plan is the only place a section's own heading exists, so it is what the assembler is
       // given below — never a heading a filled section happened to contain.
 
-      const headings = planned.plan.sections.map((section) => section.heading);
-      const sections = [];
-      for (const [index, section] of planned.plan.sections.entries()) {
-        const siblings = headings.filter((_, other) => other !== index);
+      // Every content block of the page, back in the order it stands in — the plan holds them by
+      // kind, and what has to be filled and assembled is the page, top to bottom. Each one keeps the
+      // place it came from, so a block that fails leaves a hole where it was instead of pulling
+      // everything after it up by one.
+      const planned_ = new Map();
+      const taken = new Map();
+      for (const [at, block] of pageLayout.blocks.entries()) {
+        if (!takesASection(block)) continue;
+        const nth = taken.get(block.type) ?? 0;
+        taken.set(block.type, nth + 1);
+        const entry = planned.plan.blocks?.[block.type]?.[nth];
+        if (entry) planned_.set(at, entry);
+      }
+
+      const headings = [...planned_.values()].map((section) => section.heading);
+      const sections = new Map();
+      for (const [at, section] of planned_) {
+        const siblings = headings.filter((heading) => heading !== section.heading);
         try {
           const filled = await fillSection(
             { section, siblings, brand, locale: language, instructions },
@@ -196,7 +210,7 @@ export async function generateSite({
           if (filled.items.length === 0) {
             log(`Тексты: ${name}: раздел «${section.heading}» вернулся пустым — пропущен`);
           }
-          sections.push({ heading: section.heading, items: filled.items });
+          sections.set(at, { heading: section.heading, items: filled.items });
         } catch (error) {
           // A bad key or an empty balance fails the same way for every section left, on this page
           // and every page after it — swallowing it here would burn through the rest of this page's
@@ -209,7 +223,7 @@ export async function generateSite({
           spent += error.cost ?? 0;
           // One section short is a shorter page, not a lost one.
           log(`Тексты: ${name}: раздел «${section.heading}» не вышел — ${error.message}`);
-          sections.push({ heading: section.heading, items: [] });
+          sections.set(at, { heading: section.heading, items: [] });
         }
       }
 
@@ -241,7 +255,9 @@ export async function generateSite({
       // for the section, so dropping it here, before assemblePage builds the table of contents and
       // the section blocks from this very array, keeps the two lists in agreement: no contents entry
       // is left pointing at a heading with nothing under it.
-      const filledSections = sections.filter((section) => section.items.length > 0);
+      const filledSections = new Map(
+        [...sections].filter(([, section]) => section.items.length > 0),
+      );
 
       const { page: built, warnings } = assemblePage({
         plan: planned.plan,

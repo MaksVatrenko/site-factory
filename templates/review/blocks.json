@@ -32,6 +32,16 @@
         "buttons": [0, 1]
       }
     },
+    "split": {
+      "heading": true,
+      "image": true,
+      "content": { "title": [0, 1], "text": [1, 3], "list": [0, 1], "buttons": [0, 1] }
+    },
+    "split-left": {
+      "heading": true,
+      "image": true,
+      "content": { "title": [0, 1], "text": [1, 3], "list": [0, 1], "buttons": [0, 1] }
+    },
     "links": { "auto": true },
     "faq": { "heading": true, "content": { "toggle": [5, 8] } }
   }

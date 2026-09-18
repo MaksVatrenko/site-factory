@@ -42,19 +42,25 @@ describe('trimPlan', () => {
   // settled it, and the schema pinned it, so there is nothing left here to ration.
   const links = { perBlock: [0, 5], perPage: [0, 10] };
   const base = { title: 'T', description: 'D', h1: 'H', heroText: ['a'], images: [], faq: ['q1', 'q2'] };
-  const args = { links, pages: PAGES, sectionContent: SECTION_CONTENT, imageLabels: ['hero'] };
+  const args = {
+    links,
+    pages: PAGES,
+    // One entry per kind of block, because each kind is asked for with its own list of elements.
+    contentByType: { section: SECTION_CONTENT },
+    imageLabels: ['hero'],
+  };
 
   it('keeps a plan that is already inside its limits, with nothing to say', () => {
-    const plan = { ...base, sections: [plannedSection(), plannedSection()] };
+    const plan = { ...base, blocks: { section: [plannedSection(), plannedSection()] } };
     const result = trimPlan(plan, args);
     expect(result.warnings).toEqual([]);
-    expect(result.plan.sections).toHaveLength(2);
+    expect(result.plan.blocks.section).toHaveLength(2);
   });
 
   it('drops a link to a page this site does not have', () => {
-    const plan = { ...base, sections: [plannedSection({ links: ['/casino', '/nope'] }), plannedSection()] };
+    const plan = { ...base, blocks: { section: [plannedSection({ links: ['/casino', '/nope'] }), plannedSection()] } };
     const result = trimPlan(plan, args);
-    expect(result.plan.sections[0].links).toEqual(['/casino']);
+    expect(result.plan.blocks.section[0].links).toEqual(['/casino']);
     expect(result.warnings.join(' ')).toContain('/nope');
   });
 
@@ -65,10 +71,10 @@ describe('trimPlan', () => {
   it('drops a link to the page itself, with its own warning', () => {
     const plan = {
       ...base,
-      sections: [plannedSection({ links: ['/casino', '/bonus'] }), plannedSection()],
+      blocks: { section: [plannedSection({ links: ['/casino', '/bonus'] }), plannedSection()] },
     };
     const result = trimPlan(plan, { ...args, page: 'casino' });
-    expect(result.plan.sections[0].links).toEqual(['/bonus']);
+    expect(result.plan.blocks.section[0].links).toEqual(['/bonus']);
     expect(result.warnings.join(' ')).toContain('саму страницу');
     expect(result.warnings.join(' ')).not.toContain('никуда');
     expect(result.warnings.join(' ')).not.toContain('бюджета');
@@ -80,14 +86,14 @@ describe('trimPlan', () => {
   it('does not spend the link budget on a link to the page itself', () => {
     const plan = {
       ...base,
-      sections: [plannedSection({ links: ['/casino', '/casino', '/bonus', 'home'] })],
+      blocks: { section: [plannedSection({ links: ['/casino', '/casino', '/bonus', 'home'] })] },
     };
     const result = trimPlan(plan, {
       ...args,
       links: { perBlock: [0, 2], perPage: [0, 2] },
       page: 'casino',
     });
-    expect(result.plan.sections[0].links).toEqual(['/bonus', '/']);
+    expect(result.plan.blocks.section[0].links).toEqual(['/bonus', '/']);
   });
 
   // resolveLink already collapses "home" and "/home" onto the one address "/" before this ever runs
@@ -96,10 +102,10 @@ describe('trimPlan', () => {
   it('drops both spellings of home linking to itself, when the page being planned is home', () => {
     const plan = {
       ...base,
-      sections: [plannedSection({ links: ['home', '/home', '/casino'] }), plannedSection()],
+      blocks: { section: [plannedSection({ links: ['home', '/home', '/casino'] }), plannedSection()] },
     };
     const result = trimPlan(plan, { ...args, page: 'home' });
-    expect(result.plan.sections[0].links).toEqual(['/casino']);
+    expect(result.plan.blocks.section[0].links).toEqual(['/casino']);
     expect(result.warnings.filter((warning) => warning.includes('саму страницу'))).toHaveLength(2);
   });
 
@@ -110,20 +116,20 @@ describe('trimPlan', () => {
   it('repairs a link spelled as a bare page name or a near-miss address, instead of dropping it', () => {
     const plan = {
       ...base,
-      sections: [plannedSection({ links: ['home', '/home', 'casino', '/casino/'] }), plannedSection()],
+      blocks: { section: [plannedSection({ links: ['home', '/home', 'casino', '/casino/'] }), plannedSection()] },
     };
     const result = trimPlan(plan, args);
-    expect(result.plan.sections[0].links).toEqual(['/', '/', '/casino', '/casino']);
+    expect(result.plan.blocks.section[0].links).toEqual(['/', '/', '/casino', '/casino']);
     expect(result.warnings).toEqual([]);
   });
 
   it('trims links past the per-block budget, keeping the earliest', () => {
     const plan = {
       ...base,
-      sections: [plannedSection({ links: ['/casino', '/bonus', 'home'] }), plannedSection()],
+      blocks: { section: [plannedSection({ links: ['/casino', '/bonus', 'home'] }), plannedSection()] },
     };
     const result = trimPlan(plan, { ...args, links: { perBlock: [0, 2], perPage: [0, 10] } });
-    expect(result.plan.sections[0].links).toEqual(['/casino', '/bonus']);
+    expect(result.plan.blocks.section[0].links).toEqual(['/casino', '/bonus']);
     expect(result.warnings.join(' ')).toContain('сверх бюджета ссылок на раздел');
   });
 
@@ -133,24 +139,24 @@ describe('trimPlan', () => {
   it('trims links past the per-page budget, spending it on the earliest sections first', () => {
     const plan = {
       ...base,
-      sections: [
+      blocks: { section: [
         plannedSection({ heading: 'First', links: ['/casino', '/bonus'] }),
         plannedSection({ heading: 'Second', links: ['/casino', '/bonus'] }),
-      ],
+      ] },
     };
     const result = trimPlan(plan, { ...args, links: { perBlock: [0, 5], perPage: [0, 3] } });
-    expect(result.plan.sections[0].links).toEqual(['/casino', '/bonus']);
-    expect(result.plan.sections[1].links).toEqual(['/casino']);
+    expect(result.plan.blocks.section[0].links).toEqual(['/casino', '/bonus']);
+    expect(result.plan.blocks.section[1].links).toEqual(['/casino']);
     expect(result.warnings.join(' ')).toContain('сверх бюджета ссылок на страницу');
   });
 
   it('drops elements asked for more often than the template allows', () => {
     const plan = {
       ...base,
-      sections: [plannedSection({ elements: ['text', 'text', 'list', 'list', 'list'] }), plannedSection()],
+      blocks: { section: [plannedSection({ elements: ['text', 'text', 'list', 'list', 'list'] }), plannedSection()] },
     };
     const result = trimPlan(plan, args);
-    expect(result.plan.sections[0].elements.filter((e) => e === 'list')).toHaveLength(1);
+    expect(result.plan.blocks.section[0].elements.filter((e) => e === 'list')).toHaveLength(1);
     expect(result.warnings.join(' ')).toContain('list');
   });
 
@@ -164,7 +170,7 @@ describe('trimPlan', () => {
         'A clean illustration of a game lobby with category tabs and card-style game tiles.',
         'Cozy_Live Dealer   Table!!',
       ],
-      sections: [plannedSection()],
+      blocks: { section: [plannedSection()] },
     };
     const result = trimPlan(plan, { ...args, imageLabels: ['hero', 'split 1'] });
     expect(result.plan.images[0]).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
@@ -181,7 +187,7 @@ describe('trimPlan', () => {
   // file name, and tells the picture stage nothing whatever about what to draw — a wrong picture on
   // every page of the site, with nothing anywhere saying so.
   it('drops a picture name that kept nothing but digits after stripping', () => {
-    const plan = { ...base, images: ['рулетка 2024'], sections: [plannedSection()] };
+    const plan = { ...base, images: ['рулетка 2024'], blocks: { section: [plannedSection()] } };
     const result = trimPlan(plan, args);
     expect(result.plan.images).toEqual([null]);
     expect(result.warnings.join(' ')).toContain('рулетка 2024');
@@ -190,21 +196,21 @@ describe('trimPlan', () => {
   // The other side of it: a name that did keep a word is usable, so it is kept — but it lost
   // something on the way, and the owner reading the log should be told which pictures to look at.
   it('keeps a half-stripped name but says it was not written in latin', () => {
-    const plan = { ...base, images: ['899ok лобби'], sections: [plannedSection()] };
+    const plan = { ...base, images: ['899ok лобби'], blocks: { section: [plannedSection()] } };
     const result = trimPlan(plan, args);
     expect(result.plan.images).toEqual(['899ok']);
     expect(result.warnings.join(' ')).toContain('не латиницей');
   });
 
   it('says nothing about latin when the name was written in it all along', () => {
-    const plan = { ...base, images: ['live-dealer-table'], sections: [plannedSection()] };
+    const plan = { ...base, images: ['live-dealer-table'], blocks: { section: [plannedSection()] } };
     expect(trimPlan(plan, args).warnings).toEqual([]);
   });
 
   // The block still exists; it simply has no picture. Nothing may invent a name to fill the hole —
   // an invented name reaches images.json and gets drawn, which is worse than a block without one.
   it('leaves a hole rather than a made-up name when nothing usable came back', () => {
-    const plan = { ...base, images: ['!!! ??? ---'], sections: [plannedSection()] };
+    const plan = { ...base, images: ['!!! ??? ---'], blocks: { section: [plannedSection()] } };
     const result = trimPlan(plan, args);
     expect(result.plan.images).toEqual([null]);
     expect(result.warnings.join(' ')).toContain('!!! ??? ---');
@@ -216,7 +222,7 @@ describe('trimPlan', () => {
   // the logo" log line, or — on a site that already has its logo — silently reuse that actual logo
   // image inside a content block. Guarded here, the same way an unusable name is.
   it("drops a picture name that collides with the logo's reserved names, and warns", () => {
-    const plan = { ...base, images: ['Logo', 'Logo Square'], sections: [plannedSection()] };
+    const plan = { ...base, images: ['Logo', 'Logo Square'], blocks: { section: [plannedSection()] } };
     const result = trimPlan(plan, { ...args, imageLabels: ['hero', 'split 1'] });
     expect(result.plan.images).toEqual([null, null]);
     expect(result.warnings.join(' ')).toContain('логотип');
@@ -226,7 +232,7 @@ describe('trimPlan', () => {
   // as a choice: the same image drawn twice on the way down the page. The first keeps the name, the
   // later block goes without, and the log names which block lost it.
   it('drops a repeated picture name, keeping the first, and warns by block', () => {
-    const plan = { ...base, images: ['lobby', 'Lobby'], sections: [plannedSection()] };
+    const plan = { ...base, images: ['lobby', 'Lobby'], blocks: { section: [plannedSection()] } };
     const result = trimPlan(plan, { ...args, imageLabels: ['hero', 'split 1'] });
     expect(result.plan.images).toEqual(['lobby', null]);
     expect(result.warnings.join(' ')).toContain('split 1');
@@ -235,7 +241,7 @@ describe('trimPlan', () => {
   // A name is normalised before anything else looks at it, so a picture that is only unusable after
   // slugging never occupies the name a later, real picture would have taken.
   it('names the block a picture was meant for, not its number in the list', () => {
-    const plan = { ...base, images: ['!!!'], sections: [plannedSection()] };
+    const plan = { ...base, images: ['!!!'], blocks: { section: [plannedSection()] } };
     const result = trimPlan(plan, { ...args, imageLabels: ['hero'] });
     expect(result.warnings.join(' ')).toContain('hero');
   });
@@ -248,14 +254,14 @@ describe('planPage', () => {
       body = JSON.parse(init.body);
       return answer({
         title: 'T', description: 'D', h1: 'H', heroText: ['a'], images: ['lobby'],
-        sections: [plannedSection()], faq: ['q1'],
+        blocks: { section: [plannedSection()], faq: ['q1'] },
       });
     };
     const result = await planPage(
       {
         page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        shape: { sections: 1, faq: [1, 1], heroText: [1, 1], images: 1, imageLabels: ['hero'] },
-        sectionContent: SECTION_CONTENT,
+        shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], heroText: [1, 1], images: 1, imageLabels: ['hero'] },
+        contentByType: { section: SECTION_CONTENT },
         instructions: 'RULES',
       },
       { config: CONFIG, fetchFn, sleep: async () => {} },
@@ -264,7 +270,7 @@ describe('planPage', () => {
     expect(body.instructions).toBe('RULES');
     expect(String(body.input[0].content)).toContain('casino');
     expect(String(body.input[0].content)).toContain('Acme');
-    expect(body.text.format.schema.properties.sections.minItems).toBe(1);
+    expect(body.text.format.schema.properties.blocks.properties.section.minItems).toBe(1);
     expect(body.prompt_cache_key).toContain('plan');
     expect(result.plan.h1).toBe('H');
     expect(result.cost).toBeGreaterThan(0);
@@ -280,15 +286,15 @@ describe('planPage', () => {
       body = JSON.parse(init.body);
       return answer({
         title: 'T', description: 'D', h1: 'H', heroText: ['a'], images: ['lobby'],
-        sections: [plannedSection()], faq: ['q1'],
+        blocks: { section: [plannedSection()], faq: ['q1'] },
       });
     };
     await planPage(
       {
         page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        shape: { sections: 1, faq: [1, 1], heroText: [1, 1], images: 1, imageLabels: ['hero'] },
+        shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], heroText: [1, 1], images: 1, imageLabels: ['hero'] },
         links: { perBlock: [0, 2], perPage: [0, 8] },
-        sectionContent: SECTION_CONTENT,
+        contentByType: { section: SECTION_CONTENT },
         instructions: 'RULES',
       },
       { config: CONFIG, fetchFn, sleep: async () => {} },
@@ -314,15 +320,15 @@ describe('planPage', () => {
       body = JSON.parse(init.body);
       return answer({
         title: 'T', description: 'D', h1: 'H', heroText: ['a'], images: ['lobby'],
-        sections: [plannedSection()], faq: ['q1'],
+        blocks: { section: [plannedSection()], faq: ['q1'] },
       });
     };
     await planPage(
       {
         page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        shape: { sections: 1, faq: [1, 1], heroText: [1, 1], images: 1, imageLabels: ['hero'] },
+        shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], heroText: [1, 1], images: 1, imageLabels: ['hero'] },
         links: { perBlock: [0, 2], perPage: [0, 8] },
-        sectionContent: SECTION_CONTENT,
+        contentByType: { section: SECTION_CONTENT },
         instructions: 'RULES',
       },
       { config: CONFIG, fetchFn, sleep: async () => {} },
@@ -347,19 +353,20 @@ describe('planPage', () => {
       body = JSON.parse(init.body);
       return answer({
         title: 'T', description: 'D', h1: 'H', heroText: ['a'], images: ['lobby'],
-        sections: [plannedSection()], faq: ['q1'],
+        blocks: { section: [plannedSection()], faq: ['q1'] },
       });
     };
     await planPage(
       {
         page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        shape: { sections: 1, faq: [1, 1], heroText: [1, 1], images: 1, imageLabels: ['hero'] },
-        sectionContent: SECTION_CONTENT,
+        shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], heroText: [1, 1], images: 1, imageLabels: ['hero'] },
+        contentByType: { section: SECTION_CONTENT },
         instructions: 'RULES',
       },
       { config: CONFIG, fetchFn, sleep: async () => {} },
     );
-    const offered = body.text.format.schema.properties.sections.items.properties.elements.items.enum;
+    const offered =
+      body.text.format.schema.properties.blocks.properties.section.items.properties.elements.items.enum;
     expect(offered).toEqual(Object.keys(SECTION_CONTENT));
     expect(offered).not.toContain('toggle');
   });
@@ -375,19 +382,20 @@ describe('planPage', () => {
       body = JSON.parse(init.body);
       return answer({
         title: 'T', description: 'D', h1: 'H', heroText: ['a'], images: ['lobby'],
-        sections: [plannedSection()], faq: ['q1'],
+        blocks: { section: [plannedSection()], faq: ['q1'] },
       });
     };
     await planPage(
       {
         page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        shape: { sections: 1, faq: [1, 1], heroText: [1, 1], images: 1, imageLabels: ['hero'] },
-        sectionContent: { ...SECTION_CONTENT, table: [0, 0] },
+        shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], heroText: [1, 1], images: 1, imageLabels: ['hero'] },
+        contentByType: { section: { ...SECTION_CONTENT, table: [0, 0] } },
         instructions: 'RULES',
       },
       { config: CONFIG, fetchFn, sleep: async () => {} },
     );
-    const offered = body.text.format.schema.properties.sections.items.properties.elements.items.enum;
+    const offered =
+      body.text.format.schema.properties.blocks.properties.section.items.properties.elements.items.enum;
     expect(offered).not.toContain('table');
     expect(offered).toContain('text');
   });
@@ -403,8 +411,8 @@ describe('planPage', () => {
       planPage(
         {
           page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-          shape: { sections: 1, faq: [1, 1], heroText: [1, 1], images: 1, imageLabels: ['hero'] },
-          sectionContent: {},
+          shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], heroText: [1, 1], images: 1, imageLabels: ['hero'] },
+          contentByType: { section: {} },
           instructions: 'RULES',
         },
         { config: CONFIG, fetchFn, sleep: async () => {} },
@@ -422,14 +430,14 @@ describe('planPage', () => {
       body = JSON.parse(init.body);
       return answer({
         title: 'T', description: 'D', h1: 'H', heroText: ['a'], images: ['lobby'],
-        sections: [plannedSection()], faq: ['q1'],
+        blocks: { section: [plannedSection()], faq: ['q1'] },
       });
     };
     await planPage(
       {
         page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        shape: { sections: 1, faq: [1, 1], heroText: [1, 1], images: 1, imageLabels: ['hero'] },
-        sectionContent: SECTION_CONTENT,
+        shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], heroText: [1, 1], images: 1, imageLabels: ['hero'] },
+        contentByType: { section: SECTION_CONTENT },
         instructions: 'RULES',
       },
       { config: CONFIG, fetchFn, sleep: async () => {} },
@@ -449,14 +457,14 @@ describe('planPage', () => {
       body = JSON.parse(init.body);
       return answer({
         title: 'T', description: 'D', h1: 'H', heroText: ['a'], images: [],
-        sections: [plannedSection()], faq: ['q1'],
+        blocks: { section: [plannedSection()], faq: ['q1'] },
       });
     };
     await planPage(
       {
         page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        shape: { sections: 1, faq: [1, 1], heroText: [1, 1], images: 0, imageLabels: [] },
-        sectionContent: SECTION_CONTENT,
+        shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], heroText: [1, 1], images: 0, imageLabels: [] },
+        contentByType: { section: SECTION_CONTENT },
         instructions: 'RULES',
       },
       { config: CONFIG, fetchFn, sleep: async () => {} },
@@ -471,14 +479,14 @@ describe('planPage', () => {
       body = JSON.parse(init.body);
       return answer({
         title: 'T', description: 'D', h1: 'H', heroText: ['a'], images: ['lobby'],
-        sections: [plannedSection()], faq: ['q1', 'q2', 'q3', 'q4', 'q5'],
+        blocks: { section: [plannedSection()], faq: ['q1', 'q2', 'q3', 'q4', 'q5'] },
       });
     };
     await planPage(
       {
         page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        shape: { sections: 1, faq: [5, 8], heroText: [1, 2], images: 1, imageLabels: ['hero'] },
-        sectionContent: SECTION_CONTENT,
+        shape: { byType: { section: 1 }, order: ['section'], faq: [5, 8], heroText: [1, 2], images: 1, imageLabels: ['hero'] },
+        contentByType: { section: SECTION_CONTENT },
         instructions: 'RULES',
       },
       { config: CONFIG, fetchFn, sleep: async () => {} },
