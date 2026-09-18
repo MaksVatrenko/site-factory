@@ -10,6 +10,9 @@
           "h1": "899OK Casino — Live Dealer Tables"
         },
         {
+          "image": "casino-lobby"
+        },
+        {
           "type": "text",
           "text": "I've tried a bunch of live casino sites from my flat in Mirpur, and most either lag out or the dealer looks half-asleep. 899OK actually holds up. Streams stay sharp on my regular Grameenphone data, and the Bangla-speaking dealers on evening shifts make it feel like a proper table night, not a robot dealing cards at you."
         }
@@ -59,7 +62,6 @@
             "Genuine winner screenshots floating around Telegram, not staged ones"
           ]
         },
-        { "image": "live-dealer-table" },
         {
           "type": "cards",
           "items": [

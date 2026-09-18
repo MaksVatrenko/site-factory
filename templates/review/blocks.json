@@ -1,0 +1,22 @@
+{
+  "lengths": {
+    "title": 60,
+    "description": [120, 160],
+    "h1": 60,
+    "text": [200, 400],
+    "listItems": [3, 8],
+    "tableRows": [3, 10],
+    "cards": [2, 4]
+  },
+  "links": { "perBlock": [0, 2], "perPage": [0, 8] },
+  "blocks": {
+    "hero": { "h1": true, "image": true, "content": { "text": [1, 2] } },
+    "toc": { "auto": true },
+    "section": {
+      "heading": true,
+      "content": { "title": [0, 1], "text": [2, 6], "list": [0, 1], "table": [0, 1], "cards": [0, 1] }
+    },
+    "links": { "auto": true },
+    "faq": { "heading": true, "content": { "toggle": [5, 8] } }
+  }
+}
