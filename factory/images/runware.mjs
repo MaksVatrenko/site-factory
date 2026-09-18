@@ -165,25 +165,33 @@ export async function generateLogoArtwork(request, options) {
     options,
     (answer) => typeof answer.imageUUID === 'string' && answer.imageUUID !== '',
   );
-  return { imageUUID: result.imageUUID, cost: costOf(result) };
+  // The address comes back too, when Runware gives one. The cutout below asks for the picture by
+  // its UUID, which is the cheap way — nothing is downloaded and re-uploaded — but a UUID is only
+  // usable while Runware still holds that picture for this account, and a model that will not take
+  // one leaves the wordmark paid for and unusable. The address names the same picture a second way,
+  // and carrying it here costs nothing.
+  return {
+    imageUUID: result.imageUUID,
+    imageURL: typeof result.imageURL === 'string' ? result.imageURL : '',
+    cost: costOf(result),
+  };
 }
 
 // Cuts the wordmark out of its plain background. The answer is matched by taskUUID like every
 // other: Runware's docs show it named "imageBackgroundRemoval", not the "removeBackground" asked for.
 //
-// `inputImage` sits at the top level and takes the UUID of an image Runware already holds — which is
-// what the first task returned, so the wordmark is never downloaded and re-uploaded to be cut out.
-// It was written as `inputs: { image }` here for a long time, and nothing said so: every test in
-// this project answers Runware with a fake, and two of them asserted that very shape, so the
-// mistake was pinned rather than caught. It surfaced on a live run as a 400 —
-// "Invalid value for 'inputImage' parameter" — after the wordmark had already been paid for.
-// See https://runware.ai/docs/tools/remove-background.
-export async function removeBackground(imageUUID, options) {
+// `image` names the picture — the UUID Runware returned for it, or its address. Runware wants this
+// under `inputs.image`, which its own refusal proves: sent as the top-level `inputImage` that the
+// published documentation shows, it answers "Missing required parameter 'inputs.image'". Both
+// spellings turn up in its error texts, so neither the docs nor one message settles it. Do not
+// "fix" this to `inputImage` on the strength of a message naming that parameter: a rejection of the
+// *value* is worded that way too, and following it cost a live run and $0.06 of wordmark.
+export async function removeBackground(image, options) {
   const task = {
     taskType: 'removeBackground',
     taskUUID: randomUUID(),
     model: options.config.bgModel,
-    inputImage: imageUUID,
+    inputs: { image },
     outputType: 'base64Data',
     outputFormat: 'PNG',
     includeCost: true,

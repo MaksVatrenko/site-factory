@@ -156,7 +156,22 @@ export async function generateLogo({
       { config, fetchFn, sleep },
     );
     if (typeof artwork.cost === 'number') summary.cost += artwork.cost;
-    const cutout = await removeBackground(artwork.imageUUID, { config, fetchFn, sleep });
+    // By UUID first: nothing is downloaded and re-uploaded, which is the whole reason the wordmark
+    // is never fetched. A refusal there is not the end of it — the wordmark has already been paid
+    // for, the same picture has an address, and a cutout costs a fraction of a cent, so it is worth
+    // asking the other way before throwing $0.06 of artwork away. Which way worked goes into the
+    // log: these two lines are the only evidence there is about what Runware accepts for this model.
+    let cutout;
+    try {
+      cutout = await removeBackground(artwork.imageUUID, { config, fetchFn, sleep });
+    } catch (error) {
+      if (error?.kind !== 'rejected' || !artwork.imageURL) throw error;
+      log(
+        `Логотип: по идентификатору «${artwork.imageUUID}» не принял — ${error.message}. Пробую по адресу`,
+      );
+      cutout = await removeBackground(artwork.imageURL, { config, fetchFn, sleep });
+      log('Логотип: по адресу принял');
+    }
     if (typeof cutout.cost === 'number') summary.cost += cutout.cost;
 
     // Both pictures are made in memory first and written only once both exist, so a failure

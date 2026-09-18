@@ -50,7 +50,7 @@ async function cutoutPng() {
 
 // Answers like Runware: the wordmark task with an imageUUID, the removal task with the cut-out PNG.
 // `fail` maps a taskType to an HTTP status to fail that task with.
-function fakeRunware({ cutout, fail = {} } = {}) {
+function fakeRunware({ cutout, fail = {}, artworkURL = '', refuseUUID = false } = {}) {
   const tasks = [];
   const fetchFn = async (_url, init) => {
     const [task] = JSON.parse(init.body);
@@ -58,7 +58,20 @@ function fakeRunware({ cutout, fail = {} } = {}) {
     const status = fail[task.taskType];
     if (status) return new Response(JSON.stringify({ errors: [{ message: `failed with ${status}` }] }), { status });
     if (task.taskType === 'imageInference') {
-      return new Response(JSON.stringify({ data: [{ taskUUID: task.taskUUID, imageUUID: 'art-1', cost: 0.09 }] }), { status: 200 });
+      return new Response(
+        JSON.stringify({
+          data: [{ taskUUID: task.taskUUID, imageUUID: 'art-1', ...(artworkURL ? { imageURL: artworkURL } : {}), cost: 0.09 }],
+        }),
+        { status: 200 },
+      );
+    }
+    // What a live run met: the cutout model would not take the wordmark by the identifier Runware
+    // had just handed back for it, and said so about the value rather than about the field.
+    if (refuseUUID && task.inputs?.image === 'art-1') {
+      return new Response(
+        JSON.stringify({ errors: [{ message: "Invalid value for 'inputImage' parameter." }] }),
+        { status: 400 },
+      );
     }
     return new Response(
       JSON.stringify({ data: [{ taskType: 'imageBackgroundRemoval', taskUUID: task.taskUUID, imageBase64Data: cutout.toString('base64'), cost: 0.001 }] }),
@@ -94,10 +107,7 @@ describe('generateLogo', () => {
 
     expect(tasks.map((task) => task.taskType)).toEqual(['imageInference', 'removeBackground']);
     expect(tasks[0].positivePrompt).toContain('reads "899OK"');
-    // The cutout takes the wordmark straight from Runware by the UUID the first task returned:
-    // no second download, and no racing the seven days a returned URL stays valid.
-    expect(tasks[1].inputImage).toBe('art-1');
-    expect(tasks[1].inputs).toBeUndefined();
+    expect(tasks[1].inputs).toEqual({ image: 'art-1' });
     // 0.09 + 0.001 is not exactly 0.091 in floating point, so the sum is compared, not matched.
     expect(summary.generated).toBe(true);
     expect(summary.cost).toBeCloseTo(0.091, 10);
@@ -241,6 +251,38 @@ describe('generateLogo', () => {
     const { lines } = await run(siteDir, { fetchFn, config: { ...CONFIG, ...keyFields } });
     expect(tasks).toHaveLength(0);
     expect(lines).toEqual([line]);
+  });
+
+  // The wordmark is the expensive half and it is already paid for by the time the cutout is asked
+  // for, so a refusal there must not throw it away while another way of naming the same picture is
+  // still untried. A cutout costs a fraction of a cent; the wordmark costs sixty times that.
+  it('asks again by address when the cutout will not take the wordmark by identifier', async () => {
+    const siteDir = writeSite({ site: { brand: { name: 'Fallback' } } });
+    const { fetchFn, tasks } = fakeRunware({
+      cutout: await cutoutPng(),
+      artworkURL: 'https://im.runware.ai/art-1.png',
+      refuseUUID: true,
+    });
+    const { summary, lines } = await run(siteDir, { fetchFn });
+
+    expect(summary.generated).toBe(true);
+    const cutouts = tasks.filter((task) => task.taskType === 'removeBackground');
+    expect(cutouts.map((task) => task.inputs.image)).toEqual(['art-1', 'https://im.runware.ai/art-1.png']);
+    // Both halves are in the log, because they are the only evidence there is about which way this
+    // model actually accepts — and the identifier is there to be read, not guessed at next time.
+    expect(lines.join('\n')).toContain('art-1');
+    expect(lines.join('\n')).toContain('по адресу принял');
+  });
+
+  // Without an address there is nothing to fall back to, and the run must fail the way it always
+  // did rather than retry the same refusal.
+  it('gives up when the wordmark came back without an address at all', async () => {
+    const siteDir = writeSite({ site: { brand: { name: 'NoURL' } } });
+    const { fetchFn, tasks } = fakeRunware({ cutout: await cutoutPng(), refuseUUID: true });
+    const { summary } = await run(siteDir, { fetchFn });
+
+    expect(summary.generated).toBe(false);
+    expect(tasks.filter((task) => task.taskType === 'removeBackground')).toHaveLength(1);
   });
 
   it('writes nothing when background removal fails, but still reports what the wordmark cost', async () => {
