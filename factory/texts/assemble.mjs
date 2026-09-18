@@ -204,7 +204,14 @@ export function assemblePage({ plan, blocks, layout = '', sections, faq, pages, 
     warnings.push(`блок «${block.type}» нечем наполнить — пропущен`);
   }
 
-  const headings = built.filter((entry) => entry.block.heading).map((entry) => entry.heading);
+  // The contents lists the headed blocks that come after it, and only those. src/lib/anchors.mjs
+  // pairs an entry with a block further down the page — that is the shape of a table of contents,
+  // and it is the rule hand-written sites are matched by too, so it cannot be widened here. Listing
+  // a block that sits above instead put an entry in the list with nothing below it to match, and
+  // every later entry slid onto its neighbour's block: a layout with the FAQ above the contents
+  // came out with all three of its links pointing at the wrong headings, and nothing said so.
+  const headingsAfter = (index) =>
+    built.slice(index + 1).filter((entry) => entry.block.heading).map((entry) => entry.heading);
 
   // Which picture belongs to which block, worked out over the whole layout rather than over what
   // survived. planShape counted the names in layout order, so the fourth name is for the fourth
@@ -219,10 +226,19 @@ export function assemblePage({ plan, blocks, layout = '', sections, faq, pages, 
     nextPicture += 1;
   }
 
-  const pageBlocks = built.map(({ block, at, heading, items = [] }) => ({
+  // A contents with nothing under it to list is an empty box on the page, so it goes — the same
+  // rule every other block here is held to.
+  for (const [index, entry] of built.entries()) {
+    if (entry.block.type !== 'toc' || headingsAfter(index).length > 0) continue;
+    warnings.push('оглавлению нечего перечислять — блок убран');
+    built.splice(index, 1);
+    break;
+  }
+
+  const pageBlocks = built.map(({ block, at, heading, items = [] }, index) => ({
     type: block.type,
     content: block.auto
-      ? AUTO[block.type]({ headings, labels })
+      ? AUTO[block.type]({ headings: headingsAfter(index), labels })
       : [
           ...(block.h1 ? [{ type: 'title', h1: plan.h1 }] : []),
           ...(block.heading ? [{ type: 'title', h2: heading }] : []),

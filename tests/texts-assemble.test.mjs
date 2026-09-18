@@ -83,6 +83,26 @@ describe('assemblePage', () => {
     expect(list.items).toEqual(['Payments', 'Games', 'Questions']);
   });
 
+  // Found by reordering a layout by hand, which is the one thing the owner is meant to do freely.
+  // src/lib/anchors.mjs pairs a contents entry with a block *below* it — that is the shape of a
+  // table of contents, and the rule hand-written sites are matched by too. So a headed block above
+  // the contents must not be listed in it: listed, it put an entry in with nothing below to match,
+  // and every later entry slid onto its neighbour's block. A layout with the FAQ above the contents
+  // came out with all three of its links pointing at the wrong headings, silently.
+  it('lists only the headed blocks that come after the contents', () => {
+    const { page } = build({ blocks: [HERO, FAQ_BLOCK, TOC, SECTION, SECTION, LINKS] });
+    const list = blockOf(page, 'toc').content.find((item) => item.type === 'list');
+    expect(list.items).toEqual(['Payments', 'Games']);
+    expect(list.items).not.toContain('Questions');
+  });
+
+  // And the other end of the same rule: a contents with nothing below it to list is an empty box.
+  it('drops a contents that has nothing left to list', () => {
+    const { page, warnings } = build({ blocks: [HERO, SECTION, SECTION, FAQ_BLOCK, TOC, LINKS] });
+    expect(page.blocks.map((block) => block.type)).toEqual(['hero', 'section', 'section', 'faq', 'links']);
+    expect(warnings.join(' ')).toContain('оглавлению нечего перечислять');
+  });
+
   // The whole point of the work: order and composition come from the file, not from a sequence
   // written into this module.
   it('puts the blocks out in the order the layout gave, not a fixed one', () => {
