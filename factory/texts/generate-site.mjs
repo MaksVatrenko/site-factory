@@ -8,7 +8,6 @@ import { rollSkeleton } from './skeleton.mjs';
 import { describeTemplate, loadTemplateContent, loadTemplateExamples } from './template.mjs';
 import { languageFor, loadTextsPromptFile } from './texts-prompts.mjs';
 import { loadGeos } from '../geos.mjs';
-import { readManifest } from '../../src/lib/templates.mjs';
 
 // The whole stage, start to finish. Like the picture and logo steps it never throws: every problem
 // becomes one line in the log, because a half-written folder the owner can look at and re-run beats
@@ -57,12 +56,10 @@ export async function generateSite({
   let content;
   let examples;
   let promptSet;
-  let elements;
   let geos;
   try {
     content = loadTemplateContent(templateId, root);
     examples = loadTemplateExamples(templateId, root);
-    elements = readManifest(templateId, root).elements;
     promptSet = loadTextsPromptFile(promptFile);
     geos = loadGeos(geosFile);
   } catch (error) {
@@ -137,7 +134,7 @@ export async function generateSite({
       // gets the same ceiling, straight from content.json.
       const budgets = { ...skeleton[page], links: content.links };
       const planned = await planPage(
-        { page, pages, brand, geo, locale: language, budgets, elements, sectionContent, instructions },
+        { page, pages, brand, geo, locale: language, budgets, sectionContent, instructions },
         options,
       );
       spent += planned.cost;

@@ -101,9 +101,18 @@ export function trimPlan(plan, { budgets, pages, sectionContent }) {
 }
 
 export async function planPage(
-  { page, pages, brand, geo, locale, budgets, elements, sectionContent, instructions },
+  { page, pages, brand, geo, locale, budgets, sectionContent, instructions },
   options,
 ) {
+  // The elements a plan may offer for a section come from sectionContent itself, never from the
+  // template's whole vocabulary (manifest.json's `elements`) — a template can genuinely support an
+  // element only inside some other block (this template's `toggle`, real for its `faq` block), and
+  // trimPlan below measures a section only against sectionContent. Manifest and sectionContent used
+  // to be handed in separately, and the two disagreeing is exactly how a plan got offered `toggle`
+  // for an ordinary section, had all six copies stripped by trimPlan for being over the template's
+  // (zero) allowance, and lost the section entirely. One source here leaves nothing to disagree with.
+  const elements = Object.keys(sectionContent);
+
   // What we hand the model here used to be the bare file names ("home", "casino"), while trimPlan
   // accepted only written addresses ("/", "/casino") — home's above all, since it is never "/home".
   // The model then echoed back exactly what it was given, or the obvious slash-prefixed guess, and

@@ -158,7 +158,6 @@ describe('planPage', () => {
       {
         page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
         budgets: { sections: 1, faq: 1, images: 1 },
-        elements: ['title', 'text', 'list', 'table', 'image'],
         sectionContent: SECTION_CONTENT,
         instructions: 'RULES',
       },
@@ -191,7 +190,6 @@ describe('planPage', () => {
       {
         page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
         budgets: { sections: 1, faq: 1, images: 1, links: { section: [0, 2], page: [0, 8] } },
-        elements: ['title', 'text', 'list', 'table', 'image'],
         sectionContent: SECTION_CONTENT,
         instructions: 'RULES',
       },
@@ -204,5 +202,56 @@ describe('planPage', () => {
     expect(content).not.toMatch(/Pages on this site:.*\bhome\b/);
     expect(content).toMatch(/link.*must use one of those exact addresses/i);
     expect(content).toContain('at most 8 internal links');
+  });
+
+  // Finding: planPage used to take a manifest-wide `elements` list as well as `sectionContent`, and
+  // schema.mjs's planSchema offered the model whichever list the caller passed — the template's
+  // whole vocabulary, not the "section" block's own. This template's `toggle` is real (the `faq`
+  // block supports it) but section content does not have it at all, so a plan describing an
+  // ordinary section made of toggles was always going to lose every one of them to trimPlan, and the
+  // section along with it. There is no `elements` parameter left to disagree with sectionContent —
+  // proving the model is never even offered something trimPlan can only strip back out.
+  // Mutation-proven: see live-fixes-report.md.
+  it("never offers a section an element sectionContent does not list, even one the template supports elsewhere (toggle, real only for the faq block)", async () => {
+    let body;
+    const fetchFn = async (_url, init) => {
+      body = JSON.parse(init.body);
+      return answer({
+        title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
+        sections: [plannedSection()], faq: ['q1'],
+      });
+    };
+    await planPage(
+      {
+        page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
+        budgets: { sections: 1, faq: 1, images: 1 },
+        sectionContent: SECTION_CONTENT,
+        instructions: 'RULES',
+      },
+      { config: CONFIG, fetchFn, sleep: async () => {} },
+    );
+    const offered = body.text.format.schema.properties.sections.items.properties.elements.items.enum;
+    expect(offered).toEqual(Object.keys(SECTION_CONTENT));
+    expect(offered).not.toContain('toggle');
+  });
+
+  // planSchema itself already refuses to build a schema with nothing usable in it (see
+  // texts-schema.test.mjs) — this is the same guard, reached the new way, through sectionContent
+  // alone rather than through a separate `elements` argument.
+  it("still refuses to plan when sectionContent has nothing usable in it", async () => {
+    const fetchFn = async () => {
+      throw new Error('сеть не должна была понадобиться — схема обязана отказать раньше');
+    };
+    await expect(
+      planPage(
+        {
+          page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
+          budgets: { sections: 1, faq: 1, images: 1 },
+          sectionContent: {},
+          instructions: 'RULES',
+        },
+        { config: CONFIG, fetchFn, sleep: async () => {} },
+      ),
+    ).rejects.toThrow(/элемент/);
   });
 });
