@@ -15,6 +15,26 @@
         {
           "type": "text",
           "text": "I've tried a bunch of live casino sites from my flat in Mirpur, and most either lag out or the dealer looks half-asleep. 899OK actually holds up. Streams stay sharp on my regular Grameenphone data, and the Bangla-speaking dealers on evening shifts make it feel like a proper table night, not a robot dealing cards at you."
+        },
+        {
+          "type": "buttons",
+          "items": [
+            {
+              "text": "Enter 899OK Casino"
+            },
+            {
+              "text": "Download 899OK App"
+            }
+          ]
+        },
+        {
+          "type": "info",
+          "items": [
+            "🎲 Live Dealers 24/7",
+            "⚡ Fast bKash Payouts",
+            "🔒 Licensed Studios",
+            "🇧🇩 Bengali Tables"
+          ]
         }
       ]
     },
@@ -178,14 +198,32 @@
           "text": "Takes about two minutes if your phone is nearby:"
         },
         {
-          "type": "list",
+          "type": "steps",
           "items": [
-            "Tap Register — top-right button on the site or app",
-            "Enter your Bangladesh mobile number — use the one linked to your bKash or Nagad wallet, it saves headaches at withdrawal",
-            "Set a strong password — mix letters, a number, and one symbol",
-            "Verify the OTP that lands on your phone",
-            "Drop a promo code if you have one — that's how the welcome bonus activates"
+            {
+              "title": "Tap Register",
+              "text": "top-right button on the site or app"
+            },
+            {
+              "title": "Enter your Bangladesh mobile number",
+              "text": "use the one linked to your bKash or Nagad wallet, it saves headaches at withdrawal"
+            },
+            {
+              "title": "Set a strong password",
+              "text": "mix letters, a number, and one symbol"
+            },
+            {
+              "title": "Verify the OTP that lands on your phone",
+              "text": ""
+            },
+            {
+              "title": "Drop a promo code if you have one",
+              "text": "that's how the welcome bonus activates"
+            }
           ]
+        },
+        {
+          "type": "line"
         },
         {
           "type": "text",
@@ -357,6 +395,14 @@
         {
           "type": "text",
           "text": "If you're new, park yourself at a ৳50 European Roulette or Blackjack table for twenty minutes. That's cheaper than a rickshaw ride across Dhaka and gives you a real sense of the platform before you commit."
+        },
+        {
+          "type": "buttons",
+          "items": [
+            {
+              "text": "Take a Seat at 899OK"
+            }
+          ]
         }
       ]
     },

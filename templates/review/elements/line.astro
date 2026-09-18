@@ -1,0 +1,23 @@
+---
+// A divider, and a change of register. What follows a line inside a block is an aside about what
+// came above it — a caveat, a note on the odds, a reminder — so the paragraphs after it are drawn
+// smaller and quieter than the body they qualify.
+//
+// That smaller text is not this component's to style: Astro scopes a component's CSS to its own
+// markup, and a sibling it never rendered is out of reach. The rule lives in the block that owns
+// the run of elements (see templates/review/blocks/section.astro), which is the only place where
+// "after the line" means anything at all.
+---
+
+<hr class="rline" />
+
+<style>
+  .rline {
+    height: 0;
+    margin: 0.75rem 0 0.35rem;
+    border: 0;
+    /* Dashed rather than solid: a solid rule reads as the end of a section, and this is a seam
+       inside one. */
+    border-top: 1px dashed var(--border-default);
+  }
+</style>

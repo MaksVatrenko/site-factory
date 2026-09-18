@@ -1,0 +1,91 @@
+---
+import { asRecords, asText } from '../../_shared/props.mjs';
+import { isSafeHref } from '../../_shared/rich-text.mjs';
+
+// The call to action: one or two buttons side by side. The first is the accented one — the thing
+// the page is actually for — and any after it are outlined, so a second choice reads as a second
+// choice rather than as a rival.
+//
+// A button with no `href` of its own goes to the site's partner link. That is deliberate: the
+// partner link is a setting of the build (see src/lib/site-context.mjs), not content, so asking the
+// text to carry it would bake one campaign's address into every page written for it. A button that
+// really does point somewhere else — another page of the site, an app store — says so with `href`,
+// and is held to the same safety check every link in body text is (see rich-text.mjs: no
+// `javascript:`, no protocol-relative address).
+const { items, context } = Astro.props;
+const partnerUrl = asText(context?.partnerUrl);
+
+const buttons = asRecords(items)
+  .map((item) => {
+    const own = asText(item.href);
+    const href = own === '' ? partnerUrl : own;
+    return { text: asText(item.text), href: isSafeHref(href) ? href : '' };
+  })
+  // A button with no words on it is not a button, and one with nowhere to go is a dead end: both
+  // are dropped rather than drawn. An external target opens in a new tab.
+  .filter((button) => button.text !== '' && button.href !== '');
+---
+
+{buttons.length > 0 && (
+  <div class="rbuttons">
+    {buttons.map((button, index) => (
+      <a
+        class={index === 0 ? 'rbuttons__button rbuttons__button--accent' : 'rbuttons__button'}
+        href={button.href}
+        {...(button.href.startsWith('http') ? { target: '_blank', rel: 'noopener sponsored' } : {})}
+      >
+        {button.text}
+      </a>
+    ))}
+  </div>
+)}
+
+<style>
+  .rbuttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .rbuttons__button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.9rem 2rem;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-size: 1.05rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition:
+      border-color 0.2s ease,
+      background 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
+  .rbuttons__button:hover {
+    border-color: var(--border-accent);
+    background: var(--bg-hover);
+  }
+
+  /* The accented one carries the scheme's own gradient and glow, so it reads as the page's single
+     loudest thing wherever a scheme puts its accent. */
+  .rbuttons__button--accent {
+    border-color: transparent;
+    background: linear-gradient(100deg, var(--accent-primary), var(--accent-hover));
+    color: var(--text-on-accent);
+    box-shadow: 0 0 24px var(--accent-glow);
+  }
+
+  .rbuttons__button--accent:hover {
+    background: linear-gradient(100deg, var(--accent-hover), var(--accent-primary));
+    box-shadow: 0 0 32px var(--accent-glow);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rbuttons__button {
+      transition: none;
+    }
+  }
+</style>

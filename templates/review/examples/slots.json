@@ -19,6 +19,26 @@
         {
           "type": "text",
           "text": "The jackpot tickers keep me hooked. Watching a Mega Moolah-style pot creep past ৳3 crore quietly does something to your brain — you start dreaming."
+        },
+        {
+          "type": "buttons",
+          "items": [
+            {
+              "text": "Spin at 899OK"
+            },
+            {
+              "text": "See the Bonus Terms",
+              "href": "/bonus"
+            }
+          ]
+        },
+        {
+          "type": "info",
+          "items": [
+            "🎰 800+ Slot Titles",
+            "💸 Jackpots in Crore",
+            "📱 Plays on Mobile Data"
+          ]
         }
       ]
     },
@@ -356,14 +376,32 @@
           "text": "First-timers can go from registration to first spin in about three minutes:"
         },
         {
-          "type": "list",
+          "type": "steps",
           "items": [
-            "Tap Register in the top corner of the 899OK site or app",
-            "Enter your Bangladesh mobile number — use the one tied to your bKash or Nagad for smoother withdrawals",
-            "Verify OTP and set a strong password with a symbol and number",
-            "Deposit ৳500 via bKash or Nagad — takes seconds to clear",
-            "Open Sweet Bonanza and use your welcome free spins first"
+            {
+              "title": "Tap Register in the top corner of the 899OK site or app",
+              "text": ""
+            },
+            {
+              "title": "Enter your Bangladesh mobile number",
+              "text": "use the one tied to your bKash or Nagad for smoother withdrawals"
+            },
+            {
+              "title": "Verify OTP and set a strong password with a symbol and number",
+              "text": ""
+            },
+            {
+              "title": "Deposit ৳500 via bKash or Nagad",
+              "text": "takes seconds to clear"
+            },
+            {
+              "title": "Open Sweet Bonanza and use your welcome free spins first",
+              "text": ""
+            }
           ]
+        },
+        {
+          "type": "line"
         },
         {
           "type": "text",
@@ -428,6 +466,14 @@
         {
           "type": "text",
           "text": "Decide your session budget before you open the lobby, keep spins at 1/100th of your balance, and cash out to bKash the same night you win."
+        },
+        {
+          "type": "buttons",
+          "items": [
+            {
+              "text": "Open the 899OK Lobby"
+            }
+          ]
         }
       ]
     },

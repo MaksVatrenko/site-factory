@@ -285,6 +285,79 @@ describe('assemblePage', () => {
     expect(first.content[1]).toEqual({ type: 'cards', items: [{ title: 'C', text: 't' }] });
   });
 
+describe('the elements a call-to-action page is made of', () => {
+    const withItems = (item) => build({ sections: [{ heading: 'Payments', items: [item] }] });
+    const firstSection = (page) => page.blocks.filter((block) => block.type === 'section')[0];
+
+    // A button with no href of its own is the ordinary case, not a broken one: it means the site's
+    // partner link, which the template fills in at build time because it is a setting of the build
+    // and not something the model could know. Writing an empty href instead would make it a dead
+    // link; writing a guess would send the reader to an operator nobody chose.
+    it('leaves a button with no target of its own alone, for the template to send to the partner', () => {
+      const { page, warnings } = withItems({ kind: 'buttons', items: [{ text: 'Открыть казино', href: null }] });
+      expect(firstSection(page).content[1]).toEqual({
+        type: 'buttons',
+        items: [{ text: 'Открыть казино' }],
+      });
+      // The fixture reports its own short title and description, so only a complaint about the
+      // button itself would mean anything here.
+      expect(warnings.filter((warning) => warning.includes("кнопка"))).toEqual([]);
+    });
+
+    it('repairs a button target that names a page of this site', () => {
+      const { page } = withItems({ kind: 'buttons', items: [{ text: 'Бонусы', href: 'bonus' }] });
+      expect(firstSection(page).content[1].items).toEqual([{ text: 'Бонусы', href: '/bonus' }]);
+    });
+
+    // Both fall back to the partner link, which is the only sensible target left — but they are
+    // reported, because the words on the button promised something else.
+    it('reports a button target that names no page, and one that names this very page', () => {
+      const nowhere = withItems({ kind: 'buttons', items: [{ text: 'Куда-то', href: '/nope' }] });
+      expect(nowhere.page.blocks[2].content[1].items).toEqual([{ text: 'Куда-то' }]);
+      expect(nowhere.warnings.join(' ')).toContain('/nope');
+
+      const itself = withItems({ kind: 'buttons', items: [{ text: 'Сюда же', href: '/casino' }] });
+      expect(itself.page.blocks[2].content[1].items).toEqual([{ text: 'Сюда же' }]);
+      expect(itself.warnings.join(' ')).toContain('саму страницу');
+    });
+
+    it('drops a button with no words on it, and the whole element when none are left', () => {
+      const { page } = withItems({ kind: 'buttons', items: [{ text: '', href: null }] });
+      expect(JSON.stringify(firstSection(page))).not.toContain('buttons');
+    });
+
+    it('keeps the info claims in order and drops the empty ones', () => {
+      const { page } = withItems({ kind: 'info', items: ['🎲 Live Dealers', '', '⚡ Fast Payouts'] });
+      expect(firstSection(page).content[1]).toEqual({
+        type: 'info',
+        items: ['🎲 Live Dealers', '⚡ Fast Payouts'],
+      });
+    });
+
+    it('carries a line through as the seam it is', () => {
+      const { page } = withItems({ kind: 'line' });
+      expect(firstSection(page).content[1]).toEqual({ type: 'line' });
+    });
+
+    // The explanation of a step is prose like any other, so a link written inside it is repaired
+    // and kept — the same treatment a paragraph gets, which is easy to forget for a new element.
+    it('keeps a link written inside a step explanation', () => {
+      const { page } = withItems({
+        kind: 'steps',
+        items: [{ title: 'Внести депозит', text: 'через [бонусную страницу](bonus)' }],
+      });
+      expect(firstSection(page).content[1].items[0].text).toContain('[бонусную страницу](/bonus)');
+    });
+
+    it('drops a step with neither a heading nor an explanation', () => {
+      const { page } = withItems({
+        kind: 'steps',
+        items: [{ title: 'Шаг', text: '' }, { title: '', text: '' }],
+      });
+      expect(firstSection(page).content[1].items).toEqual([{ title: 'Шаг', text: '' }]);
+    });
+  });
+
   it('turns every element kind into its own shape', () => {
     const sections = [
       {

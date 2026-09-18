@@ -6,15 +6,31 @@
     "text": [200, 400],
     "listItems": [3, 8],
     "tableRows": [3, 10],
-    "cards": [2, 4]
+    "cards": [2, 4],
+    "stepItems": [3, 6],
+    "infoItems": [3, 4],
+    "buttonItems": [1, 2]
   },
   "links": { "perBlock": [0, 2], "perPage": [0, 8] },
   "blocks": {
-    "hero": { "h1": true, "image": true, "content": { "text": [1, 2] } },
+    "hero": {
+      "h1": true,
+      "image": true,
+      "content": { "text": [1, 2], "buttons": [0, 1], "info": [0, 1] }
+    },
     "toc": { "auto": true },
     "section": {
       "heading": true,
-      "content": { "title": [0, 1], "text": [2, 6], "list": [0, 1], "table": [0, 1], "cards": [0, 1] }
+      "content": {
+        "title": [0, 1],
+        "text": [2, 6],
+        "list": [0, 1],
+        "steps": [0, 1],
+        "table": [0, 1],
+        "cards": [0, 1],
+        "line": [0, 1],
+        "buttons": [0, 1]
+      }
     },
     "links": { "auto": true },
     "faq": { "heading": true, "content": { "toggle": [5, 8] } }

@@ -4,16 +4,19 @@ import Content from '../Content.astro';
 
 // The plainest shell: spacing, the anchor id, the container. What the section holds, and in what
 // order, is entirely its content — see templates/review/Content.astro.
-const { content, anchor, templateId } = Astro.props;
+const { content, anchor, site, templateId } = Astro.props;
 const entries = asEntries(content);
 const anchorId = asText(anchor);
 const idAttrs = anchorId ? { id: anchorId } : {};
+// The partner link is a setting of the build, not content, so a call-to-action button is told it
+// from here rather than having it written into every page (see elements/buttons.astro).
+const context = { partnerUrl: asText(site?.partnerUrl) };
 ---
 
 {entries.length > 0 && (
   <section class="rsection section" {...idAttrs}>
     <div class="container rsection__inner">
-      <Content content={entries} templateId={templateId} />
+      <Content content={entries} templateId={templateId} context={context} />
     </div>
   </section>
 )}
@@ -26,5 +29,15 @@ const idAttrs = anchorId ? { id: anchorId } : {};
   .rsection__inner {
     display: grid;
     gap: 1.1rem;
+  }
+
+  /* What follows a line inside a section is an aside about what came above it, so it is drawn
+     smaller and quieter than the body it qualifies (see elements/line.astro). The rule lives here
+     because "after the line" is a fact about the run of elements, which only the block that holds
+     them can see — a component cannot style a sibling it never rendered. `~` rather than `+`: a
+     note is often two sentences, and the second is no less a note than the first. */
+  .rsection__inner > :global(.rline) ~ :global(p) {
+    color: var(--text-tertiary);
+    font-size: 0.92rem;
   }
 </style>

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { ELEMENT_KINDS, faqSchema, planSchema, sectionSchema } from '../factory/texts/schema.mjs';
 
-const ELEMENTS = ['title', 'text', 'list', 'table', 'cards', 'toggle', 'image'];
+const ELEMENTS = ['title', 'text', 'list', 'table', 'cards', 'toggle', 'image', 'buttons', 'info', 'line', 'steps'];
 
 // Strict mode is only strict if every object in the schema obeys it: additionalProperties must be
 // false and every declared property must be listed as required. Checked over the whole tree rather
@@ -95,9 +95,15 @@ describe('sectionSchema', () => {
     ]);
   });
 
-  it('knows all seven kinds of our content format', () => {
+  // The list is the contract between this module and docs/content-format.md: an element a theme
+  // may declare but this module has no shape for is silently unwritable, and one described here but
+  // absent from the format is a shape nothing can draw. Spelled out rather than counted, so adding
+  // a kind is a deliberate edit here too.
+  it('knows every kind of our content format, and only those', () => {
+    expect([...ELEMENT_KINDS].sort()).toEqual([
+      'buttons', 'cards', 'image', 'info', 'line', 'list', 'steps', 'table', 'text', 'title', 'toggle',
+    ]);
     expect([...ELEMENT_KINDS].sort()).toEqual([...ELEMENTS].sort());
-    expect(Object.keys(sectionSchema(ELEMENTS).$defs)).toHaveLength(7);
   });
 
   it('drops an element name it has no shape for instead of making one up', () => {

@@ -1,0 +1,81 @@
+---
+import { asRecords, asText } from '../../_shared/props.mjs';
+import RichText from '../RichText.astro';
+
+// A numbered run of instructions: register, deposit, claim. Each step is a short imperative and an
+// explanation of it, drawn as its own framed row with the number beside it, because a reader
+// following instructions looks for "where am I" far more often than they read the words.
+//
+// A real <ol>, not a set of divs: the order is the meaning here, and a screen reader announcing
+// "3 of 5" is telling the reader the same thing the circle tells everyone else. The numbers are
+// drawn by a counter rather than written into the content, so inserting a step renumbers the rest.
+const { items } = Astro.props;
+const steps = asRecords(items)
+  .map((item) => ({ title: asText(item.title), text: asText(item.text) }))
+  .filter((step) => step.title !== '' || step.text !== '');
+---
+
+{steps.length > 0 && (
+  <ol class="rsteps">
+    {steps.map((step) => (
+      <li class="rsteps__item">
+        <div class="rsteps__body">
+          {step.title && <strong class="rsteps__title">{step.title}</strong>}
+          {step.title && step.text && <span class="rsteps__dash"> — </span>}
+          {step.text && <RichText text={step.text} />}
+        </div>
+      </li>
+    ))}
+  </ol>
+)}
+
+<style>
+  .rsteps {
+    display: grid;
+    gap: 0.75rem;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    counter-reset: rsteps;
+  }
+
+  .rsteps__item {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: start;
+    gap: 1rem;
+    padding: 1.1rem 1.35rem;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
+    background: var(--bg-elevated);
+    counter-increment: rsteps;
+  }
+
+  .rsteps__item::before {
+    content: counter(rsteps);
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    background: linear-gradient(140deg, var(--accent-primary), var(--accent-hover));
+    box-shadow: 0 0 14px var(--accent-glow);
+    color: var(--text-on-accent);
+    font-weight: 700;
+  }
+
+  .rsteps__body {
+    /* The number is a fixed height; the words next to it are not, so the row's own centre is the
+       wrong place to line them up. Half the circle's height puts the first line beside it. */
+    padding-top: 0.3rem;
+    color: var(--text-secondary);
+  }
+
+  .rsteps__title {
+    color: var(--text-primary);
+  }
+
+  .rsteps__dash {
+    color: var(--text-tertiary);
+  }
+</style>

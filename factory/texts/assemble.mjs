@@ -85,6 +85,40 @@ function toElement(item, { images, pages, page, warnings, lengths }) {
       };
     case 'toggle':
       return { type: 'toggle', title: item.title, text: link(item.text) };
+    case 'buttons': {
+      // A button's own target is held to the same rule a link in prose is (see links.mjs): it names
+      // a page of this site or it names nothing. Naming nothing is not a mistake here — it is the
+      // ordinary case, and it means the partner link, which the template fills in at build time. So
+      // an unusable target is dropped back to that rather than turning the button into a dead end.
+      const items = trimToMax('кнопок', item.items, lengths.buttonItems, warnings)
+        .map((button) => {
+          const canonical = button.href ? resolveLink(button.href, pages) : null;
+          if (button.href && canonical === null) {
+            warnings.push(`кнопка «${button.text}» ведёт на ${button.href} — адреса нет, оставлена партнёрской`);
+          } else if (canonical !== null && isSelfLink(canonical, page)) {
+            // Reported rather than quietly turned into the partner button: a button that says
+            // "read the bonus terms" and goes to the operator instead is a different promise than
+            // the one the words make, and the log is the only place that can say so.
+            warnings.push(`кнопка «${button.text}» ведёт на саму страницу — оставлена партнёрской`);
+          }
+          const href = canonical !== null && !isSelfLink(canonical, page) ? canonical : '';
+          return { text: button.text, ...(href ? { href } : {}) };
+        })
+        .filter((button) => button.text !== '');
+      return items.length > 0 ? { type: 'buttons', items } : null;
+    }
+    case 'info': {
+      const items = trimToMax('плашек', item.items, lengths.infoItems, warnings).filter(Boolean);
+      return items.length > 0 ? { type: 'info', items } : null;
+    }
+    case 'line':
+      return { type: 'line' };
+    case 'steps': {
+      const items = trimToMax('шагов', item.items, lengths.stepItems, warnings)
+        .map((step) => ({ title: step.title, text: link(step.text) }))
+        .filter((step) => step.title !== '' || step.text !== '');
+      return items.length > 0 ? { type: 'steps', items } : null;
+    }
     case 'image': {
       const image = picture(item.name);
       return image ? { image } : null;

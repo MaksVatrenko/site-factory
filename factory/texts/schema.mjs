@@ -52,6 +52,34 @@ const ELEMENT_DEFS = {
   }),
   toggle: object({ kind: kind('toggle'), title: { type: 'string' }, text: { type: 'string' } }),
   image: object({ kind: kind('image'), name: { type: 'string' } }),
+  // A call to action. `href` is null far more often than not: a button with none goes to the site's
+  // partner link, which is a setting of the build and not something the model could know or should
+  // guess (see templates/review/elements/buttons.astro). It is offered at all so a button can point
+  // at another page of this site — "see the full bonus terms" — rather than at the operator.
+  buttons: object({
+    kind: kind('buttons'),
+    items: {
+      type: 'array',
+      items: object({ text: { type: 'string' }, href: { type: ['string', 'null'] } }),
+    },
+  }),
+  // Short claims in a row under the first screen: "Live Dealers 24/7". Whatever pictogram one opens
+  // with is part of its text — an emoji is a character, and a field of its own would make choosing
+  // one the factory's job rather than the writer's.
+  info: object({ kind: kind('info'), items: strings }),
+  // A seam inside a block: what follows it is an aside about what came above. It carries nothing of
+  // its own, but it is an element like any other so that its place in the run can be chosen.
+  line: object({ kind: kind('line') }),
+  // Numbered instructions: a short imperative and the explanation of it. Two fields rather than one
+  // string with markup in it, because the two are drawn differently and our content format has no
+  // way to say "bold" inside a sentence.
+  steps: object({
+    kind: kind('steps'),
+    items: {
+      type: 'array',
+      items: object({ title: { type: 'string' }, text: { type: 'string' } }),
+    },
+  }),
 };
 
 export const ELEMENT_KINDS = Object.freeze(Object.keys(ELEMENT_DEFS));

@@ -1,0 +1,45 @@
+---
+import { asList, asText } from '../../_shared/props.mjs';
+
+// A row of short claims under the first screen: "Live Dealers 24/7", "Fast bKash Payouts". Each is
+// a few words, so they read at a glance rather than being read.
+//
+// Whatever pictogram an item opens with is part of its text, not a field of its own. An emoji is a
+// character like any other, it comes through a spreadsheet cell and a JSON string unchanged, and it
+// is the writer's choice whether a claim needs one — a separate `icon` field would make it the
+// factory's, and would need a picture registry for something a single character already says.
+const { items } = Astro.props;
+const claims = asList(items)
+  .map((item) => asText(item))
+  .filter((item) => item !== '');
+---
+
+{claims.length > 0 && (
+  <ul class="rinfo">
+    {claims.map((claim) => (
+      <li class="rinfo__item">{claim}</li>
+    ))}
+  </ul>
+)}
+
+<style>
+  .rinfo {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+
+  .rinfo__item {
+    padding: 0.55rem 1.1rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    background: var(--bg-elevated);
+    color: var(--accent-primary);
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+</style>

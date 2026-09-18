@@ -462,7 +462,17 @@ describe('the layout decides what goes inside a block', () => {
       fetchFn,
       layoutsDir: layoutsDirWith({
         name: 'Проба',
-        blocks: ['hero', 'toc', { type: 'section', count: 2, content: { text: 2, title: 0, list: 0, table: 0, cards: 0 } }, 'links', 'faq'],
+        blocks: [
+          'hero',
+          'toc',
+          {
+            type: 'section',
+            count: 2,
+            content: { text: 2, title: 0, list: 0, steps: 0, table: 0, cards: 0, line: 0, buttons: 0 },
+          },
+          'links',
+          'faq',
+        ],
       }),
     });
 

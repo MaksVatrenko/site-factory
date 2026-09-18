@@ -16,7 +16,11 @@ const brandLabel = asText(site?.brand?.name);
     <div class="container hero__inner">
       {brandLabel && <p class="hero__eyebrow">{brandLabel}</p>}
       <div class="hero__content">
-        <Content content={entries} templateId={templateId} context={{ eagerImages: true }} />
+        <Content
+          content={entries}
+          templateId={templateId}
+          context={{ eagerImages: true, partnerUrl: asText(site?.partnerUrl) }}
+        />
       </div>
     </div>
   </section>
