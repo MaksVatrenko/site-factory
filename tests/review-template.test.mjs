@@ -514,3 +514,112 @@ describe('review template: pictures from images.json', () => {
     expect(log).toContain('картинки «nowhere» нет в images.json');
   });
 });
+
+describe('review template: the block cut in half', () => {
+  let html;
+
+  // Its own fixture rather than buildSingleBlockPage's: this block is half picture, and a picture
+  // only survives normalisation when images.json declares it and the file is where it says.
+  function pageWithPictures(blocks) {
+    const dir = mkdtempSync(join(tmpdir(), 'site-factory-split-'));
+    mkdirSync(join(dir, 'public', 'images'), { recursive: true });
+    const names = ['one', 'two'];
+    for (const name of names) writeFileSync(join(dir, 'public', 'images', `${name}.webp`), '');
+    writeFileSync(
+      join(dir, 'images.json'),
+      JSON.stringify(
+        Object.fromEntries(
+          names.map((name) => [name, { src: `/images/${name}.webp`, alt: name, width: 800, height: 450 }]),
+        ),
+      ),
+    );
+    writeFileSync(join(dir, 'site.json'), JSON.stringify({ domain: 'example.com', brand: { name: 'Split Fixture' } }));
+    writeFileSync(
+      join(dir, 'home.json'),
+      JSON.stringify({ title: 'Fixture', blocks: blocks.map(({ type, props }) => ({ type, ...props })) }),
+    );
+    return dir;
+  }
+
+  function buildWith(blocks, outName) {
+    const dir = pageWithPictures(blocks);
+    try {
+      const { outDir } = buildSite({
+        outDir: join('output', outName),
+        env: { SITE_DIR: dir, PUBLIC_DIR: join(dir, 'public'), TEMPLATE: 'review', SCHEME: 'dark' },
+      });
+      return readOutput(outDir);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  beforeAll(() => {
+    html = buildWith([
+      {
+        type: 'split',
+        props: {
+          content: [
+            { type: 'title', h2: 'Words on the left' },
+            { image: 'one' },
+            { type: 'text', text: 'A paragraph beside the picture.' },
+          ],
+        },
+      },
+      {
+        type: 'split-left',
+        props: {
+          content: [
+            { type: 'title', h2: 'Words on the right' },
+            { image: 'two' },
+            { type: 'text', text: 'Another paragraph.' },
+          ],
+        },
+      },
+    ], 'test-review-split');
+  });
+
+  // The picture is not an element among the words — it is the other half of the block. Left in
+  // place it would render inside the column of prose, which is the ordinary section's behaviour and
+  // the one thing this block exists not to do.
+  it('takes the picture out of the words and gives it its own half', () => {
+    const block = html.match(/<section class="rsplit section"[\s\S]*?<\/section>/)[0];
+    const wordsAt = block.indexOf('rsplit__words');
+    const imageAt = block.indexOf('rsplit__image');
+    expect(wordsAt).toBeGreaterThan(-1);
+    expect(imageAt).toBeGreaterThan(wordsAt);
+    // Up to the picture's own tag, not to its class: the class name sits inside the <img, so
+    // slicing there would leave the tag's opening in the words half and fail on its own boundary.
+    const words = block.slice(wordsAt, block.indexOf('<img'));
+    expect(words).not.toContain('<img');
+    expect(words).toContain('A paragraph beside the picture.');
+  });
+
+  // Mirrored by moving the halves, not by reordering the markup: the words come first in the
+  // document either way, so a screen reader and a search engine read the block the same however it
+  // is drawn. Swapping the markup instead would make the mirrored one read picture-first.
+  it('mirrors the halves with a class, leaving the reading order alone', () => {
+    const blocks = [...html.matchAll(/<section class="rsplit section"[\s\S]*?<\/section>/g)]
+      .map((match) => match[0]);
+    expect(blocks).toHaveLength(2);
+    expect(blocks[0]).not.toContain('rsplit__inner--flipped');
+    expect(blocks[1]).toContain('rsplit__inner--flipped');
+    // Words before picture in both, in the document itself.
+    for (const block of blocks) {
+      expect(block.indexOf('rsplit__words')).toBeLessThan(block.indexOf('rsplit__image'));
+    }
+    // And the flip is a matter of CSS order, which only applies once there are two columns to
+    // swap — on a phone both halves stack, words first, and a rule that reordered them there
+    // would put a picture above the heading it belongs to.
+    expect(html).toMatch(/--flipped[^{]*\{\s*order:\s*2/);
+  });
+
+  it('draws a half with no picture in it at all rather than an empty column', () => {
+    const alone = buildWith(
+      [{ type: 'split', props: { content: [{ type: 'text', text: 'Words alone.' }] } }],
+      'test-review-split-nopic',
+    );
+    expect(alone).toContain('Words alone.');
+    expect(alone.match(/<section class="rsplit section"[\s\S]*?<\/section>/)[0]).not.toContain('<img');
+  });
+});
