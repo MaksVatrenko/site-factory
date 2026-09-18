@@ -174,6 +174,33 @@ describe('trimPlan', () => {
     expect(result.warnings).toEqual([]);
   });
 
+  // Found by generating a page with a fake model that answered in the language of the site, which
+  // is what every other instruction asks the model to do. A name written in Cyrillic, Bengali or
+  // Arabic loses every one of its letters to the slug, and what is left is not a name: "рулетка
+  // 2024" comes out as "2024". That passes every other check, becomes a key in images.json and a
+  // file name, and tells the picture stage nothing whatever about what to draw — a wrong picture on
+  // every page of the site, with nothing anywhere saying so.
+  it('drops a picture name that kept nothing but digits after stripping', () => {
+    const plan = { ...base, images: ['рулетка 2024'], sections: [plannedSection()] };
+    const result = trimPlan(plan, args);
+    expect(result.plan.images).toEqual([null]);
+    expect(result.warnings.join(' ')).toContain('рулетка 2024');
+  });
+
+  // The other side of it: a name that did keep a word is usable, so it is kept — but it lost
+  // something on the way, and the owner reading the log should be told which pictures to look at.
+  it('keeps a half-stripped name but says it was not written in latin', () => {
+    const plan = { ...base, images: ['899ok лобби'], sections: [plannedSection()] };
+    const result = trimPlan(plan, args);
+    expect(result.plan.images).toEqual(['899ok']);
+    expect(result.warnings.join(' ')).toContain('не латиницей');
+  });
+
+  it('says nothing about latin when the name was written in it all along', () => {
+    const plan = { ...base, images: ['live-dealer-table'], sections: [plannedSection()] };
+    expect(trimPlan(plan, args).warnings).toEqual([]);
+  });
+
   // The block still exists; it simply has no picture. Nothing may invent a name to fill the hole —
   // an invented name reaches images.json and gets drawn, which is worse than a block without one.
   it('leaves a hole rather than a made-up name when nothing usable came back', () => {
@@ -382,6 +409,7 @@ describe('planPage', () => {
     const content = String(body.input[0].content);
     expect(content).toMatch(/short.*slug/i);
     expect(content).toMatch(/never a sentence/i);
+    expect(content).toMatch(/latin/i);
     expect(content).toMatch(/1\. hero/);
   });
 

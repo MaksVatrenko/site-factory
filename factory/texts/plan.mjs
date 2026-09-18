@@ -30,6 +30,15 @@ export function buildInstructions({ rules, templateText, examples }) {
 // usable in it must be dropped by the caller, the same as one that is simply over budget.
 const MAX_IMAGE_NAME_LENGTH = 60;
 
+// A slug with no latin letter left in it is not a name, it is what survived the stripping. The
+// model writes in the site's language, and a picture named in Cyrillic, Bengali or Arabic loses
+// every one of its letters here — "рулетка 2024" comes out as "2024", which passes every check,
+// becomes a key in images.json and a file name, and tells the picture stage nothing at all about
+// what to draw. Dropping it turns a silent wrong picture into a line in the log. A name that keeps
+// a word ("899ok лобби" → "899ok") is kept, but reported: it did lose something.
+const hasLatinLetter = (slug) => /[a-z]/.test(slug);
+const hasForeignLetter = (raw) => /\p{Letter}/u.test(raw.replace(/[a-zA-Z]/g, ''));
+
 function slugifyImageName(raw) {
   return raw
     .toLowerCase()
@@ -74,9 +83,12 @@ export function trimPlan(plan, { links, pages, page, sectionContent, imageLabels
   const claimImage = (raw, where) => {
     if (!raw) return null;
     const slug = slugifyImageName(raw);
-    if (!slug) {
+    if (!slug || !hasLatinLetter(slug)) {
       warnings.push(`картинка «${raw}» ${where} — от имени не осталось ярлыка — убрана`);
       return null;
+    }
+    if (hasForeignLetter(raw)) {
+      warnings.push(`картинка «${raw}» ${where} названа не латиницей — осталось «${slug}», стоит проверить`);
     }
     if (RESERVED_IMAGE_NAMES.has(slug)) {
       warnings.push(`картинка «${raw}» ${where} — имя «${slug}» занято логотипом — убрана`);
@@ -200,8 +212,13 @@ export async function planPage(
   // something — "hero" says nothing about a picture, "slot-reels" says what to draw.
   const pictureLines = shape.imageLabels.length > 0
     ? [
-        'Pictures on this page, in this order. Name each with a short hyphenated slug such as',
-        '"live-dealer-table" — never a sentence:',
+        // Latin letters, said outright: the name becomes a file name, and everything outside
+        // [a-z0-9-] is stripped from it. A name written in the language of the site — which is what
+        // every other instruction asks for — survives that as nothing, or as the one digit that
+        // happened to be in it.
+        'Pictures on this page, in this order. Name each with a short hyphenated slug in latin',
+        'letters, such as "live-dealer-table" — never a sentence, and never in the page language,',
+        'because the name becomes a file name:',
         ...shape.imageLabels.map((label, index) => `${index + 1}. ${label}`),
       ]
     : [];
