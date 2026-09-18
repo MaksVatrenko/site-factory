@@ -1,0 +1,12 @@
+{
+  "name": "Лендинг",
+  "blocks": [
+    { "type": "hero", "elements": ["text", "text", "buttons", "info"] },
+    { "type": "split", "elements": ["text", "list", "buttons"] },
+    { "type": "section", "elements": ["text", "cards", "buttons"] },
+    { "type": "split-left", "elements": ["text", "text", "buttons"] },
+    { "type": "section", "elements": ["text", "list", "line", "text"] },
+    "links",
+    { "type": "faq", "content": { "toggle": 5 } }
+  ]
+}

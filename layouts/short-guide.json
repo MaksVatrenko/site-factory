@@ -1,0 +1,13 @@
+{
+  "name": "Короткий гид",
+  "blocks": [
+    "hero",
+    "toc",
+    { "type": "section", "elements": ["text", "steps", "line", "text"] },
+    { "type": "section", "elements": ["text", "list", "buttons"] },
+    { "type": "split", "elements": ["text", "list", "buttons"] },
+    { "type": "section", "elements": ["text", "table", "line", "text"] },
+    "links",
+    { "type": "faq", "content": { "toggle": 5 } }
+  ]
+}

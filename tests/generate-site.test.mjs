@@ -133,6 +133,24 @@ function fakeOpenAi({
   return { fetchFn, asked };
 }
 
+// A layouts folder of this file's own. Every run here uses one, because the real layouts/ belongs
+// to the owner: they add a layout and every seeded choice in this file moves, so a suite that read
+// it would go red on a change that broke nothing. It did, once — four layouts on disk instead of
+// one, and five tests failed while the code was correct.
+function layoutsDirWith(layout, name = 'probe') {
+  const dir = mkdtempSync(join(tmpdir(), 'site-factory-layouts-'));
+  dirs.push(dir);
+  writeFileSync(join(dir, `${name}.json`), JSON.stringify(layout));
+  return dir;
+}
+
+// Close enough to the shipped long review to be worth testing against — a first screen, a contents,
+// a run of sections, the service blocks — and short enough not to pay for nine fills per page.
+const DEFAULT_LAYOUT = {
+  name: 'Длинный обзор',
+  blocks: ['hero', 'toc', { type: 'section', count: 9 }, 'links', 'faq'],
+};
+
 const run = (dir, overrides = {}) => {
   const lines = [];
   return generateSite({
@@ -140,6 +158,7 @@ const run = (dir, overrides = {}) => {
     pages: PAGES, config: CONFIG, root: process.cwd(),
     promptFile: join('factory', 'prompts', 'texts.json'),
     geosFile: join('factory', 'geos.json'),
+    layoutsDir: layoutsDirWith(DEFAULT_LAYOUT),
     sleep: async () => {}, log: (line) => lines.push(line),
     ...overrides,
   }).then((summary) => ({ summary, lines }));
@@ -467,13 +486,6 @@ describe('generateSite', () => {
 
 // The real proof: what this writes is a site folder Astro can build, not merely valid JSON.
 // A layouts folder of this test's own, so a layout can say something the shipped one does not.
-function layoutsDirWith(layout) {
-  const dir = mkdtempSync(join(tmpdir(), 'site-factory-layouts-'));
-  dirs.push(dir);
-  writeFileSync(join(dir, 'probe.json'), JSON.stringify(layout));
-  return dir;
-}
-
 describe('the layout decides what goes inside a block', () => {
   // The whole reason a layout may carry numbers at all. resolveLayout worked these out correctly
   // from the start — and generate-site.mjs then handed the plan the theme's ranges instead, so a
@@ -674,9 +686,9 @@ describe('a generated folder builds', () => {
     // page by title, description and blocks, so the field is inert by construction. Inert by
     // construction is still worth holding to account — a leak into a built page would be silent,
     // and this is the one test in the suite that runs the engine end to end against real output.
-    expect(JSON.parse(readFileSync(join(dir, 'casino.json'), 'utf8')).layout).toBe('long-review');
-    expect(html).not.toContain('long-review');
-    expect(readFileSync(join(out, 'index.html'), 'utf8')).not.toContain('long-review');
+    expect(JSON.parse(readFileSync(join(dir, 'casino.json'), 'utf8')).layout).toBe('probe');
+    expect(html).not.toContain('"layout"');
+    expect(readFileSync(join(out, 'index.html'), 'utf8')).not.toContain('"layout"');
 
     // The picture belongs to the first screen and to nothing else — checked in the delivered HTML,
     // not in the JSON, because "one picture" is a promise about the page a reader gets. A card that
