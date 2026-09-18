@@ -27,8 +27,8 @@
           <fieldset class="card">
             <legend>Основное</legend>
             <label>Бренд<input name="brand" type="text" placeholder="Example Guide" /></label>
-            <label>Гео<input name="geo" type="text" placeholder="ID" /></label>
-            <label>Язык<input name="locale" type="text" placeholder="en-US" /></label>
+            <label>Гео<select name="geo" id="field-geo"></select></label>
+            <label>Язык<select name="locale" id="field-locale"></select></label>
           </fieldset>
 
           <fieldset class="card">
@@ -76,8 +76,9 @@
             <label>Шаблон<select name="template" id="texts-template"></select></label>
             <label>Папка<input name="out" type="text" placeholder="520bdapp" required /></label>
             <label>Бренд<input name="brand" type="text" placeholder="520BD" required /></label>
-            <label>Гео<input name="geo" type="text" placeholder="Bangladesh" /></label>
-            <label>Язык<input name="locale" type="text" placeholder="пусто — по гео" /></label>
+            <label>Гео<select name="geo" id="texts-geo"></select></label>
+            <label>Язык<select name="locale" id="texts-locale"></select></label>
+            <p class="note">Пустое поле языка — язык определяется по гео</p>
           </fieldset>
 
           <fieldset class="card">

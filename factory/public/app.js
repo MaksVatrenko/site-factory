@@ -39,12 +39,33 @@ document.querySelector('#tabs').addEventListener('click', (event) => {
   }
 });
 
+// Every geo/language select keeps this as its first option. Both fields are meaningfully empty:
+// on «Генерация» that means "take it from site.json", on «Тексты» a blank language means "work it
+// out from the geo" (see generateSite). fillSelect reads value.id/value.name, and `??` only falls
+// back on null/undefined, so an id/name of '' survives as a real, selectable empty option instead
+// of being replaced by anything.
+const BLANK_OPTION = { id: '', name: '' };
+
+// Wires one tab's own geo select to its own language select: picking a geo preselects the
+// language the table has for it, without touching the other tab's fields — each call closes over
+// its own pair, so the two tabs never share one. The person stays free to change the language
+// afterwards; this only runs again on the next geo change, never on its own.
+function syncLocaleWithGeo(geoField, localeField, countries) {
+  geoField.addEventListener('change', () => {
+    const country = countries.find((c) => c.name === geoField.value);
+    if (country && [...localeField.options].some((o) => o.value === country.locale)) {
+      localeField.value = country.locale;
+    }
+  });
+}
+
 async function loadLists() {
   try {
-    const [templates, schemes, sites] = await Promise.all([
+    const [templates, schemes, sites, geos] = await Promise.all([
       fetch('/api/templates').then((r) => r.json()),
       fetch('/api/schemes').then((r) => r.json()),
       fetch('/api/sites').then((r) => r.json()),
+      fetch('/api/geos').then((r) => r.json()),
     ]);
 
     fillSelect(document.querySelector('#field-template'), templates.templates);
@@ -60,6 +81,16 @@ async function loadLists() {
         return { id: site.id, name: site.brand ? `${label} · ${site.brand}` : label };
       }),
     );
+
+    // /api/geos reports each country in factory/geos.json's own order, with its locale, plus the
+    // distinct locales in the order they first appear — the owner's own order, unchanged, so the
+    // countries they use most stay at the top of the dropdown.
+    const geoOptions = [BLANK_OPTION, ...geos.countries.map((c) => ({ id: c.name, name: c.name }))];
+    const localeOptions = [BLANK_OPTION, ...geos.locales.map((locale) => ({ id: locale, name: locale }))];
+    for (const id of ['field-geo', 'texts-geo']) fillSelect(document.querySelector(`#${id}`), geoOptions);
+    for (const id of ['field-locale', 'texts-locale']) fillSelect(document.querySelector(`#${id}`), localeOptions);
+    syncLocaleWithGeo(document.querySelector('#field-geo'), document.querySelector('#field-locale'), geos.countries);
+    syncLocaleWithGeo(document.querySelector('#texts-geo'), document.querySelector('#texts-locale'), geos.countries);
 
     const describe = () => {
       const chosen = templates.templates.find(
