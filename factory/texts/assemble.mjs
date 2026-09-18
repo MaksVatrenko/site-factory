@@ -121,7 +121,7 @@ const AUTO = {
 
 export const AUTO_BLOCKS = Object.keys(AUTO);
 
-export function assemblePage({ plan, blocks, sections, faq, pages, page, labels, lengths = {} }) {
+export function assemblePage({ plan, blocks, layout = '', sections, faq, pages, page, labels, lengths = {} }) {
   const warnings = [];
   // One name per picture-bearing block, in layout order, already normalised and de-duplicated by
   // trimPlan. A null is a block whose name came back unusable: it keeps its place in the list so
@@ -236,8 +236,14 @@ export function assemblePage({ plan, blocks, sections, faq, pages, page, labels,
   // the page, and unlike the item counts it is never trimmed anywhere earlier in the pipeline.
   noteLength('h1 страницы', plan.h1, lengths.h1, warnings);
 
+  // Which layout the page was built from, written into the page rather than into site.json.
+  // Layouts are per page now, and site.json is written once at the start of a run and never
+  // overwritten: a run that stopped and was picked up later would add pages that no table in
+  // site.json could still grow to hold, so the record would be wrong exactly when it was needed
+  // most. src/lib/site-dir.mjs reads a page by its own three fields and never looks at the rest,
+  // so this one is inert — the engine does not read it and it reaches no built page.
   return {
-    page: { title: plan.title, description: plan.description, blocks: pageBlocks },
+    page: { title: plan.title, description: plan.description, layout, blocks: pageBlocks },
     warnings,
   };
 }

@@ -92,7 +92,6 @@ function fakeOpenAi({
           heading: `Section ${index + 1}`,
           brief: 'b',
           elements: ['title', 'text'],
-          image: null,
           links: [],
         })),
         faq: Array.from({ length: faq }, (_, index) => `Question ${index + 1}?`),
@@ -158,10 +157,10 @@ describe('generateSite', () => {
     expect(lines.join('\n')).toMatch(/\$\d+\.\d{4}/);
   });
 
-  // Finding 1, end to end: a section the plan gave a picture must have that same picture in the
-  // written page. Before the fix, fill.mjs never told the model the name plan.mjs had already
-  // chosen, so the model (and this fake, which reads the brief the way a real model would — see
-  // fakeOpenAi above) could only guess, and assemble.mjs throws out any name it does not recognise.
+  // End to end: a picture the plan named reaches the written page, in the block whose nature
+  // carries one and in no other. The name is still the model's to choose — it is the only thing
+  // about a picture that carries meaning further down the pipeline — but where it goes, and how
+  // many there are, stopped being anybody's choice the moment layouts existed.
   it('carries the picture the plan named all the way into the written page', async () => {
     const dir = siteDir();
     const IMAGE_NAME = 'roulette-table-close-up';
@@ -452,5 +451,21 @@ describe('a generated folder builds', () => {
     // which is the real proof that this build holds a site, not merely a page of empty headings.
     expect(html).toContain('Section 1');
     expect(html).toContain('Body text of the section.');
+
+    // The layout is recorded in every page file, and must stay there: src/lib/site-dir.mjs reads a
+    // page by title, description and blocks, so the field is inert by construction. Inert by
+    // construction is still worth holding to account — a leak into a built page would be silent,
+    // and this is the one test in the suite that runs the engine end to end against real output.
+    expect(JSON.parse(readFileSync(join(dir, 'casino.json'), 'utf8')).layout).toBe('long-review');
+    expect(html).not.toContain('long-review');
+    expect(readFileSync(join(out, 'index.html'), 'utf8')).not.toContain('long-review');
+
+    // The picture belongs to the first screen and to nothing else, on every page of the site:
+    // that is the whole point of the redesign, checked here on a real build rather than on a shape
+    // in memory.
+    const page = JSON.parse(readFileSync(join(dir, 'home.json'), 'utf8'));
+    const pictures = JSON.stringify(page).match(/"image":/g) ?? [];
+    expect(pictures).toHaveLength(1);
+    expect(JSON.stringify(page.blocks[0])).toContain('"image"');
   }, 120_000);
 });

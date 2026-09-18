@@ -244,6 +244,7 @@ export async function generateSite({
       const { page: built, warnings } = assemblePage({
         plan: planned.plan,
         blocks: pageLayout.blocks,
+        layout: pageLayout.id,
         sections: filledSections,
         faq,
         pages,

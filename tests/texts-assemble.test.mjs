@@ -57,6 +57,15 @@ const build = (overrides = {}) =>
 const blockOf = (page, type) => page.blocks.find((block) => block.type === type);
 
 describe('assemblePage', () => {
+  // Which layout built the page, kept in the page itself. The field is for the owner and for us,
+  // not for the reader: src/lib/site-dir.mjs reads a page by title, description and blocks and
+  // never looks at the rest, so it reaches no built site.
+  it('records which layout the page was built from', () => {
+    const { page } = build({ layout: 'long-review' });
+    expect(page.layout).toBe('long-review');
+    expect(Object.keys(page)).toEqual(['title', 'description', 'layout', 'blocks']);
+  });
+
   it('builds the page in our own content format, in layout order', () => {
     const { page } = build();
     expect(page.title).toBe('Casino guide');
