@@ -142,6 +142,55 @@ describe('trimPlan', () => {
     expect(result.plan.sections[0].elements.filter((e) => e === 'list')).toHaveLength(1);
     expect(result.warnings.join(' ')).toContain('list');
   });
+
+  // Finding: trimPlan nulled a section's picture when the page's budget ran out, but left `image`
+  // sitting in that section's own `elements` list. fillSection (factory/texts/fill.mjs) builds its
+  // request straight from `elements`, so it still asked the model to write an `image` element — with
+  // no name to give it, since fill.mjs's brief only ever names a picture when trimPlan left one in
+  // place. The model then had to invent a name, and assemble.mjs accepts any invented name that
+  // happens to match some other picture the plan did declare (the hero's, typically) — the budget
+  // satisfied on paper, exceeded in the file. Mutation-proven: see live-fixes-report.md.
+  it("drops a trimmed section picture's own image element along with it", () => {
+    const plan = {
+      title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: 'hero-shot',
+      sections: [plannedSection({ image: 'over-budget-pic', elements: ['text', 'image'] })],
+      faq: ['q1', 'q2'],
+    };
+    // The page's one picture slot is spent by the hero, so the section's own image is over budget.
+    const result = trimPlan(plan, { budgets: { ...budgets, images: 1 }, pages: PAGES, sectionContent: SECTION_CONTENT });
+    expect(result.plan.sections[0].image).toBeNull();
+    expect(result.plan.sections[0].elements).not.toContain('image');
+    expect(result.warnings.join(' ')).toContain('без картинки');
+  });
+
+  // The other half: a section that never had a picture name at all, but still asked for the
+  // `image` element — there is nothing for fillSection to name it after, so it must go too, even
+  // though nothing here was ever trimmed for budget (no "сверх бюджета" warning fires).
+  it('drops an image element the plan never gave a picture name to', () => {
+    const plan = {
+      title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
+      sections: [plannedSection({ image: null, elements: ['text', 'image'] })],
+      faq: ['q1', 'q2'],
+    };
+    const result = trimPlan(plan, { budgets, pages: PAGES, sectionContent: SECTION_CONTENT });
+    expect(result.plan.sections[0].image).toBeNull();
+    expect(result.plan.sections[0].elements).not.toContain('image');
+    expect(result.warnings.join(' ')).toContain('без картинки');
+    expect(result.warnings.join(' ')).not.toContain('сверх бюджета');
+  });
+
+  // Keeps the two drops above honest: a section that really does have a picture must keep its
+  // image element exactly as the model wrote it.
+  it('keeps the image element when the section really does have a picture', () => {
+    const plan = {
+      title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
+      sections: [plannedSection({ image: 'a-real-picture', elements: ['text', 'image'] })],
+      faq: ['q1', 'q2'],
+    };
+    const result = trimPlan(plan, { budgets, pages: PAGES, sectionContent: SECTION_CONTENT });
+    expect(result.plan.sections[0].image).toBe('a-real-picture');
+    expect(result.plan.sections[0].elements).toContain('image');
+  });
 });
 
 describe('planPage', () => {

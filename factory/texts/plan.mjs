@@ -82,8 +82,19 @@ export function trimPlan(plan, { budgets, pages, sectionContent }) {
       })
       .filter(Boolean);
 
+    // An `image` element left over once its picture is gone — trimmed above for the budget, or
+    // simply never named one to begin with — has nothing left to point at. Left in, fillSection
+    // still asks the model to write it, the model invents a name, and assemble.mjs accepts that
+    // name whenever it happens to match some other picture the plan did declare (the hero's, most
+    // often — it is rarely trimmed, being first in line for the budget). That is the budget being
+    // satisfied on paper and exceeded in the file, so this element is dropped in the same pass that
+    // already knows whether `image` above is null, before the per-kind cap below ever sees it.
     const used = new Map();
     const elements = section.elements.filter((element) => {
+      if (element === 'image' && !image) {
+        warnings.push(`элемент image в разделе «${section.heading}» без картинки — убран`);
+        return false;
+      }
       const max = sectionContent[element]?.[1] ?? 0;
       const seen = used.get(element) ?? 0;
       if (seen >= max) {
