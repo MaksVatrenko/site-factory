@@ -481,11 +481,25 @@ describe('the layout decides what goes inside a block', () => {
 describe('a generated folder builds', () => {
   it('passes a real Astro build', async () => {
     const dir = siteDir();
-    await run(dir, fakeOpenAi());
+    const IMAGE_NAME = 'lobby-shot';
+    await run(dir, fakeOpenAi({ heroImageName: IMAGE_NAME }));
+
+    // The picture stage runs after this one and is what normally writes these; standing in for it
+    // here is what makes the <img> tags below reachable at all. Without them normalisation drops
+    // every picture as undeclared, and "one picture, in the first screen" could only ever be checked
+    // against the JSON — never against the page a reader actually gets.
+    const publicDir = join(dir, 'public');
+    mkdirSync(join(publicDir, 'images'), { recursive: true });
+    writeFileSync(join(publicDir, 'images', `${IMAGE_NAME}.webp`), '');
+    writeFileSync(
+      join(dir, 'images.json'),
+      JSON.stringify({ [IMAGE_NAME]: { src: `/images/${IMAGE_NAME}.webp`, alt: 'Лобби', width: 1200, height: 675 } }),
+    );
+
     const { execFileSync } = await import('node:child_process');
     const out = join(dir, '..', 'out');
     execFileSync(join('node_modules', '.bin', 'astro'), ['build'], {
-      env: { ...process.env, SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'dark', OUT_DIR: out, SITE_URL: 'https://example.com' },
+      env: { ...process.env, SITE_DIR: dir, PUBLIC_DIR: publicDir, TEMPLATE: 'review', SCHEME: 'dark', OUT_DIR: out, SITE_URL: 'https://example.com' },
       stdio: 'pipe',
     });
     expect(existsSync(join(out, 'index.html'))).toBe(true);
@@ -505,12 +519,22 @@ describe('a generated folder builds', () => {
     expect(html).not.toContain('long-review');
     expect(readFileSync(join(out, 'index.html'), 'utf8')).not.toContain('long-review');
 
-    // The picture belongs to the first screen and to nothing else, on every page of the site:
-    // that is the whole point of the redesign, checked here on a real build rather than on a shape
-    // in memory.
-    const page = JSON.parse(readFileSync(join(dir, 'home.json'), 'utf8'));
-    const pictures = JSON.stringify(page).match(/"image":/g) ?? [];
-    expect(pictures).toHaveLength(1);
-    expect(JSON.stringify(page.blocks[0])).toContain('"image"');
+    // The picture belongs to the first screen and to nothing else — checked in the delivered HTML,
+    // not in the JSON, because "one picture" is a promise about the page a reader gets. A card that
+    // repeated an already-declared name used to make this ten (see schema.mjs on cards).
+    const imgTags = html.match(/<img\b/g) ?? [];
+    expect(imgTags).toHaveLength(1);
+    expect(html.indexOf('<img')).toBeLessThan(html.indexOf('<h2'));
+
+    // Every contents entry reaches a heading that really is on the page. This is the coupling the
+    // whole anchors module exists for, and the one the FAQ's arrival in the contents broke — worth
+    // holding to account against real ids rather than against a shape in memory.
+    const anchors = new Set([...html.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]));
+    const hrefs = [...html.matchAll(/href="#([^"]+)"/g)].map((m) => m[1]);
+    expect(hrefs.length).toBeGreaterThan(1);
+    for (const href of hrefs) expect(anchors.has(href)).toBe(true);
+    // The FAQ is one of them now, and it is last: the contents is a map of the page, not a list of
+    // its sections.
+    expect(hrefs.at(-1)).toBe('questions');
   }, 120_000);
 });
