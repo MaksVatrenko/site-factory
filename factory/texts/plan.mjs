@@ -181,6 +181,10 @@ export function trimPlan(plan, { links, pages, page, contentByType, order = [], 
     // There is no `image` element any more — loadTemplateBlocks refuses one outright, so no theme
     // can offer the model a picture to place. The only cap left is per kind: at most one table, at
     // most one card set, whatever blocks.json allows a block of this sort to hold.
+    // A block whose sequence the layout spelled out has no `elements` in the plan at all: the
+    // schema did not ask. There is nothing to cap, and resolveLayout already held that sequence to
+    // the same ranges this loop enforces.
+    if (!Array.isArray(section.elements)) return { ...section, links };
     const used = new Map();
     const elements = section.elements.filter((element) => {
       const max = sectionContent[element]?.[1] ?? 0;

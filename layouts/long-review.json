@@ -3,7 +3,15 @@
   "blocks": [
     "hero",
     "toc",
-    { "type": "section", "count": 9 },
+    { "type": "section", "elements": ["text", "list", "cards"] },
+    { "type": "section", "elements": ["text", "table", "cards"] },
+    { "type": "section", "elements": ["text", "text", "text", "list", "line", "buttons"] },
+    { "type": "section", "elements": ["text", "steps", "line", "text"] },
+    { "type": "section", "elements": ["text", "list", "line", "text"] },
+    { "type": "section", "elements": ["text", "list", "line", "text"] },
+    { "type": "section", "elements": ["text", "table", "line", "text", "cards", "buttons"] },
+    { "type": "section", "elements": ["text", "list", "line", "text"] },
+    "split",
     "links",
     "faq"
   ]

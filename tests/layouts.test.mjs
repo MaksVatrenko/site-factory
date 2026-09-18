@@ -258,6 +258,8 @@ describe('planShape', () => {
     expect(planShape(blocks)).toEqual({
       byType: { hero: 1, section: 9 },
       order: ['hero', ...Array.from({ length: 9 }, () => 'section')],
+      // Nothing in this layout names its own sequence, so the model is still asked for both kinds.
+      choosesElements: { hero: true, section: true },
       faq: [5, 8],
       images: 1,
       imageLabels: ['hero'],
@@ -327,6 +329,77 @@ describe('contentByType', () => {
   it('reports only the first screen for a layout that holds nothing else', () => {
     const { blocks } = resolveLayout(layout(['hero', 'toc']), theme());
     expect(Object.keys(contentByType(blocks))).toEqual(['hero']);
+  });
+});
+
+describe('a layout that spells out what a block holds', () => {
+  // Composition is the layout's own business: `content` says how many of each, `elements` says
+  // which and in what order. Without it a layout can only say "nine sections" and the model decides
+  // what is inside every one of them — which is fine for variety and useless when the owner has a
+  // page design in mind.
+  it('keeps the sequence, in order, on the block it was written for', () => {
+    const { blocks } = resolveLayout(
+      layout(['hero', { type: 'section', elements: ['text', 'title', 'text'] }]),
+      theme(),
+    );
+    expect(blocks.find((block) => block.type === 'section').elements).toEqual(['text', 'title', 'text']);
+  });
+
+  // A count repeats the same sequence, which is what makes "three sections like this" one line.
+  it('gives every copy of a repeated block the same sequence', () => {
+    const { blocks } = resolveLayout(
+      layout(['hero', { type: 'section', count: 2, elements: ['text', 'text', 'title'] }]),
+      theme(),
+    );
+    const sections = blocks.filter((block) => block.type === 'section');
+    expect(sections).toHaveLength(2);
+    expect(sections[0].elements).toEqual(['text', 'text', 'title']);
+    // A fresh array per copy: one page's sequence must not be reachable from another's.
+    expect(sections[0].elements).not.toBe(sections[1].elements);
+  });
+
+  it('refuses an element the block does not hold, naming it', () => {
+    expect(() =>
+      resolveLayout(layout(['hero', { type: 'section', elements: ['text', 'toggle'] }]), theme()),
+    ).toThrow(/toggle/);
+  });
+
+  // Held to the same ranges a number override is held to, and for every element of the block — not
+  // only the ones named. A section that must carry two paragraphs and is given a sequence with one
+  // is a section the theme cannot draw, and it is free to say so now.
+  it('refuses a sequence that breaks the range, whether over or under', () => {
+    expect(() =>
+      resolveLayout(
+        layout(['hero', { type: 'section', elements: ['text', 'text', 'title', 'title'] }]),
+        theme(),
+      ),
+    ).toThrow(/title/);
+    expect(() =>
+      resolveLayout(layout(['hero', { type: 'section', elements: ['text'] }]), theme()),
+    ).toThrow(/text/);
+  });
+
+  it('refuses elements that are not a non-empty list of names', () => {
+    expect(() => resolveLayout(layout(['hero', { type: 'section', elements: [] }]), theme())).toThrow(/elements/);
+    expect(() => resolveLayout(layout(['hero', { type: 'section', elements: 'text' }]), theme())).toThrow(/elements/);
+  });
+
+  // What the schema is built from: a kind whose every block spells its own sequence out has already
+  // answered what goes inside it, so the model is not asked — an answer nobody reads is output paid
+  // for, and one that disagreed with the page being built would be worse than useless.
+  it('stops the model being asked about a kind whose blocks all name their own elements', () => {
+    const spelled = resolveLayout(
+      layout(['hero', { type: 'section', count: 2, elements: ['text', 'text'] }]),
+      theme(),
+    );
+    expect(planShape(spelled.blocks).choosesElements).toEqual({ hero: true, section: false });
+
+    // One left unspelled is enough to keep the question: the model still decides that one.
+    const mixed = resolveLayout(
+      layout(['hero', { type: 'section', elements: ['text', 'text'] }, 'section']),
+      theme(),
+    );
+    expect(planShape(mixed.blocks).choosesElements.section).toBe(true);
   });
 });
 

@@ -110,8 +110,25 @@ function fakeOpenAi({
       const count = body.text.format.schema.properties.answers.minItems;
       return reply({ answers: Array.from({ length: count }, () => 'An answer.') });
     }
-    // section_content, the generic case.
-    return reply({ items: [{ kind: 'text', text: 'Body text of the section.' }] });
+    // section_content, the generic case. One item per element the brief asked for, in that order —
+    // the way a model given "write these elements, in this order" behaves. Answering with one
+    // paragraph whatever was asked would make every test about composition test this fake instead.
+    const wanted = (String(body.input[0].content).match(/Write these elements, in this order: (.*)$/m)?.[1] ?? '')
+      .split(', ')
+      .filter(Boolean);
+    const CANNED = {
+      text: { kind: 'text', text: 'Body text of the section.' },
+      title: { kind: 'title', level: 'h3', text: 'A subheading.' },
+      list: { kind: 'list', items: ['One', 'Two', 'Three'] },
+      table: { kind: 'table', columns: ['A', 'B'], rows: [['1', '2']] },
+      cards: { kind: 'cards', cards: [{ title: 'Card', text: 'Card text.' }] },
+      steps: { kind: 'steps', items: [{ title: 'Step', text: 'how to' }] },
+      line: { kind: 'line' },
+      buttons: { kind: 'buttons', items: [{ text: 'Open', href: null }] },
+      info: { kind: 'info', items: ['Claim one', 'Claim two', 'Claim three'] },
+    };
+    const items = wanted.map((kind) => CANNED[kind]).filter(Boolean);
+    return reply({ items: items.length > 0 ? items : [CANNED.text] });
   };
   return { fetchFn, asked };
 }
@@ -230,6 +247,12 @@ describe('generateSite', () => {
     await run(baseDir, fakeOpenAi());
     const basePage = JSON.parse(readFileSync(join(baseDir, 'home.json'), 'utf8'));
     const baseSectionCount = basePage.blocks.filter((block) => block.type === 'section').length;
+    // Measured against the same page built without the failure, not against a count of what the
+    // shipped layout happens to hold: the contents lists every headed block, and which other kinds
+    // a layout carries beside its sections is the owner's to change.
+    const baseTocCount = basePage.blocks
+      .find((block) => block.type === 'toc')
+      .content.find((item) => item.type === 'list').items.length;
 
     const dir = siteDir();
     await run(dir, fakeOpenAi({ failFirstSection: true }));
@@ -237,10 +260,11 @@ describe('generateSite', () => {
     const sectionBlocks = page.blocks.filter((block) => block.type === 'section');
     const tocList = page.blocks.find((block) => block.type === 'toc').content.find((item) => item.type === 'list');
 
-    // One fewer section, and the contents list shrank with it — never one without the other. The
-    // list is one longer than the sections because the FAQ has a heading too and is in it.
+    // One fewer section, and the contents list shrank with it — never one without the other.
     expect(sectionBlocks).toHaveLength(baseSectionCount - 1);
-    expect(tocList.items).toHaveLength(baseSectionCount - 1 + 1);
+    expect(tocList.items).toHaveLength(baseTocCount - 1);
+    // The FAQ is a headed block too, so it closes the list: the contents is a map of the page, not
+    // a list of its sections.
     expect(tocList.items.at(-1)).toBe('Questions');
     // The failed section was "Section 1" (the plan's first) — its heading must be gone entirely,
     // not left behind as a contents entry with nothing under it.
@@ -496,6 +520,63 @@ describe('the layout decides what goes inside a block', () => {
     const section = page.blocks.find((block) => block.type === 'section');
     expect(section.content.map((item) => item.type)).toEqual(['title', 'text']); // h2 heading + one text
     expect(page.blocks.filter((block) => block.type === 'section')).toHaveLength(2);
+  });
+});
+
+describe('a layout that spells out what each block holds', () => {
+  // The end the whole mechanism exists for: the owner writes a page design, block by block, and the
+  // page comes out in that order. Checked through the written file rather than through the request,
+  // because "the order I asked for" is a fact about the page, not about what was asked.
+  it('builds each block in the order the layout named, element for element', async () => {
+    const dir = siteDir();
+    const fake = fakeOpenAi();
+    let asked;
+    const fetchFn = async (url, init) => {
+      const body = JSON.parse(init.body);
+      if (body.text.format.name === 'page_plan') {
+        asked = body.text.format.schema.properties.blocks.properties;
+      }
+      return fake.fetchFn(url, init);
+    };
+    await run(dir, {
+      fetchFn,
+      layoutsDir: layoutsDirWith({
+        name: 'Проба',
+        blocks: [
+          'hero',
+          'toc',
+          { type: 'section', elements: ['text', 'list', 'cards'] },
+          { type: 'section', elements: ['text', 'text', 'text', 'list', 'line', 'buttons'] },
+          'links',
+          'faq',
+        ],
+      }),
+    });
+
+    // Nothing left to ask about this kind, so the question is gone from the request entirely.
+    expect(asked.section.items.properties).not.toHaveProperty('elements');
+
+    const page = JSON.parse(readFileSync(join(dir, 'home.json'), 'utf8'));
+    const sections = page.blocks.filter((block) => block.type === 'section');
+    expect(sections).toHaveLength(2);
+    // The h2 the factory writes, then exactly what the layout listed, in that order.
+    expect(sections[0].content.map((item) => item.type)).toEqual(['title', 'text', 'list', 'cards']);
+    expect(sections[1].content.map((item) => item.type)).toEqual([
+      'title', 'text', 'text', 'text', 'list', 'line', 'buttons',
+    ]);
+  });
+
+  it('refuses a layout naming an element the block cannot hold, before paying for anything', async () => {
+    const dir = siteDir();
+    const { lines } = await run(dir, {
+      ...fakeOpenAi(),
+      layoutsDir: layoutsDirWith({
+        name: 'Проба',
+        blocks: ['hero', { type: 'section', elements: ['text', 'toggle'] }, 'faq'],
+      }),
+    });
+    expect(lines.join('\n')).toContain('toggle');
+    expect(existsSync(join(dir, 'home.json'))).toBe(false);
   });
 });
 

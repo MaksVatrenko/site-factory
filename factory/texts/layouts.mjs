@@ -60,7 +60,7 @@ export function loadLayouts(dir) {
 
 // Everything a layout is allowed to say about a block. Anything else is its nature, and the nature
 // belongs to the theme: see natureOf below for why the difference is worth a message of its own.
-const ALLOWED = new Set(['type', 'count', 'content']);
+const ALLOWED = new Set(['type', 'count', 'content', 'elements']);
 
 function natureOf(layout, content, type) {
   if (!content.known.includes(type)) {
@@ -114,6 +114,39 @@ function contentOf(layout, nature, asked) {
   return content;
 }
 
+// What a block holds, in order, when the layout says so outright. This is composition, which is
+// the layout's own business — `content` says how many of each, `elements` says which and in what
+// order, and a block that names them leaves the model nothing to choose about its shape: the plan
+// is not even asked, so there is no answer to trim and no order to be surprised by.
+//
+// Checked against the same ranges a number override is checked against, and for every element of
+// the block, not only the ones named: a section that must hold at least two paragraphs and is given
+// a sequence with one is a section the theme cannot draw, and saying so now costs nothing.
+function elementsOf(layout, nature, asked) {
+  if (asked === undefined) return undefined;
+  if (!Array.isArray(asked) || asked.length === 0 || asked.some((name) => typeof name !== 'string')) {
+    throw new Error(
+      `в раскладке «${layout.id}» у блока «${nature.type}» elements — это непустой список имён элементов`,
+    );
+  }
+  for (const name of asked) {
+    if (nature.content[name] === undefined) {
+      throw new Error(
+        `раскладка «${layout.id}»: блок «${nature.type}» не держит элемент «${name}»`,
+      );
+    }
+  }
+  for (const [element, [min, max]] of Object.entries(nature.content)) {
+    const howMany = asked.filter((name) => name === element).length;
+    if (howMany < min || howMany > max) {
+      throw new Error(
+        `раскладка «${layout.id}»: у блока «${nature.type}» элемента «${element}» бывает от ${min} до ${max}, а последовательность содержит ${howMany}`,
+      );
+    }
+  }
+  return [...asked];
+}
+
 // A layout made sense of against one theme: the block list expanded by `count`, each block carrying
 // its nature from blocks.json and its numbers after the override.
 //
@@ -149,6 +182,7 @@ export function resolveLayout(layout, { content, autoBlocks }) {
       );
     }
     const resolved = contentOf(layout, nature, asked.content);
+    const elements = elementsOf(layout, { ...nature, content: resolved }, asked.elements);
 
     // A fresh object per copy, down to the ranges. The theme is read once per run and serves every
     // page, each with a layout of its own, so a block pointing back into it would let one page's
@@ -162,6 +196,7 @@ export function resolveLayout(layout, { content, autoBlocks }) {
         image: nature.image,
         heading: nature.heading,
         content: Object.fromEntries(Object.entries(resolved).map(([element, range]) => [element, [...range]])),
+        ...(elements ? { elements: [...elements] } : {}),
       });
     }
   }
@@ -244,6 +279,14 @@ export function planShape(blocks) {
     // of each to ask for; this says which comes first, which the per-page link budget needs — it is
     // spent top to bottom, and the plan's per-kind arrays cannot say what follows what.
     order: blocks.filter(takesASection).map((block) => block.type),
+    // Whether the model is still asked what goes inside a kind of block. A layout that spells out
+    // the sequence for every block of a kind has answered that already, so asking would buy an
+    // answer nobody reads — and invite one that disagrees with the page being built.
+    choosesElements: Object.fromEntries(
+      Object.entries(Object.groupBy(blocks.filter(takesASection), (block) => block.type)).map(
+        ([type, list]) => [type, list.some((block) => block.elements === undefined)],
+      ),
+    ),
     faq: faq?.content?.toggle ?? [0, 0],
     images: imageLabels.length,
     imageLabels,

@@ -106,8 +106,29 @@ describe('planSchema', () => {
     expect(schema.properties).not.toHaveProperty('heroImage');
   });
 
+  // A layout that spelled the sequence out for every block of a kind has already answered what
+  // goes inside it. Asking anyway buys an answer nobody reads — output paid for — and invites one
+  // that disagrees with the page actually being built.
+  it('does not ask about a kind whose blocks all name their own elements', () => {
+    const schema = planSchema({ ...SHAPE, choosesElements: { section: false } }, { section: SECTION });
+    const item = blocksOf(schema).section.items;
+    expect(item.properties).not.toHaveProperty('elements');
+    expect(item.required).not.toContain('elements');
+    // The rest of the question stands: what the block is about is still the model's to write.
+    expect(item.properties).toHaveProperty('heading');
+    expect(item.properties).toHaveProperty('brief');
+  });
+
+  it('still asks when even one block of the kind was left unspelled', () => {
+    const schema = planSchema({ ...SHAPE, choosesElements: { section: true } }, { section: SECTION });
+    expect(blocksOf(schema).section.items.properties).toHaveProperty('elements');
+  });
+
   it('is strict everywhere', () => {
     expect(everyObjectIsStrict(planSchema(SHAPE, { section: SECTION }))).toEqual([]);
+    expect(
+      everyObjectIsStrict(planSchema({ ...SHAPE, choosesElements: { section: false } }, { section: SECTION })),
+    ).toEqual([]);
   });
 
   // An empty enum is a schema nothing can ever satisfy — a request that gets paid for and can only
@@ -122,6 +143,22 @@ describe('planSchema', () => {
 });
 
 describe('sectionSchema', () => {
+  // The count is decoded against, not asked for in prose. By the time a block is filled its list of
+  // elements is concrete — the layout spelled it out, or the plan chose it — so "three paragraphs,
+  // a list and a line" is six items, and a model that would rather write four cannot. Which kinds
+  // stand where the brief still has to ask: strict mode cannot pin a kind to a position.
+  it('pins the number of items to the number of elements asked for', () => {
+    const schema = sectionSchema(['text', 'text', 'text', 'list']);
+    expect(schema.properties.items.minItems).toBe(4);
+    expect(schema.properties.items.maxItems).toBe(4);
+  });
+
+  it('describes a repeated kind once, however many times it was asked for', () => {
+    const schema = sectionSchema(['text', 'text', 'text']);
+    expect(Object.keys(schema.$defs)).toEqual(['text']);
+    expect(schema.properties.items.items.anyOf).toHaveLength(1);
+  });
+
   it('describes every element kind the template declares, and no others', () => {
     const schema = sectionSchema(['text', 'list']);
     expect(Object.keys(schema.$defs).sort()).toEqual(['list', 'text']);

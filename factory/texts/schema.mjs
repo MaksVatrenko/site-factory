@@ -88,7 +88,7 @@ export const ELEMENT_KINDS = Object.freeze(Object.keys(ELEMENT_DEFS));
 // sections when the page is meant to have nine. Where the layout left a range — what it did not
 // pin down — the range reaches the schema as minItems/maxItems and the model chooses inside it, by
 // the subject of the page. `sections` is always exact: a layout says how many blocks it has.
-export function planSchema({ byType, faq, images }, contentByType) {
+export function planSchema({ byType, faq, images, choosesElements = {} }, contentByType) {
   // One array per kind of content block, each offering only what that kind may hold. Two kinds are
   // two different questions — a half-and-half block holds a heading, a paragraph or two and a call
   // to action, a section holds tables and card sets besides — and one shared list would offer the
@@ -99,9 +99,13 @@ export function planSchema({ byType, faq, images }, contentByType) {
       // on it and trimPlan would strip it, leaving a shorter block and a log full of removals.
       .filter(([element, range]) => range[1] > 0 && Object.hasOwn(ELEMENT_DEFS, element))
       .map(([element]) => element);
+    // A layout that spelled out the sequence for every block of this kind has already answered
+    // what goes inside it, so the question is not asked at all: an answer nobody reads is output
+    // paid for, and one that disagreed with the page being built would be worse than useless.
+    const asks = choosesElements[type] !== false;
     // Same guard as sectionSchema, for the same reason: an empty `known` leaves `elements` an
     // `enum: []` — a schema nothing can satisfy, so the request is paid for and fails every time.
-    if (known.length === 0) {
+    if (asks && known.length === 0) {
       throw new Error(`ни один элемент блока «${type}» не описан схемой — генерировать нечего`);
     }
     return [
@@ -113,7 +117,7 @@ export function planSchema({ byType, faq, images }, contentByType) {
         items: object({
           heading: string,
           brief: string,
-          elements: { type: 'array', items: { type: 'string', enum: known } },
+          ...(asks ? { elements: { type: 'array', items: { type: 'string', enum: known } } } : {}),
           links: strings,
         }),
       },
@@ -146,17 +150,25 @@ export function sectionSchema(elements) {
   if (kinds.length === 0) {
     throw new Error('ни один элемент шаблона не описан схемой — генерировать нечего');
   }
+  // As many items as were asked for, no more and no fewer. The list is concrete by the time it
+  // reaches here — either the layout spelled the block's sequence out, or the plan chose it — so
+  // "three paragraphs, a list and a line" can be a count the answer is decoded against rather than
+  // a sentence in the brief that the model is free to round down. Which kinds, and in what order,
+  // the brief still has to ask for: strict mode has no way to pin a kind to a position.
+  const unique = [...new Set(kinds)];
   return {
     type: 'object',
     properties: {
       items: {
         type: 'array',
-        items: { anyOf: kinds.map((name) => ({ $ref: `#/$defs/${name}` })) },
+        minItems: kinds.length,
+        maxItems: kinds.length,
+        items: { anyOf: unique.map((name) => ({ $ref: `#/$defs/${name}` })) },
       },
     },
     required: ['items'],
     additionalProperties: false,
-    $defs: Object.fromEntries(kinds.map((name) => [name, ELEMENT_DEFS[name]])),
+    $defs: Object.fromEntries(unique.map((name) => [name, ELEMENT_DEFS[name]])),
   };
 }
 

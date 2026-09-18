@@ -190,7 +190,11 @@ export async function generateSite({
         const nth = taken.get(block.type) ?? 0;
         taken.set(block.type, nth + 1);
         const entry = planned.plan.blocks?.[block.type]?.[nth];
-        if (entry) planned_.set(at, entry);
+        // What goes inside the block, and in what order, comes from the layout when the layout
+        // said so — that is the whole point of naming a sequence there — and from the plan when it
+        // did not. The two never both apply: the schema stops asking as soon as a kind is spelled
+        // out everywhere it appears.
+        if (entry) planned_.set(at, { ...entry, elements: block.elements ?? entry.elements });
       }
 
       const headings = [...planned_.values()].map((section) => section.heading);
