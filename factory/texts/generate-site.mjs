@@ -2,10 +2,10 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildInstructions, planPage } from './plan.mjs';
 import { fillFaq, fillSection } from './fill.mjs';
-import { assemblePage } from './assemble.mjs';
+import { assemblePage, AUTO_BLOCKS } from './assemble.mjs';
 import { generateSiteJson } from './site-json.mjs';
-import { rollSkeleton } from './skeleton.mjs';
-import { describeTemplate, loadTemplateContent, loadTemplateExamples } from './template.mjs';
+import { loadLayouts, pickLayouts, planShape, resolveLayout } from './layouts.mjs';
+import { describeBlocks, loadTemplateBlocks, loadTemplateExamples } from './template.mjs';
 import { languageFor, loadTextsPromptFile } from './texts-prompts.mjs';
 import { loadGeos } from '../geos.mjs';
 
@@ -38,6 +38,12 @@ export async function generateSite({
   root = process.cwd(),
   promptFile,
   geosFile,
+  layoutsDir = join(root, 'layouts'),
+  // Empty means «Случайно»: every page draws its own layout from the folder, by a seed on the site
+  // and the page name. A named one goes to every page of the site instead — that is how a layout
+  // gets looked at without re-running generation ten times, and how something already shown to a
+  // client is shown again.
+  layout = '',
   fetchFn,
   sleep,
   log = () => {},
@@ -57,11 +63,13 @@ export async function generateSite({
   let examples;
   let promptSet;
   let geos;
+  let layouts;
   try {
-    content = loadTemplateContent(templateId, root);
+    content = loadTemplateBlocks(templateId, root);
     examples = loadTemplateExamples(templateId, root);
     promptSet = loadTextsPromptFile(promptFile);
     geos = loadGeos(geosFile);
+    layouts = loadLayouts(layoutsDir);
   } catch (error) {
     log(`Тексты: ${error.message} — пропущены`);
     return summary;
@@ -79,12 +87,29 @@ export async function generateSite({
 
   const instructions = buildInstructions({
     rules: promptSet.rules,
-    templateText: describeTemplate(content),
+    templateText: describeBlocks(content),
     examples,
   });
-  const sectionContent = content.blocks.find((block) => block.type === 'section')?.content ?? {};
-  // Seeded by the folder name, so a re-run of a stopped generation keeps the same shapes.
-  const skeleton = rollSkeleton({ content, pages, seed: siteDir.split(/[/\\]/).filter(Boolean).at(-1) });
+  const sectionContent = content.blocks.section?.content ?? {};
+
+  // Seeded by the folder name, so a re-run of a stopped generation keeps the same layouts. Every
+  // page is resolved here, before the first paid request: a layout that does not fit the theme must
+  // be named for free, not discovered after six pages have been paid for.
+  let resolved;
+  try {
+    const chosen = pickLayouts({
+      layouts,
+      pages,
+      seed: siteDir.split(/[/\\]/).filter(Boolean).at(-1),
+      chosen: layout,
+    });
+    resolved = Object.fromEntries(
+      pages.map((page) => [page, resolveLayout(chosen[page], { content, autoBlocks: AUTO_BLOCKS })]),
+    );
+  } catch (error) {
+    log(`Тексты: ${error.message} — пропущены`);
+    return summary;
+  }
   const options = { config, fetchFn, sleep };
 
   // A dedicated catch, not left to escape: an unwritable path or a plain file already sitting where
@@ -129,10 +154,22 @@ export async function generateSite({
     const started = Date.now();
     let spent = 0;
     try {
-      // sections/faq/images are rolled per page, for variety across sites; the link budgets are not
-      // — they exist to stop spam, not to add it, so every page of every site from this template
-      // gets the same ceiling, straight from content.json.
-      const budgets = { ...skeleton[page], links: content.links };
+      const pageLayout = resolved[page];
+      const shape = planShape(pageLayout.blocks);
+      // An adapter, and only until plan.mjs learns to read a shape: the old plan schema wants plain
+      // numbers where a layout speaks in ranges, and the old trimPlan spells the two link budgets
+      // section/page where blocks.json now spells them perBlock/perPage. Handing it content.links
+      // unmapped would leave both budgets undefined, which trimPlan reads as no ceiling at all —
+      // links unbounded, silently, for exactly as long as this adapter lives.
+      const budgets = {
+        sections: shape.sections,
+        faq: shape.faq[1],
+        images: shape.images,
+        // The link budgets are not a property of the layout — they exist to stop spam, not to add
+        // it, so every page of every site from this theme gets the same ceiling, straight from
+        // blocks.json.
+        links: { section: content.links.perBlock, page: content.links.perPage },
+      };
       const planned = await planPage(
         { page, pages, brand, geo, locale: language, budgets, sectionContent, instructions },
         options,
@@ -208,6 +245,7 @@ export async function generateSite({
 
       const { page: built, warnings } = assemblePage({
         plan: planned.plan,
+        blocks: pageLayout.blocks,
         sections: filledSections,
         faq,
         pages,
@@ -219,7 +257,9 @@ export async function generateSite({
 
       if (writeIfNew(join(siteDir, name), built)) summary.written.push(name);
       else summary.skipped.push(name);
-      log(`Тексты: ${name} готова — ${((Date.now() - started) / 1000).toFixed(1)} с, ${formatCost(spent)}`);
+      log(
+        `Тексты: ${name} готова — раскладка «${pageLayout.name}», ${((Date.now() - started) / 1000).toFixed(1)} с, ${formatCost(spent)}`,
+      );
     } catch (error) {
       // Whatever this page already spent before dying — planning, filled sections, a truncated or
       // refused attempt right here — is real money and belongs in the total the log line prints next.

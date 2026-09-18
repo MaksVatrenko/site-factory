@@ -1,0 +1,10 @@
+{
+  "name": "Длинный обзор",
+  "blocks": [
+    "hero",
+    "toc",
+    { "type": "section", "count": 9 },
+    "links",
+    "faq"
+  ]
+}

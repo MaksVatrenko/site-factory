@@ -34,16 +34,30 @@ const LENGTHS = {
   tableRows: [3, 10],
   cards: [2, 4],
 };
+// A layout already resolved against the theme — what generate-site.mjs hands the assembler. Every
+// entry carries its own nature, and nothing here says "hero" to the assembler except the block's
+// own type, which it only ever passes through.
+const nature = (type, own) => ({
+  type, auto: false, h1: false, image: false, heading: false, content: {}, ...own,
+});
+const HERO = nature('hero', { h1: true, image: true, content: { text: [1, 2] } });
+const TOC = nature('toc', { auto: true });
+const SECTION = nature('section', { heading: true, content: { title: [0, 1], text: [2, 6] } });
+const LINKS = nature('links', { auto: true });
+const FAQ_BLOCK = nature('faq', { heading: true, content: { toggle: [5, 8] } });
+const BLOCKS = [HERO, TOC, SECTION, SECTION, LINKS, FAQ_BLOCK];
+
 const build = (overrides = {}) =>
   assemblePage({
-    plan: PLAN, sections: SECTIONS, faq: FAQ, pages: PAGES, page: PAGE, labels: LABELS, lengths: LENGTHS,
+    plan: PLAN, blocks: BLOCKS, sections: SECTIONS, faq: FAQ, pages: PAGES, page: PAGE,
+    labels: LABELS, lengths: LENGTHS,
     ...overrides,
   });
 
 const blockOf = (page, type) => page.blocks.find((block) => block.type === type);
 
 describe('assemblePage', () => {
-  it('builds the page in our own content format, in template order', () => {
+  it('builds the page in our own content format, in layout order', () => {
     const { page } = build();
     expect(page.title).toBe('Casino guide');
     expect(page.description).toBe('A description of the page.');
@@ -52,11 +66,67 @@ describe('assemblePage', () => {
   });
 
   // The one coupling the model used to break on every page: the table of contents is built from the
-  // section headings, so it cannot disagree with them.
-  it('builds the table of contents from the section headings, in order', () => {
+  // headings themselves, so it cannot disagree with them. Every block that has a heading is in it,
+  // the FAQ included — the contents is a map of the page, not a list of its sections.
+  it('lists every headed block in the contents, in order, the FAQ included', () => {
     const { page } = build();
     const list = blockOf(page, 'toc').content.find((item) => item.type === 'list');
-    expect(list.items).toEqual(['Payments', 'Games']);
+    expect(list.items).toEqual(['Payments', 'Games', 'Questions']);
+  });
+
+  // The whole point of the work: order and composition come from the file, not from a sequence
+  // written into this module.
+  it('puts the blocks out in the order the layout gave, not a fixed one', () => {
+    const { page } = build({ blocks: [HERO, FAQ_BLOCK, TOC, SECTION, LINKS] });
+    expect(page.blocks.map((block) => block.type)).toEqual(['hero', 'faq', 'toc', 'section', 'links']);
+  });
+
+  it('builds as many blocks of a kind as the layout asked for', () => {
+    const { page } = build({
+      blocks: [HERO, TOC, SECTION],
+      sections: [SECTIONS[0]],
+    });
+    expect(page.blocks.filter((block) => block.type === 'section')).toHaveLength(1);
+  });
+
+  // A section that never came out is dropped upstream; its contents entry must go with it, or the
+  // list points at a heading with nothing under it.
+  it('drops a block that has nothing to show, and its contents entry with it', () => {
+    const { page } = build({ sections: [SECTIONS[0]] });
+    expect(page.blocks.filter((block) => block.type === 'section')).toHaveLength(1);
+    const list = blockOf(page, 'toc').content.find((item) => item.type === 'list');
+    expect(list.items).toEqual(['Payments', 'Questions']);
+  });
+
+  // The layout, not the block type, decides where the h1 goes. This module must not know the word
+  // "hero": a theme is free to call its first screen anything and to put the h1 somewhere else.
+  it('writes the h1 into whichever block claims it', () => {
+    const { page } = build({ blocks: [nature('opener', { h1: true }), TOC, SECTION] });
+    expect(page.blocks[0].type).toBe('opener');
+    expect(page.blocks[0].content[0]).toEqual({ type: 'title', h1: 'Casino guide' });
+  });
+
+  // A picture is placed by the factory now, straight under the heading of the block whose nature
+  // carries one. The model chose neither the place nor the count.
+  it('puts the picture under the heading of the block whose nature carries it', () => {
+    const { page } = build({ plan: { ...PLAN, heroImage: 'casino-lobby' } });
+    const hero = blockOf(page, 'hero');
+    expect(hero.content[0]).toEqual({ type: 'title', h1: 'Casino guide' });
+    expect(hero.content[1]).toEqual({ image: 'casino-lobby' });
+  });
+
+  it('gives no picture to a block whose nature has none', () => {
+    const { page } = build({
+      blocks: [nature('opener', { h1: true }), SECTION],
+      plan: { ...PLAN, heroImage: 'casino-lobby' },
+    });
+    expect(JSON.stringify(page.blocks[0])).not.toMatch(/casino-lobby/);
+  });
+
+  it('says so instead of emitting an empty block it has nothing to fill', () => {
+    const { page, warnings } = build({ blocks: [HERO, nature('mystery')] });
+    expect(page.blocks.map((block) => block.type)).toEqual(['hero']);
+    expect(warnings.join(' ')).toMatch(/mystery/);
   });
 
   it('writes each section heading itself, ahead of what the model returned', () => {

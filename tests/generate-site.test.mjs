@@ -46,7 +46,7 @@ function fakeOpenAi({
   failFaq = false,
   failFirstSection = false,
   emptyFirstSection = false,
-  sectionImageName = '',
+  heroImageName = '',
 } = {}) {
   const asked = [];
   let sectionCalls = 0;
@@ -79,15 +79,16 @@ function fakeOpenAi({
       const sections = body.text.format.schema.properties.sections.minItems;
       const faq = body.text.format.schema.properties.faq.minItems;
       return reply({
-        title: 'T', description: 'D', h1: 'H', heroText: ['Hero.'], heroImage: null,
+        title: 'T', description: 'D', h1: 'H', heroText: ['Hero.'],
+        // The picture belongs to the block whose nature carries one, which in this theme is the
+        // first screen. A section is never offered one any more, so a fake that put a name there
+        // would be testing a path no theme can reach.
+        heroImage: heroImageName || null,
         sections: Array.from({ length: sections }, (_, index) => ({
           heading: `Section ${index + 1}`,
           brief: 'b',
-          // Only the first section ever carries a picture, and only when a test asks for one — the
-          // per-page image budget is rolled from the skeleton, so whether it survives trimPlan
-          // depends on the page (see the "carries a section picture" test below).
-          elements: sectionImageName && index === 0 ? ['title', 'text', 'image'] : ['title', 'text'],
-          image: sectionImageName && index === 0 ? sectionImageName : null,
+          elements: ['title', 'text'],
+          image: null,
           links: [],
         })),
         faq: Array.from({ length: faq }, (_, index) => `Question ${index + 1}?`),
@@ -97,17 +98,7 @@ function fakeOpenAi({
       const count = body.text.format.schema.properties.answers.minItems;
       return reply({ answers: Array.from({ length: count }, () => 'An answer.') });
     }
-    // section_content, the generic case. A section asked to write an "image" element can only use
-    // the exact name fill.mjs's brief gave it — this fake plays along like a real model would,
-    // reading the name from the brief instead of simply knowing what the plan fake above wrote, so a
-    // regression that stops fill.mjs from naming the picture shows up here as a wrong name, not as a
-    // suspiciously well-informed fake.
-    const wantsImage = Object.hasOwn(body.text.format.schema.$defs ?? {}, 'image');
-    if (wantsImage) {
-      const input = String(body.input[0].content);
-      const usedName = sectionImageName && input.includes(sectionImageName) ? sectionImageName : 'name-the-model-had-to-guess';
-      return reply({ items: [{ kind: 'text', text: 'Body text of the section.' }, { kind: 'image', name: usedName }] });
-    }
+    // section_content, the generic case.
     return reply({ items: [{ kind: 'text', text: 'Body text of the section.' }] });
   };
   return { fetchFn, asked };
@@ -167,16 +158,25 @@ describe('generateSite', () => {
   // written page. Before the fix, fill.mjs never told the model the name plan.mjs had already
   // chosen, so the model (and this fake, which reads the brief the way a real model would — see
   // fakeOpenAi above) could only guess, and assemble.mjs throws out any name it does not recognise.
-  it('carries a section picture the plan named all the way into the written page', async () => {
+  it('carries the picture the plan named all the way into the written page', async () => {
     const dir = siteDir();
     const IMAGE_NAME = 'roulette-table-close-up';
-    await run(dir, fakeOpenAi({ sectionImageName: IMAGE_NAME }));
-    // casino's own image budget (rolled from this fixture's fixed seed, "newsite:casino") is 1, so
-    // the picture plan.mjs put on its first section survives trimPlan; home's rolls to 0 and loses
-    // it — proof this is the ordinary per-page budget at work, not a fake that always succeeds.
-    const page = JSON.parse(readFileSync(join(dir, 'casino.json'), 'utf8'));
-    const sectionBlocks = page.blocks.filter((block) => block.type === 'section');
-    expect(sectionBlocks[0].content).toContainEqual({ image: IMAGE_NAME });
+    await run(dir, fakeOpenAi({ heroImageName: IMAGE_NAME }));
+    // Every page, not one lucky one: the picture is there because the block carries it by nature,
+    // so there is no budget left to roll and nothing to lose it to.
+    for (const name of PAGES) {
+      const page = JSON.parse(readFileSync(join(dir, `${name}.json`), 'utf8'));
+      expect(page.blocks[0].content).toContainEqual({ image: IMAGE_NAME });
+      const elsewhere = page.blocks.slice(1);
+      expect(JSON.stringify(elsewhere)).not.toContain(IMAGE_NAME);
+    }
+  });
+
+  // Раскладка названа в строке готовности страницы, чтобы по логу было видно, какую смотришь.
+  it('names the layout each page was built from', async () => {
+    const dir = siteDir();
+    const { lines } = await run(dir, fakeOpenAi());
+    expect(lines.find((line) => line.includes('home.json готова'))).toMatch(/Длинный обзор/);
   });
 
   // A section that comes back truncated still ran the model and still cost money — that attempt's
@@ -225,9 +225,11 @@ describe('generateSite', () => {
     const sectionBlocks = page.blocks.filter((block) => block.type === 'section');
     const tocList = page.blocks.find((block) => block.type === 'toc').content.find((item) => item.type === 'list');
 
-    // One fewer section, and the contents list shrank with it — never one without the other.
+    // One fewer section, and the contents list shrank with it — never one without the other. The
+    // list is one longer than the sections because the FAQ has a heading too and is in it.
     expect(sectionBlocks).toHaveLength(baseSectionCount - 1);
-    expect(tocList.items).toHaveLength(baseSectionCount - 1);
+    expect(tocList.items).toHaveLength(baseSectionCount - 1 + 1);
+    expect(tocList.items.at(-1)).toBe('Questions');
     // The failed section was "Section 1" (the plan's first) — its heading must be gone entirely,
     // not left behind as a contents entry with nothing under it.
     expect(tocList.items).not.toContain('Section 1');
@@ -287,8 +289,11 @@ describe('generateSite', () => {
     const page = JSON.parse(readFileSync(join(dir, 'home.json'), 'utf8'));
     // The sections' prose is the money already spent — proof it was not thrown away with the FAQ.
     expect(JSON.stringify(page)).toContain('Body text of the section.');
-    const faqBlock = page.blocks.find((block) => block.type === 'faq');
-    expect(faqBlock.content).toHaveLength(1); // just the heading — no question made it in
+    // No FAQ block at all rather than a heading with nothing under it: a block with nothing to
+    // show is dropped, and its contents entry goes with it, the same as a section that never came.
+    expect(page.blocks.find((block) => block.type === 'faq')).toBeUndefined();
+    const tocList = page.blocks.find((block) => block.type === 'toc').content.find((item) => item.type === 'list');
+    expect(tocList.items).not.toContain('Questions');
     expect(lines.join('\n')).toMatch(/home\.json: FAQ не вышел/);
   });
 

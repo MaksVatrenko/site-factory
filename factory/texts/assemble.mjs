@@ -3,10 +3,15 @@ import { resolveLink, isSelfLink } from './links.mjs';
 // Turns a plan and a pile of filled sections into one page of our own content format.
 //
 // Everything structural happens here rather than in the model: the table of contents is built from
-// the section headings, each section's own heading is written from the plan, and the service blocks
+// the block headings, each block's own heading is written from the plan, and the service blocks
 // are labelled in the site's language. The couplings that a model breaks most often — a contents
 // list that does not match the sections, a second h1, a link to a page that was never made, a link
 // back to the page it is already on — are not checked here so much as made impossible by construction.
+//
+// What the page is made of — which blocks, in what order, how many — is not written here either. It
+// comes in as `blocks`: a layout already resolved against the theme, where every entry carries its
+// own nature (see factory/texts/layouts.mjs). This module knows no block by name except the two it
+// fills itself, so a new kind of block reaches a page without a line of this file changing.
 
 // [words](/target). Deliberately narrow: no nesting, no whitespace tricks, the same shape the
 // engine's own link parser accepts (see docs/content-format.md).
@@ -100,71 +105,121 @@ function noteLength(what, value, range, warnings) {
   else if (min > 0 && length < min) warnings.push(`${what}: ${length} знаков вместо ${min} — оставлено как есть`);
 }
 
-export function assemblePage({ plan, sections, faq, pages, page, labels, lengths = {} }) {
+// The factory's own blocks: what goes inside them is known without asking the model, so asking
+// would only pay for something thrown away. Named here, beside the builders, and handed to
+// layouts.mjs so a layout naming an auto block nobody can fill is refused before the first request.
+const AUTO = {
+  // Built from the headings, not from anything the model wrote: one entry per headed block that
+  // survived, in the same order they come out in.
+  toc: ({ headings, labels }) => [
+    { type: 'title', h2: labels.toc },
+    { type: 'list', items: headings },
+  ],
+  // The "other pages" grid is drawn from site.json's own menu, so this block only needs its title.
+  links: ({ labels }) => [{ type: 'title', h2: labels.links }],
+};
+
+export const AUTO_BLOCKS = Object.keys(AUTO);
+
+export function assemblePage({ plan, blocks, sections, faq, pages, page, labels, lengths = {} }) {
   const warnings = [];
   const images = new Set(
     [plan.heroImage, ...plan.sections.map((section) => section.image)].filter(Boolean),
   );
   const context = { images, pages, page, warnings, lengths };
 
-  const hero = {
-    type: 'hero',
-    content: [
-      { type: 'title', h1: plan.h1 },
-      ...(plan.heroImage ? [{ image: plan.heroImage }] : []),
-      ...plan.heroText.map((text) => ({ type: 'text', text: keepLinks(text, pages, page, warnings) })),
-    ],
-  };
+  // Two passes over the layout, because the contents cannot be built until every heading is known,
+  // and a block with nothing to show is dropped along the way — so the auto blocks are filled over
+  // what actually survived rather than over what the layout asked for.
+  const built = [];
+  let sectionIndex = 0;
+  for (const block of blocks) {
+    if (block.auto) {
+      // layouts.mjs refuses this before the first paid request; by the time a page is assembled it
+      // can only mean the two lists drifted apart, and an empty block on the page would be the
+      // quietest possible way to say so.
+      if (!AUTO[block.type]) {
+        warnings.push(`блок «${block.type}» помечен auto, но фабрика не умеет его заполнять — пропущен`);
+        continue;
+      }
+      built.push({ block });
+      continue;
+    }
 
-  // Built from the headings, not from anything the model wrote: one entry per section, same order.
-  const toc = {
-    type: 'toc',
-    content: [
-      { type: 'title', h2: labels.toc },
-      { type: 'list', items: sections.map((section) => section.heading) },
-    ],
-  };
+    // The FAQ is the one block filled by a request of its own (see fill.mjs), so it is the one
+    // block taken from its own argument rather than from the pool of filled sections.
+    if (block.type === 'faq') {
+      if (faq.length === 0) continue;
+      built.push({
+        block,
+        heading: labels.faq,
+        items: faq.map((entry) => ({
+          type: 'toggle',
+          title: entry.question,
+          text: keepLinks(entry.answer, pages, page, warnings),
+        })),
+      });
+      continue;
+    }
 
-  const body = sections.map((section) => ({
-    type: 'section',
-    content: [
-      { type: 'title', h2: section.heading },
-      ...section.items
-        .map((item) => {
-          if (item.kind === 'text') noteLength('text абзаца', item.text, lengths.text, warnings);
-          return toElement(item, context);
-        })
-        .filter(Boolean),
-    ],
+    if (block.heading) {
+      const section = sections[sectionIndex];
+      // Dropped upstream because it came back empty. Its contents entry goes with it, which is the
+      // whole reason the contents is built from what survived: no entry may point at a heading with
+      // nothing under it.
+      if (!section) continue;
+      sectionIndex += 1;
+      built.push({
+        block,
+        heading: section.heading,
+        items: section.items
+          .map((item) => {
+            if (item.kind === 'text') noteLength('text абзаца', item.text, lengths.text, warnings);
+            return toElement(item, context);
+          })
+          .filter(Boolean),
+      });
+      continue;
+    }
+
+    if (block.h1) {
+      built.push({
+        block,
+        items: plan.heroText.map((text) => ({ type: 'text', text: keepLinks(text, pages, page, warnings) })),
+      });
+      continue;
+    }
+
+    // Nothing to put in it: no heading to write, no h1 to carry, and the factory does not fill it.
+    // A layout reaches here only by naming a block blocks.json describes as holding content the
+    // plan has no field for, so say so rather than emit an empty block onto the page.
+    warnings.push(`блок «${block.type}» нечем наполнить — пропущен`);
+  }
+
+  const headings = built.filter((entry) => entry.block.heading).map((entry) => entry.heading);
+
+  const pageBlocks = built.map(({ block, heading, items = [] }) => ({
+    type: block.type,
+    content: block.auto
+      ? AUTO[block.type]({ headings, labels })
+      : [
+          ...(block.h1 ? [{ type: 'title', h1: plan.h1 }] : []),
+          ...(block.heading ? [{ type: 'title', h2: heading }] : []),
+          // A picture belongs to the block by its nature, so the factory places it: straight under
+          // the heading, where every block that has one wants it. The model never chose where.
+          ...(block.image && plan.heroImage ? [{ image: plan.heroImage }] : []),
+          ...items,
+        ],
   }));
-
-  // The "other pages" grid is drawn from site.json's own menu, so this block only needs its title.
-  const links = { type: 'links', content: [{ type: 'title', h2: labels.links }] };
-
-  const questions = {
-    type: 'faq',
-    content: [
-      { type: 'title', h2: labels.faq },
-      ...faq.map((entry) => ({
-        type: 'toggle',
-        title: entry.question,
-        text: keepLinks(entry.answer, pages, page, warnings),
-      })),
-    ],
-  };
 
   noteLength('title страницы', plan.title, lengths.title, warnings);
   noteLength('description страницы', plan.description, lengths.description, warnings);
-  // The h1 belongs here with them: content.json gives it a limit, it is the most prominent text on
+  // The h1 belongs here with them: blocks.json gives it a limit, it is the most prominent text on
   // the page, and unlike the item counts it is never trimmed anywhere earlier in the pipeline.
   noteLength('h1 страницы', plan.h1, lengths.h1, warnings);
 
   return {
-    page: {
-      title: plan.title,
-      description: plan.description,
-      blocks: [hero, toc, ...body, links, questions],
-    },
+    page: { title: plan.title, description: plan.description, blocks: pageBlocks },
     warnings,
   };
 }
