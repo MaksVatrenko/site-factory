@@ -1,3 +1,5 @@
+import { resolveLink } from './links.mjs';
+
 // Turns a plan and a pile of filled sections into one page of our own content format.
 //
 // Everything structural happens here rather than in the model: the table of contents is built from
@@ -10,18 +12,21 @@
 // engine's own link parser accepts (see docs/content-format.md).
 const LINK = /\[([^\]\n]+)\]\(([^)\s]+)\)/g;
 
-function hrefsOf(pages) {
-  return new Set(pages.map((page) => (page === 'home' ? '/' : `/${page}`)));
-}
-
-// A link is kept only when it points at a page this site actually has, or at an anchor on this one.
-// Anything else — an invented external address, a page from the example site — loses its brackets
-// and stays as plain words, which reads fine and links nowhere.
-function keepLinks(text, allowed, warnings) {
+// A link is kept only when it points at a page this site actually has, or at an anchor on this one
+// — and when it does, it is rewritten to that page's canonical address, so `[words](/home)` reaches
+// the page as `[words](/)`. plan.mjs's brief tells the model the real addresses, but prose is not
+// the schema: a link the model writes inside a sentence is never validated the way plan.mjs's own
+// link list is, so the same repair belongs here too (see links.mjs). Anything that names no page of
+// this site — an invented external address, a page from the example site — loses its brackets and
+// stays as plain words, which reads fine and links nowhere.
+function keepLinks(text, pages, warnings) {
   return String(text).replace(LINK, (whole, label, href) => {
-    if (href.startsWith('#') || allowed.has(href)) return whole;
-    warnings.push(`ссылка ${href} ведёт в никуда — осталась текстом`);
-    return label;
+    const canonical = resolveLink(href, pages);
+    if (canonical === null) {
+      warnings.push(`ссылка ${href} ведёт в никуда — осталась текстом`);
+      return label;
+    }
+    return `[${label}](${canonical})`;
   });
 }
 
@@ -37,8 +42,8 @@ function trimToMax(what, list, range, warnings) {
   return list.slice(0, max);
 }
 
-function toElement(item, { images, allowed, warnings, lengths }) {
-  const link = (text) => keepLinks(text, allowed, warnings);
+function toElement(item, { images, pages, warnings, lengths }) {
+  const link = (text) => keepLinks(text, pages, warnings);
   const picture = (name) => {
     if (name && images.has(name)) return name;
     if (name) warnings.push(`картинка «${name}» не объявлена планом — убрана`);
@@ -91,18 +96,17 @@ function noteLength(what, value, range, warnings) {
 
 export function assemblePage({ plan, sections, faq, pages, labels, lengths = {} }) {
   const warnings = [];
-  const allowed = hrefsOf(pages);
   const images = new Set(
     [plan.heroImage, ...plan.sections.map((section) => section.image)].filter(Boolean),
   );
-  const context = { images, allowed, warnings, lengths };
+  const context = { images, pages, warnings, lengths };
 
   const hero = {
     type: 'hero',
     content: [
       { type: 'title', h1: plan.h1 },
       ...(plan.heroImage ? [{ image: plan.heroImage }] : []),
-      ...plan.heroText.map((text) => ({ type: 'text', text: keepLinks(text, allowed, warnings) })),
+      ...plan.heroText.map((text) => ({ type: 'text', text: keepLinks(text, pages, warnings) })),
     ],
   };
 
@@ -138,7 +142,7 @@ export function assemblePage({ plan, sections, faq, pages, labels, lengths = {} 
       ...faq.map((entry) => ({
         type: 'toggle',
         title: entry.question,
-        text: keepLinks(entry.answer, allowed, warnings),
+        text: keepLinks(entry.answer, pages, warnings),
       })),
     ],
   };

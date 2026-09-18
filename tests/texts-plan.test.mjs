@@ -86,6 +86,52 @@ describe('trimPlan', () => {
     expect(result.warnings.join(' ')).toContain('/nope');
   });
 
+  // Finding: the brief hands the model file names ("home", "casino"), not addresses, so it echoes
+  // them back, or the obvious slash-prefixed guess — neither of which used to be in the `allowed`
+  // set this filter checked against. A recognisable spelling must be repaired to its canonical
+  // address, not thrown away like a link to a page that genuinely does not exist.
+  it('repairs a link spelled as a bare page name or a near-miss address, instead of dropping it', () => {
+    const plan = {
+      title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
+      sections: [plannedSection({ links: ['home', '/home', 'casino', '/casino/'] }), plannedSection()],
+      faq: ['q1', 'q2'],
+    };
+    const result = trimPlan(plan, { budgets, pages: PAGES, sectionContent: SECTION_CONTENT });
+    expect(result.plan.sections[0].links).toEqual(['/', '/', '/casino', '/casino']);
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('trims links past the per-section budget, keeping the earliest', () => {
+    const withLinks = { ...budgets, links: { section: [0, 2], page: [0, 10] } };
+    const plan = {
+      title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
+      sections: [plannedSection({ links: ['/casino', '/bonus', 'home'] }), plannedSection()],
+      faq: ['q1', 'q2'],
+    };
+    const result = trimPlan(plan, { budgets: withLinks, pages: PAGES, sectionContent: SECTION_CONTENT });
+    expect(result.plan.sections[0].links).toEqual(['/casino', '/bonus']);
+    expect(result.warnings.join(' ')).toContain('сверх бюджета ссылок на раздел');
+  });
+
+  // Same budget, spread across the whole page rather than one section: the second section's own
+  // per-section allowance is nowhere near spent, but the page as a whole is, so it is the later
+  // section that gives way — a link near the top of the page is worth more than one near the bottom.
+  it('trims links past the per-page budget, spending it on the earliest sections first', () => {
+    const withLinks = { ...budgets, links: { section: [0, 5], page: [0, 3] } };
+    const plan = {
+      title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
+      sections: [
+        plannedSection({ heading: 'First', links: ['/casino', '/bonus'] }),
+        plannedSection({ heading: 'Second', links: ['/casino', '/bonus'] }),
+      ],
+      faq: ['q1', 'q2'],
+    };
+    const result = trimPlan(plan, { budgets: withLinks, pages: PAGES, sectionContent: SECTION_CONTENT });
+    expect(result.plan.sections[0].links).toEqual(['/casino', '/bonus']);
+    expect(result.plan.sections[1].links).toEqual(['/casino']);
+    expect(result.warnings.join(' ')).toContain('сверх бюджета ссылок на страницу');
+  });
+
   it('drops elements asked for more often than the template allows', () => {
     const plan = {
       title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
@@ -126,5 +172,37 @@ describe('planPage', () => {
     expect(body.prompt_cache_key).toContain('plan');
     expect(result.plan.h1).toBe('H');
     expect(result.cost).toBeGreaterThan(0);
+  });
+
+  // Finding: the brief used to list PAGES verbatim — file names such as "home" — which is exactly
+  // what trimPlan then refused to accept back as a link target. The brief must speak in the
+  // addresses a link is actually allowed to use, and say so plainly, and it must carry the per-page
+  // link budget alongside the sections/questions/pictures line it already had.
+  it("lists the site's pages as addresses, not file names, and states the link budget", async () => {
+    let body;
+    const fetchFn = async (_url, init) => {
+      body = JSON.parse(init.body);
+      return answer({
+        title: 'T', description: 'D', h1: 'H', heroText: ['a'], heroImage: null,
+        sections: [plannedSection()], faq: ['q1'],
+      });
+    };
+    await planPage(
+      {
+        page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
+        budgets: { sections: 1, faq: 1, images: 1, links: { section: [0, 2], page: [0, 8] } },
+        elements: ['title', 'text', 'list', 'table', 'image'],
+        sectionContent: SECTION_CONTENT,
+        instructions: 'RULES',
+      },
+      { config: CONFIG, fetchFn, sleep: async () => {} },
+    );
+
+    const content = String(body.input[0].content);
+    expect(content).toContain('Pages on this site: /, /casino, /bonus');
+    // "home" the file name must be gone from that line entirely — only its address, "/", remains.
+    expect(content).not.toMatch(/Pages on this site:.*\bhome\b/);
+    expect(content).toMatch(/link.*must use one of those exact addresses/i);
+    expect(content).toContain('at most 8 internal links');
   });
 });

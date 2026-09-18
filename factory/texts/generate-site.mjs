@@ -132,7 +132,10 @@ export async function generateSite({
     const started = Date.now();
     let spent = 0;
     try {
-      const budgets = skeleton[page];
+      // sections/faq/images are rolled per page, for variety across sites; the link budgets are not
+      // — they exist to stop spam, not to add it, so every page of every site from this template
+      // gets the same ceiling, straight from content.json.
+      const budgets = { ...skeleton[page], links: content.links };
       const planned = await planPage(
         { page, pages, brand, geo, locale: language, budgets, elements, sectionContent, instructions },
         options,

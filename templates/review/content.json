@@ -8,6 +8,7 @@
     { "type": "faq", "content": { "title": 1, "toggle": [5, 8] } }
   ],
   "images": [0, 3],
+  "links": { "section": [0, 2], "page": [0, 8] },
   "lengths": {
     "title": 60,
     "description": [120, 160],

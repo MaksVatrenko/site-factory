@@ -79,9 +79,19 @@ export function loadTemplateContent(templateId, root = process.cwd()) {
   });
 
   const lengths = isPlainObject(raw.lengths) ? raw.lengths : {};
+  // Same [min, max] convention as images and the per-section element counts above: only the upper
+  // bound is ever enforced (trimPlan cuts down to it), the lower bound is descriptive. Missing
+  // entirely defaults to 0, exactly like images — the conservative default, not the permissive one:
+  // a template that says nothing about links gets none, rather than an unstated unlimited budget.
+  const linksRaw = isPlainObject(raw.links) ? raw.links : {};
+  const links = {
+    section: readRange(linksRaw.section ?? 0, `links.section шаблона «${templateId}»`),
+    page: readRange(linksRaw.page ?? 0, `links.page шаблона «${templateId}»`),
+  };
   return {
     blocks,
     images: readRange(raw.images ?? 0, `images шаблона «${templateId}»`),
+    links,
     lengths,
     home: { sectionsBonus: Number(raw.home?.sectionsBonus) || 0 },
   };

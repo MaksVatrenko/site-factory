@@ -78,6 +78,23 @@ describe('assemblePage', () => {
     expect(text.text).toContain('[the bonus](/bonus)');
   });
 
+  // Prose is never checked against the schema the way the plan's own link list is, so a link the
+  // model writes mid-sentence needs the same repair trimPlan gives the plan's links (see links.mjs)
+  // — a bare page name or an obvious near-miss address reaches the page in its canonical form,
+  // rather than being unwrapped to plain words like a link to a page that truly does not exist.
+  it('repairs a link spelled as a bare page name or a near-miss address, inside the prose', () => {
+    const sections = [
+      { heading: 'Payments', items: [{ kind: 'text', text: 'Go to [home](home) or [home](/home) or [bonus](/bonus/) now.' }] },
+      SECTIONS[1],
+    ];
+    const { page, warnings } = build({ sections });
+    const text = page.blocks.filter((block) => block.type === 'section')[0].content[1];
+    expect(text.text).toBe('Go to [home](/) or [home](/) or [bonus](/bonus) now.');
+    // Other, unrelated length warnings from this fixture's short text are fine (see the list-minimum
+    // test above) — only a "ведёт в никуда" link warning, which must not happen here, would matter.
+    expect(warnings.join(' ')).not.toContain('никуда');
+  });
+
   it('unwraps a link to a page that does not exist, keeping the words', () => {
     const sections = [
       { heading: 'Payments', items: [{ kind: 'text', text: 'See [the app](/app) for more.' }] },

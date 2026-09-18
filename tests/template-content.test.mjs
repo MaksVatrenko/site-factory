@@ -80,6 +80,17 @@ describe('loadTemplateContent', () => {
     expect(content.home.sectionsBonus).toBe(2);
   });
 
+  // Loaded the same way as images (readRange, defaulting to 0): a template that says nothing about
+  // link budgets gets no links at all, rather than the least conservative choice possible.
+  it('reads the link budgets, defaulting to none when the template says nothing', () => {
+    const withLinks = { ...CONTENT, links: { section: [0, 2], page: [0, 8] } };
+    const root = writeTemplate({ manifest: MANIFEST, content: withLinks });
+    expect(loadTemplateContent('demo', root).links).toEqual({ section: [0, 2], page: [0, 8] });
+
+    const bareRoot = writeTemplate({ manifest: MANIFEST, content: CONTENT });
+    expect(loadTemplateContent('demo', bareRoot).links).toEqual({ section: [0, 0], page: [0, 0] });
+  });
+
   it('refuses a template with no content.json, naming it', () => {
     const root = writeTemplate({ manifest: MANIFEST });
     expect(() => loadTemplateContent('demo', root)).toThrow(/demo/);
