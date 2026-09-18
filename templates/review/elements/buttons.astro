@@ -16,10 +16,18 @@ const { items, context } = Astro.props;
 const partnerUrl = asText(context?.partnerUrl);
 
 const buttons = asRecords(items)
-  .map((item) => {
-    const own = asText(item.href);
-    const href = own === '' ? partnerUrl : own;
-    return { text: asText(item.text), href: isSafeHref(href) ? href : '' };
+  .map((item, index) => {
+    // Trimmed before anything else looks at it. isSafeHref trims for its own check, so an address
+    // padded with spaces passes it and then reaches the page padded — where `startsWith('http')`
+    // is false, and an external link silently loses both its new tab and its rel="sponsored". The
+    // same path for a link inside prose (parseRichText) trims, and these two must not disagree:
+    // an unmarked paid link looks exactly like a marked one on the page.
+    const own = asText(item.href).trim();
+    const href = own === '' ? partnerUrl.trim() : own;
+    // Which button is the loud one is decided by what was written, not by what survives. Numbering
+    // after the filter would hand the accent to whatever is left — so a site with no partner link
+    // loses its real call to action and makes "Download the app" the loudest thing on the page.
+    return { text: asText(item.text), href: isSafeHref(href) ? href : '', accent: index === 0 };
   })
   // A button with no words on it is not a button, and one with nowhere to go is a dead end: both
   // are dropped rather than drawn. An external target opens in a new tab.
@@ -28,9 +36,9 @@ const buttons = asRecords(items)
 
 {buttons.length > 0 && (
   <div class="rbuttons">
-    {buttons.map((button, index) => (
+    {buttons.map((button) => (
       <a
-        class={index === 0 ? 'rbuttons__button rbuttons__button--accent' : 'rbuttons__button'}
+        class={button.accent ? 'rbuttons__button rbuttons__button--accent' : 'rbuttons__button'}
         href={button.href}
         {...(button.href.startsWith('http') ? { target: '_blank', rel: 'noopener sponsored' } : {})}
       >

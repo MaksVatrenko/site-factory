@@ -43,9 +43,25 @@ const brandLabel = asText(site?.brand?.name);
     justify-self: center;
   }
 
-  /* A centred list keeps its items flush with their bullets. */
+  /* A centred list keeps its items flush with their bullets. The rows of pills and buttons are
+     centred from here rather than from inside their own components: a section aligned left wants
+     them flush left, and where a row sits is the enclosing block's decision, not the element's. */
   .hero__content > :global(ul) {
     text-align: left;
+  }
+
+  .hero__content > :global(.rinfo),
+  .hero__content > :global(.rbuttons) {
+    justify-content: center;
+  }
+
+  /* Same rule the section holds, for the same reason: what follows a line is an aside about what
+     came above it. Written twice because each block scopes its own styles and there is nowhere
+     both can reach — but a line drawn in one block and ignored in the other would be an element
+     that works in half the places it is allowed. */
+  .hero__content > :global(.rline) ~ :global(p) {
+    color: var(--text-tertiary);
+    font-size: 0.92rem;
   }
 
   .hero__eyebrow {
