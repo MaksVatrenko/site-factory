@@ -299,10 +299,17 @@ describe('removeBackground', () => {
     expect(result.bytes.equals(png)).toBe(true);
     expect(result.cost).toBe(0.001);
     const [task] = JSON.parse(calls[0].init.body);
-    expect(task).toMatchObject({
+    // The wire shape Runware documents, field for field. This assertion used to say
+    // `inputs: { image }`, which is not a thing Runware accepts — and because every test here
+    // answers with a fake, the wrong shape passed for as long as it existed and only surfaced on a
+    // live run, as a 400 naming the parameter, after the wordmark had been paid for. Written as an
+    // exact object rather than toMatchObject's subset, so a stray field is caught too:
+    // https://runware.ai/docs/tools/remove-background
+    expect(task).toEqual({
       taskType: 'removeBackground',
+      taskUUID: expect.any(String),
       model: 'ideogram:remove-background@0',
-      inputs: { image: 'art-1' },
+      inputImage: 'art-1',
       outputType: 'base64Data',
       outputFormat: 'PNG',
       includeCost: true,

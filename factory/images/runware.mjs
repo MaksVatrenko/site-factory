@@ -170,12 +170,20 @@ export async function generateLogoArtwork(request, options) {
 
 // Cuts the wordmark out of its plain background. The answer is matched by taskUUID like every
 // other: Runware's docs show it named "imageBackgroundRemoval", not the "removeBackground" asked for.
+//
+// `inputImage` sits at the top level and takes the UUID of an image Runware already holds — which is
+// what the first task returned, so the wordmark is never downloaded and re-uploaded to be cut out.
+// It was written as `inputs: { image }` here for a long time, and nothing said so: every test in
+// this project answers Runware with a fake, and two of them asserted that very shape, so the
+// mistake was pinned rather than caught. It surfaced on a live run as a 400 —
+// "Invalid value for 'inputImage' parameter" — after the wordmark had already been paid for.
+// See https://runware.ai/docs/tools/remove-background.
 export async function removeBackground(imageUUID, options) {
   const task = {
     taskType: 'removeBackground',
     taskUUID: randomUUID(),
     model: options.config.bgModel,
-    inputs: { image: imageUUID },
+    inputImage: imageUUID,
     outputType: 'base64Data',
     outputFormat: 'PNG',
     includeCost: true,

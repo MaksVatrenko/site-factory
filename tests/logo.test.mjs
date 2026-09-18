@@ -94,7 +94,10 @@ describe('generateLogo', () => {
 
     expect(tasks.map((task) => task.taskType)).toEqual(['imageInference', 'removeBackground']);
     expect(tasks[0].positivePrompt).toContain('reads "899OK"');
-    expect(tasks[1].inputs).toEqual({ image: 'art-1' });
+    // The cutout takes the wordmark straight from Runware by the UUID the first task returned:
+    // no second download, and no racing the seven days a returned URL stays valid.
+    expect(tasks[1].inputImage).toBe('art-1');
+    expect(tasks[1].inputs).toBeUndefined();
     // 0.09 + 0.001 is not exactly 0.091 in floating point, so the sum is compared, not matched.
     expect(summary.generated).toBe(true);
     expect(summary.cost).toBeCloseTo(0.091, 10);
