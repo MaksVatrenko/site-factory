@@ -156,21 +156,26 @@ export async function generateLogo({
       { config, fetchFn, sleep },
     );
     if (typeof artwork.cost === 'number') summary.cost += artwork.cost;
-    // By UUID first: nothing is downloaded and re-uploaded, which is the whole reason the wordmark
-    // is never fetched. A refusal there is not the end of it — the wordmark has already been paid
-    // for, the same picture has an address, and a cutout costs a fraction of a cent, so it is worth
-    // asking the other way before throwing $0.06 of artwork away. Which way worked goes into the
-    // log: these two lines are the only evidence there is about what Runware accepts for this model.
+    // By address first, by identifier second. Both name the same picture and Runware's own error
+    // text accepts either — but ideogram:remove-background@0 refuses the identifier outright, even
+    // a valid UUID v4 it had handed back seconds earlier. Measured on a live run of 2026-09-18:
+    // "Invalid value for 'inputImage' parameter", where the same wordmark went through by address
+    // on the next call. The identifier is still tried when there is no address, and after an
+    // address is refused, because a different cutout model may well be the other way round — this
+    // one is a setting in .env, not a constant.
+    const ways = [artwork.imageURL, artwork.imageUUID].filter(Boolean);
     let cutout;
-    try {
-      cutout = await removeBackground(artwork.imageUUID, { config, fetchFn, sleep });
-    } catch (error) {
-      if (error?.kind !== 'rejected' || !artwork.imageURL) throw error;
-      log(
-        `Логотип: по идентификатору «${artwork.imageUUID}» не принял — ${error.message}. Пробую по адресу`,
-      );
-      cutout = await removeBackground(artwork.imageURL, { config, fetchFn, sleep });
-      log('Логотип: по адресу принял');
+    for (const [index, way] of ways.entries()) {
+      try {
+        cutout = await removeBackground(way, { config, fetchFn, sleep });
+        break;
+      } catch (error) {
+        // Only a refusal of this picture is worth asking again for. A bad key or an empty balance
+        // answers the same way whichever way the picture is named, and the last way left has
+        // nothing to fall back to.
+        if (error?.kind !== 'rejected' || index === ways.length - 1) throw error;
+        log(`Логотип: «${way}» не принят — ${error.message}. Пробую иначе`);
+      }
     }
     if (typeof cutout.cost === 'number') summary.cost += cutout.cost;
 

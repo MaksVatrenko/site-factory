@@ -50,7 +50,7 @@ async function cutoutPng() {
 
 // Answers like Runware: the wordmark task with an imageUUID, the removal task with the cut-out PNG.
 // `fail` maps a taskType to an HTTP status to fail that task with.
-function fakeRunware({ cutout, fail = {}, artworkURL = '', refuseUUID = false } = {}) {
+function fakeRunware({ cutout, fail = {}, artworkURL = '', refuseUUID = false, refuseURL = false } = {}) {
   const tasks = [];
   const fetchFn = async (_url, init) => {
     const [task] = JSON.parse(init.body);
@@ -66,8 +66,12 @@ function fakeRunware({ cutout, fail = {}, artworkURL = '', refuseUUID = false } 
       );
     }
     // What a live run met: the cutout model would not take the wordmark by the identifier Runware
-    // had just handed back for it, and said so about the value rather than about the field.
-    if (refuseUUID && task.inputs?.image === 'art-1') {
+    // had just handed back for it — a valid UUID v4 — and said so about the value rather than about
+    // the field. The same picture went through by address on the very next call.
+    const refused =
+      (refuseUUID && task.inputs?.image === 'art-1') ||
+      (refuseURL && task.inputs?.image === artworkURL);
+    if (refused) {
       return new Response(
         JSON.stringify({ errors: [{ message: "Invalid value for 'inputImage' parameter." }] }),
         { status: 400 },
@@ -253,30 +257,49 @@ describe('generateLogo', () => {
     expect(lines).toEqual([line]);
   });
 
-  // The wordmark is the expensive half and it is already paid for by the time the cutout is asked
-  // for, so a refusal there must not throw it away while another way of naming the same picture is
-  // still untried. A cutout costs a fraction of a cent; the wordmark costs sixty times that.
-  it('asks again by address when the cutout will not take the wordmark by identifier', async () => {
-    const siteDir = writeSite({ site: { brand: { name: 'Fallback' } } });
+  // The address is asked for first because that is the one the shipped cutout model takes: it
+  // refuses the identifier outright, even a valid UUID v4 it handed back seconds earlier. Asking
+  // the other way round spends a rejected round trip on every logo ever made.
+  it('asks for the cutout by address, not by identifier', async () => {
+    const siteDir = writeSite({ site: { brand: { name: 'ByURL' } } });
     const { fetchFn, tasks } = fakeRunware({
       cutout: await cutoutPng(),
       artworkURL: 'https://im.runware.ai/art-1.png',
       refuseUUID: true,
     });
+    const { summary } = await run(siteDir, { fetchFn });
+
+    expect(summary.generated).toBe(true);
+    const cutouts = tasks.filter((task) => task.taskType === 'removeBackground');
+    expect(cutouts.map((task) => task.inputs.image)).toEqual(['https://im.runware.ai/art-1.png']);
+  });
+
+  // The identifier is still tried, because which of the two a cutout model takes is a property of
+  // the model — and the model is a line in .env, not a constant. The wordmark is the expensive half
+  // and is already paid for by then, so one more way is always worth asking before losing it.
+  it('falls back to the identifier when the address is refused', async () => {
+    const siteDir = writeSite({ site: { brand: { name: 'Fallback' } } });
+    const { fetchFn, tasks } = fakeRunware({
+      cutout: await cutoutPng(),
+      artworkURL: 'https://im.runware.ai/art-1.png',
+      refuseURL: true,
+    });
     const { summary, lines } = await run(siteDir, { fetchFn });
 
     expect(summary.generated).toBe(true);
     const cutouts = tasks.filter((task) => task.taskType === 'removeBackground');
-    expect(cutouts.map((task) => task.inputs.image)).toEqual(['art-1', 'https://im.runware.ai/art-1.png']);
-    // Both halves are in the log, because they are the only evidence there is about which way this
-    // model actually accepts — and the identifier is there to be read, not guessed at next time.
-    expect(lines.join('\n')).toContain('art-1');
-    expect(lines.join('\n')).toContain('по адресу принял');
+    expect(cutouts.map((task) => task.inputs.image)).toEqual([
+      'https://im.runware.ai/art-1.png',
+      'art-1',
+    ]);
+    // What was refused is named in the log: it is the only evidence there is about what a given
+    // cutout model actually accepts, and the next person should not have to buy it again.
+    expect(lines.join('\n')).toContain('https://im.runware.ai/art-1.png');
   });
 
-  // Without an address there is nothing to fall back to, and the run must fail the way it always
-  // did rather than retry the same refusal.
-  it('gives up when the wordmark came back without an address at all', async () => {
+  // With no address there is only one way left, and it must fail the way it always did rather than
+  // ask the same refusal twice.
+  it('gives up when the one way left is refused', async () => {
     const siteDir = writeSite({ site: { brand: { name: 'NoURL' } } });
     const { fetchFn, tasks } = fakeRunware({ cutout: await cutoutPng(), refuseUUID: true });
     const { summary } = await run(siteDir, { fetchFn });
