@@ -113,15 +113,30 @@ OPENAI_PRICE_OUTPUT=1.20
     "Do not invent payment methods, licences, bonus amounts, withdrawal times, ratings, reviews or legal claims that are not in the examples.",
     "Avoid unsupported first-person experience, fabricated testimonials and absolute promises.",
     "Keep the meta title and description accurate and natural, without keyword stuffing."
-  ],
-  "languageByGeo": {
-    "Bangladesh": "en-US", "Philippines": "en-US", "Pakistan": "en-US", "India": "en-IN",
-    "Indonesia": "id-ID", "Mexico": "es-MX", "Brazil": "pt-BR"
-  }
+  ]
 }
 ```
 
 Правила редактируются как `logo.json` и `images.json` — без правки кода.
+
+### Таблица гео → язык
+
+Живёт отдельно, в `factory/geos.json` — это справочник, а не правило письма, и его же читает
+`GET /api/geos`, чтобы наполнить выпадающие списки «Гео»/«Язык» в форме:
+
+```jsonc
+{
+  "Bangladesh": "en-US", "Philippines": "en-US", "Pakistan": "en-US", "India": "en-IN",
+  "Indonesia": "id-ID", "Mexico": "es-MX", "Brazil": "pt-BR"
+}
+```
+
+Порядок строк — это порядок в выпадающем списке «Гео», поэтому файл не сортируется нигде в коде:
+частые гео можно держать сверху. **Новая страна добавляется одной строкой в `factory/geos.json`**,
+без правки кода; `factory/geos.mjs` читает файл и по нему же строит список стран и список
+различающихся языков. Битый или нечитаемый файл не роняет форму: `GET /api/geos` в этом случае
+отвечает пустыми списками, а `factory/texts/generate-site.mjs` — тем же логом «пропущено», что и у
+шаблона без `content.json`.
 
 ### Чего в промпте не будет
 
@@ -147,8 +162,8 @@ OPENAI_PRICE_OUTPUT=1.20
 | Шаблон | Из списка шаблонов; нужен `content.json` |
 | Папка | Имя новой папки в `data/sites/`. Существующая не перезаписывается |
 | Бренд | Название бренда |
-| Гео | Страна |
-| Язык | Подставляется из гео по таблице раздела 4, правится руками |
+| Гео | Страна. Выпадающий список из `factory/geos.json` (раздел 4) |
+| Язык | Тоже выпадающий список оттуда же. Пустое значение подставляется из гео при его выборе, дальше правится руками |
 | Страницы | Текстовое поле, по странице на строку, заполнено набором по умолчанию |
 
 Список страниц — обычные имена файлов без расширения: `home`, `casino`, `slots`, `bonus`. Имя
@@ -351,8 +366,10 @@ FAQ наполняется одним запросом на все вопрос�
 | `factory/texts/assemble.mjs` | Сборка страницы, оглавление, проверки |
 | `factory/texts/site-json.mjs` | Меню, футер, слоган |
 | `factory/texts/generate-site.mjs` | Оркестровка, лог, деньги |
-| `factory/texts/texts-prompts.mjs` | Чтение правил, язык по гео |
-| `factory/prompts/texts.json` | Правила и таблица языков |
+| `factory/texts/texts-prompts.mjs` | Чтение правил, сопоставление гео с языком по готовой таблице |
+| `factory/prompts/texts.json` | Правила |
+| `factory/geos.mjs` | Чтение и проверка таблицы гео → язык |
+| `factory/geos.json` | Таблица гео → язык, тот же файл кормит `GET /api/geos` |
 | `scripts/generate-texts.mjs` | Команда |
 
 ## 15. Тесты
