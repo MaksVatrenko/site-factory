@@ -2,13 +2,15 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { readManifest, TEMPLATES_DIR } from '../../src/lib/templates.mjs';
 
-// A template says what it can render (manifest.json: blocks and elements) and, for text
-// generation, what a page made with it looks like (content.json: order, counts, lengths).
+// A theme says what it can render — manifest.json: which blocks and which element types — and,
+// for text generation, what each of those blocks is by its nature: templates/<id>/blocks.json,
+// read by loadTemplateBlocks below. What a page is made of is neither of those things and lives
+// apart from both, in layouts/ (see factory/texts/layouts.mjs).
 //
-// content.json is the single source for both halves of the job: the factory rolls a site's
-// skeleton from it, and describeTemplate() below renders the same file as the rules the model is
-// given. Written twice, the two would drift; derived from one file, they cannot. That is what lets
-// a new template arrive with a correct prompt and no prompt editing at all.
+// blocks.json is the single source for both halves of the job: a layout is resolved against it,
+// and describeBlocks() renders the same file as the rules the model is shown. Written twice, the
+// two would drift; derived from one file, they cannot. That is what lets a new theme arrive with a
+// correct prompt and no prompt editing at all.
 
 function isPlainObject(value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -23,10 +25,6 @@ function readRange(raw, where) {
     throw new Error(`в ${where} нужно целое число или пара [меньше, больше] — сейчас ${JSON.stringify(raw)}`);
   }
   return [raw[0], raw[1]];
-}
-
-function contentPath(templateId, root) {
-  return join(root, TEMPLATES_DIR, templateId, 'content.json');
 }
 
 // blocks.json: what each block of this theme is by its nature, one entry per block, with no
@@ -138,74 +136,6 @@ export function loadTemplateBlocks(templateId, root = process.cwd()) {
   };
 }
 
-export function loadTemplateContent(templateId, root = process.cwd()) {
-  const file = contentPath(templateId, root);
-  if (!existsSync(file)) {
-    throw new Error(
-      `шаблон «${templateId}» не поддерживает генерацию текстов: нет файла ${file}`,
-    );
-  }
-  let raw;
-  try {
-    raw = JSON.parse(readFileSync(file, 'utf8'));
-  } catch (error) {
-    throw new Error(`не удалось прочитать content.json шаблона «${templateId}»: ${error.message}`);
-  }
-  if (!isPlainObject(raw)) throw new Error(`content.json шаблона «${templateId}» должен быть объектом`);
-
-  const manifest = readManifest(templateId, root);
-  const knownBlocks = new Set(manifest.blocks);
-  const knownElements = new Set(manifest.elements);
-
-  if (!Array.isArray(raw.blocks) || raw.blocks.length === 0) {
-    throw new Error(`в content.json шаблона «${templateId}» нужен непустой список blocks`);
-  }
-  const blocks = raw.blocks.map((block) => {
-    if (!isPlainObject(block) || typeof block.type !== 'string' || block.type === '') {
-      throw new Error(`в blocks шаблона «${templateId}» каждый блок должен иметь строковый type`);
-    }
-    if (!knownBlocks.has(block.type)) {
-      throw new Error(
-        `шаблон «${templateId}» не умеет блок «${block.type}»: его нет в blocks манифеста`,
-      );
-    }
-    if (block.auto === true) return { type: block.type, auto: true, count: [1, 1], content: {} };
-    const content = {};
-    for (const [element, value] of Object.entries(isPlainObject(block.content) ? block.content : {})) {
-      if (!knownElements.has(element)) {
-        throw new Error(
-          `шаблон «${templateId}» не умеет элемент «${element}»: его нет в elements манифеста`,
-        );
-      }
-      content[element] = readRange(value, `блоке «${block.type}» шаблона «${templateId}»`);
-    }
-    return {
-      type: block.type,
-      auto: false,
-      count: readRange(block.count ?? 1, `блоке «${block.type}» шаблона «${templateId}»`),
-      content,
-    };
-  });
-
-  const lengths = isPlainObject(raw.lengths) ? raw.lengths : {};
-  // Same [min, max] convention as images and the per-section element counts above: only the upper
-  // bound is ever enforced (trimPlan cuts down to it), the lower bound is descriptive. Missing
-  // entirely defaults to 0, exactly like images — the conservative default, not the permissive one:
-  // a template that says nothing about links gets none, rather than an unstated unlimited budget.
-  const linksRaw = isPlainObject(raw.links) ? raw.links : {};
-  const links = {
-    section: readRange(linksRaw.section ?? 0, `links.section шаблона «${templateId}»`),
-    page: readRange(linksRaw.page ?? 0, `links.page шаблона «${templateId}»`),
-  };
-  return {
-    blocks,
-    images: readRange(raw.images ?? 0, `images шаблона «${templateId}»`),
-    links,
-    lengths,
-    home: { sectionsBonus: Number(raw.home?.sectionsBonus) || 0 },
-  };
-}
-
 export function loadTemplateExamples(templateId, root = process.cwd()) {
   const dir = join(root, TEMPLATES_DIR, templateId, 'examples');
   const names = existsSync(dir)
@@ -224,24 +154,6 @@ export function loadTemplateExamples(templateId, root = process.cwd()) {
 }
 
 const plural = ([min, max]) => (min === max ? `exactly ${min}` : `between ${min} and ${max}`);
-
-// The rules the model is shown, rendered from the same content.json the skeleton is rolled from.
-// Blocks marked `auto` are left out on purpose: the factory builds those itself, and describing
-// them would invite the model to write something that is then thrown away.
-export function describeTemplate(content) {
-  const lines = [];
-  for (const block of content.blocks) {
-    if (block.auto) continue;
-    const parts = Object.entries(block.content).map(([element, range]) => `${plural(range)} ${element}`);
-    const count = block.count[0] === 1 && block.count[1] === 1 ? '' : ` (${plural(block.count)} of them)`;
-    lines.push(`- ${block.type}${count}: ${parts.join(', ')}`);
-  }
-  for (const [name, value] of Object.entries(content.lengths)) {
-    const range = Array.isArray(value) ? `${value[0]}–${value[1]}` : `up to ${value}`;
-    lines.push(`- ${name}: ${range} characters or items`);
-  }
-  return lines.join('\n');
-}
 
 // The rules the model is shown, rendered from the same blocks.json a layout is resolved against.
 // Auto blocks are left out on purpose: the factory builds those itself, and describing them would

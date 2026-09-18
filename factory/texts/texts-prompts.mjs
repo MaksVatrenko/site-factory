@@ -3,8 +3,9 @@ import { readFileSync } from 'node:fs';
 // The half of the prompt that does not depend on the template: what to write like and what never
 // to invent. Editable without touching code, like the other files in factory/prompts/.
 //
-// Everything about *structure* lives with the template instead (templates/<id>/content.json), so
-// adding a template never means editing this file. The country → locale table this stage also
+// Everything about *structure* lives elsewhere: what a block is by nature with the theme
+// (templates/<id>/blocks.json), what a page is made of with the layout (layouts/*.json). So adding
+// a theme or a layout never means editing this file. The country → locale table this stage also
 // needs lives separately, in factory/geos.mjs/geos.json — it is a reference list, not a writing
 // rule, and languageFor below works on it unchanged no matter where it came from.
 
