@@ -777,6 +777,87 @@ describe('a page made of more than one kind of block', () => {
   });
 });
 
+// Not a throwaway fixture: the theme's real examples folder, which is what SEO hands over and what
+// every paid run will actually be built from. The tests above prove the mechanism on pages written
+// to suit them; this one proves it on the thing itself. Nothing here asserts which example gets
+// drawn — the owner will add more and every seeded choice would move — only that the page which
+// came out is the page the chosen example describes.
+describe('the real examples of the theme', () => {
+  // Read straight off the example, not through frameOf: a check derived from the code it checks
+  // would agree with any mistake that code makes.
+  const AUTO = new Set(['toc', 'links']);
+  const shapeOf = (example) =>
+    example.blocks.map((block) => ({
+      type: block.type,
+      // The factory writes an auto block itself, so the example says nothing about what is in it.
+      elements: AUTO.has(block.type)
+        ? null
+        : block.content
+            // Every heading goes: the block's own is written by the factory from the plan, and an
+            // h3 inside it is not in use.
+            .filter((item) => item.type !== 'title' && item.type !== 'image')
+            .map((item) => item.type),
+    }));
+
+  it('builds a page that matches its example block for block and element for element', async () => {
+    const dir = siteDir('real');
+    await run(dir, { ...fakeOpenAi(), root: process.cwd() });
+
+    for (const address of PAGES) {
+      const page = JSON.parse(readFileSync(join(dir, `${address}.json`), 'utf8'));
+      const example = JSON.parse(
+        readFileSync(join('templates', 'review', 'examples', `${page.example}.json`), 'utf8'),
+      );
+      const wanted = shapeOf(example);
+
+      expect(page.blocks.map((block) => block.type)).toEqual(wanted.map((block) => block.type));
+      for (const [at, block] of page.blocks.entries()) {
+        if (wanted[at].elements === null) continue;
+        const written = block.content
+          // The picture the factory placed carries no `type` at all — it is { image: "имя" } —
+          // and it is counted below rather than here.
+          .filter((item) => item.type !== undefined)
+          .map((item) => item.type)
+          // The block's own heading, written by the factory. Every other title was dropped.
+          .slice(1);
+        expect(`${address} ${at} ${block.type}: ${written.join(',')}`).toBe(
+          `${address} ${at} ${block.type}: ${wanted[at].elements.join(',')}`,
+        );
+      }
+
+      // One picture, in the first screen, because that is the only block pictures.json puts one in.
+      expect((JSON.stringify(page).match(/"image":/g) ?? [])).toHaveLength(1);
+      expect(page.blocks[0].type).toBe('hero');
+    }
+  });
+
+  it("cuts every collection back to what the example's own block held", async () => {
+    const dir = siteDir('real');
+    await run(dir, { ...fakeOpenAi(), root: process.cwd() });
+
+    for (const address of PAGES) {
+      const page = JSON.parse(readFileSync(join(dir, `${address}.json`), 'utf8'));
+      const example = JSON.parse(
+        readFileSync(join('templates', 'review', 'examples', `${page.example}.json`), 'utf8'),
+      );
+      for (const [at, block] of page.blocks.entries()) {
+        if (AUTO.has(block.type)) continue;
+        const room = (kind) =>
+          Math.max(
+            0,
+            ...example.blocks[at].content
+              .filter((item) => item.type === kind)
+              .map((item) => (item.type === 'table' ? item.rows : item.items)?.length ?? 0),
+          );
+        for (const item of block.content) {
+          if (item.type === 'list') expect(item.items.length).toBeLessThanOrEqual(room('list'));
+          if (item.type === 'table') expect(item.rows.length).toBeLessThanOrEqual(room('table'));
+        }
+      }
+    }
+  });
+});
+
 describe('a generated folder builds', () => {
   it('passes a real Astro build', async () => {
     const dir = siteDir();
