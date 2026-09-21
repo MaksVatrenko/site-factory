@@ -5,7 +5,12 @@
 // site, every time. The file name is not a detail: it is the page's address (src/lib/site-dir.mjs),
 // so two sheets landing on one file name would silently lose a page.
 //
-// Usage: node scripts/import-sheet.mjs <spreadsheet url or id> <site folder name>
+// Usage: node scripts/import-sheet.mjs <spreadsheet url, id or .xlsx path> <site folder name>
+//
+// A downloaded .xlsx is read straight off disk (scripts/xlsx.mjs) and takes the same path from
+// there on: the sheets of a workbook and the sheets of a Google spreadsheet are the same thing, and
+// the converter never learns which it was given. That matters because a spreadsheet shared by
+// someone else is usually a file in a folder, not a link anyone outside can open.
 //
 // A bare id is the easier thing to paste: a full sheet url carries a `?`, which zsh takes
 // for a filename pattern and refuses to run the command at all.
@@ -13,7 +18,8 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { SERVICE_FILE_NAMES, slugFromFileName } from '../src/lib/site-dir.mjs';
-import { sheetToPage } from './sheet-to-json.mjs';
+import { rowsToPage, sheetToPage } from './sheet-to-json.mjs';
+import { readWorkbook } from './xlsx.mjs';
 
 // Sheet names that mean "this is the front page" rather than a page called "home".
 const HOME_SHEET_NAMES = new Set(['home', 'index', 'main', 'главная', 'домашняя']);
@@ -110,35 +116,53 @@ async function fetchText(url, what) {
   return response.text();
 }
 
+// A path to a workbook on disk, as opposed to a link or an id to fetch.
+export const isWorkbookPath = (input) => /\.xlsx$/i.test(String(input ?? '').trim());
+
 async function main() {
   const [input, siteName] = process.argv.slice(2);
   if (!input || !siteName) {
-    console.error('Использование: node scripts/import-sheet.mjs <ссылка или id таблицы> <папка сайта>');
-    console.error('Ссылку нужно взять в кавычки — id таблицы можно передать как есть.');
+    console.error('Использование: node scripts/import-sheet.mjs <ссылка, id таблицы или файл .xlsx> <папка сайта>');
+    console.error('Ссылку нужно взять в кавычки — id таблицы и путь к файлу можно передать как есть.');
     process.exit(1);
   }
 
-  const id = spreadsheetId(input);
   const dir = join('data', 'sites', siteName);
+  const local = isWorkbookPath(input);
 
-  const html = await fetchText(`https://docs.google.com/spreadsheets/d/${id}/htmlview`, 'таблицу');
-  const sheets = parseSheetList(html);
-  if (sheets.length === 0) {
-    throw new Error(
-      'В таблице не найдено ни одного листа. Проверьте ссылку и что доступ открыт по ссылке.',
-    );
+  // Both sources end up as the same thing: a list of sheets with a name each, and a way to get one
+  // sheet's rows. What differs is only where the bytes come from.
+  let sheets;
+  let rowsOf;
+  if (local) {
+    const workbook = readWorkbook(input);
+    sheets = workbook.map(({ name }, index) => ({ name, gid: String(index) }));
+    rowsOf = async (target) => workbook[Number(target.gid)].rows;
+  } else {
+    const id = spreadsheetId(input);
+    const html = await fetchText(`https://docs.google.com/spreadsheets/d/${id}/htmlview`, 'таблицу');
+    sheets = parseSheetList(html);
+    if (sheets.length === 0) {
+      throw new Error(
+        'В таблице не найдено ни одного листа. Проверьте ссылку и что доступ открыт по ссылке.',
+      );
+    }
+    rowsOf = async (target) =>
+      sheetToPage(
+        await fetchText(
+          `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${target.gid}`,
+          `лист «${target.name}»`,
+        ),
+      );
   }
 
   const { targets, notes } = assignTargets(sheets);
   mkdirSync(dir, { recursive: true });
-  console.log(`Таблица: ${sheets.length} листов → ${dir}\n`);
+  console.log(`${local ? 'Книга' : 'Таблица'}: ${sheets.length} листов → ${dir}\n`);
 
   for (const target of targets) {
-    const csv = await fetchText(
-      `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${target.gid}`,
-      `лист «${target.name}»`,
-    );
-    const page = sheetToPage(csv);
+    const got = await rowsOf(target);
+    const page = Array.isArray(got) ? rowsToPage(got) : got;
     writeFileSync(join(dir, target.file), `${JSON.stringify(page, null, 2)}\n`);
     const route = slugFromFileName(target.file);
     console.log(`  ${target.file.padEnd(18)} ${route.padEnd(12)} ${page.blocks.length} блоков`);

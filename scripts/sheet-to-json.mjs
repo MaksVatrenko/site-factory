@@ -105,8 +105,17 @@ function splitBody(lines) {
   return parts;
 }
 
+// A spreadsheet exported as CSV. The rows are what the converter below actually works on, so a
+// reader that already has them — scripts/xlsx.mjs, reading the .xlsx directly — hands them over
+// instead of building a CSV for this to take apart again: a round trip through quoting is a round
+// trip through a way to lose a comma.
 export function sheetToPage(csvText) {
-  const rows = parseCsv(csvText).map((cells) => cells.map((c) => c.trim()));
+  return rowsToPage(parseCsv(csvText));
+}
+
+// One sheet, as a list of rows of cells, turned into one page.
+export function rowsToPage(rawRows) {
+  const rows = rawRows.map((cells) => cells.map((c) => String(c ?? "").trim()));
   const page = { title: '', description: '', blocks: [] };
 
   let current = null;
