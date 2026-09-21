@@ -6,6 +6,12 @@
 // so two sheets landing on one file name would silently lose a page.
 //
 // Usage: node scripts/import-sheet.mjs <spreadsheet url, id or .xlsx path> <site folder name>
+//        node scripts/import-sheet.mjs <…> --example <theme>/<name>
+//
+// The second form is how a site becomes an *example* rather than a site: one folder per page under
+// templates/<theme>/examples/, one file per source site, named by <name>. That is what generation
+// reads to know what a page of this kind is made of (factory/texts/example.mjs), so this is the
+// command that arrives with every new batch from SEO.
 //
 // A downloaded .xlsx is read straight off disk (scripts/xlsx.mjs) and takes the same path from
 // there on: the sheets of a workbook and the sheets of a Google spreadsheet are the same thing, and
@@ -120,14 +126,27 @@ async function fetchText(url, what) {
 export const isWorkbookPath = (input) => /\.xlsx$/i.test(String(input ?? '').trim());
 
 async function main() {
-  const [input, siteName] = process.argv.slice(2);
-  if (!input || !siteName) {
+  const args = process.argv.slice(2);
+  const at = args.indexOf('--example');
+  const asExample = at !== -1 ? args[at + 1] : '';
+  const [input, siteName] = args.filter((_, index) => index !== at && index !== at + 1);
+  if (!input || (!siteName && !asExample)) {
     console.error('Использование: node scripts/import-sheet.mjs <ссылка, id таблицы или файл .xlsx> <папка сайта>');
+    console.error('              node scripts/import-sheet.mjs <…> --example <тема>/<имя>');
     console.error('Ссылку нужно взять в кавычки — id таблицы и путь к файлу можно передать как есть.');
     process.exit(1);
   }
 
-  const dir = join('data', 'sites', siteName);
+  // `--example тема/имя`: страницы ложатся в templates/<тема>/examples/<адрес>/<имя>.json, по папке
+  // на страницу и по файлу на сайт-источник. Имя одно на все страницы — по нему один источник
+  // можно попросить сразу на весь сайт.
+  const [themeId = '', exampleName = ''] = asExample.split('/');
+  if (asExample && (!themeId || !exampleName)) {
+    console.error('После --example нужно «тема/имя», например template1/899ok');
+    process.exit(1);
+  }
+
+  const dir = asExample ? join('templates', themeId, 'examples') : join('data', 'sites', siteName);
   const local = isWorkbookPath(input);
 
   // Both sources end up as the same thing: a list of sheets with a name each, and a way to get one
@@ -163,12 +182,25 @@ async function main() {
   for (const target of targets) {
     const got = await rowsOf(target);
     const page = Array.isArray(got) ? rowsToPage(got) : got;
-    writeFileSync(join(dir, target.file), `${JSON.stringify(page, null, 2)}\n`);
-    const route = slugFromFileName(target.file);
-    console.log(`  ${target.file.padEnd(18)} ${route.padEnd(12)} ${page.blocks.length} блоков`);
+    // An example keeps the page's address as the folder it sits in, so `home.json` becomes
+    // `home/899ok.json`. A site keeps it as the file name, which is where a site's address lives.
+    const address = target.file.slice(0, -'.json'.length);
+    const into = asExample ? join(dir, address) : dir;
+    if (asExample) mkdirSync(into, { recursive: true });
+    const name = asExample ? `${exampleName}.json` : target.file;
+    writeFileSync(join(into, name), `${JSON.stringify(page, null, 2)}\n`);
+    const where = asExample ? `${address}/${exampleName}` : target.file;
+    console.log(`  ${where.padEnd(24)} ${(asExample ? '' : slugFromFileName(target.file)).padEnd(12)} ${page.blocks.length} блоков`);
   }
 
   for (const note of notes) console.log(`\n  ${note}`);
+
+  // An example is not a site: it has no menu, no brand and nothing to build. site.json below, and
+  // the build line under it, belong to the site form only.
+  if (asExample) {
+    console.log(`\nПримеры на месте. Генерация возьмёт их сама — в форме они появятся как «${exampleName}».`);
+    return;
+  }
 
   const siteFile = join(dir, 'site.json');
   if (existsSync(siteFile)) {

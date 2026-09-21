@@ -1,4 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterAll } from 'vitest';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   spreadsheetId,
   parseSheetList,
@@ -128,5 +132,48 @@ describe('assignTargets', () => {
 
   it('handles an empty sheet list', () => {
     expect(assignTargets([])).toEqual({ targets: [], notes: [] });
+  });
+});
+
+// Running the script itself, not a function of it: `--example` is about where the files land and
+// under what names, and that is a fact about the command line, not about any one function.
+describe('импорт как пример темы', () => {
+  const root = mkdtempSync(join(tmpdir(), 'site-factory-import-'));
+  const book = join(process.cwd(), 'data', 'examples-new', 'https___520bd.vip_.xlsx');
+
+  afterAll(() => rmSync(root, { recursive: true, force: true }));
+
+  const run = (...args) =>
+    spawnSync(process.execPath, [join(process.cwd(), 'scripts', 'import-sheet.mjs'), ...args], {
+      cwd: root,
+      encoding: 'utf8',
+    });
+
+  it('lays a workbook out as one folder per page and one file per source site', () => {
+    const result = run(book, '--example', 'probe/520bd');
+    expect(result.status).toBe(0);
+
+    const dir = join(root, 'templates', 'probe', 'examples');
+    // Every sheet of the workbook is a page of the site, and its name becomes the folder.
+    expect(readdirSync(dir).sort()).toEqual(['app', 'betting', 'bonus', 'casino', 'games', 'home', 'login', 'slots']);
+    // The same file name in every folder: that is what lets one source site be asked for across
+    // the whole site by name.
+    for (const address of readdirSync(dir)) expect(readdirSync(join(dir, address))).toEqual(['520bd.json']);
+
+    const page = JSON.parse(readFileSync(join(dir, 'home', '520bd.json'), 'utf8'));
+    expect(page.blocks[0].type).toBe('hero');
+    expect(page.blocks.length).toBeGreaterThan(5);
+  });
+
+  it('writes no site.json: an example is not a site and has nothing to build', () => {
+    run(book, '--example', 'probe2/520bd');
+    expect(existsSync(join(root, 'templates', 'probe2', 'examples', 'site.json'))).toBe(false);
+    expect(existsSync(join(root, 'data', 'sites'))).toBe(false);
+  });
+
+  it('refuses a --example that does not name both the theme and the example', () => {
+    const result = run(book, '--example', 'probe3');
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('тема/имя');
   });
 });
