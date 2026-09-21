@@ -2,7 +2,8 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { loadExamples, pickExamples, frameOf } from '../factory/texts/example.mjs';
+import { loadExamples, pickExamples, frameOf, planShape } from '../factory/texts/example.mjs';
+import { assemblePage } from '../factory/texts/assemble.mjs';
 
 let dirs = [];
 afterEach(() => {
@@ -371,5 +372,59 @@ describe('frameOf', () => {
       { type: 'faq', content: [title('h2'), toggle('в', 'г')] },
     ]);
     expect(() => frameOf(one, theme())).toThrow(/faq/);
+  });
+});
+
+// planShape says how many block entries the plan must hold; assemblePage hands one out per block
+// that takes one. Two modules, one rule — so they are checked against each other rather than each
+// against a number written twice. A page whose content block is not called "section" is the case
+// that would have drifted: planned for zero times, then dropped without a word.
+describe('planShape agrees with assemblePage about what takes a section', () => {
+  const nature = (type, own) => ({
+    type, auto: false, h1: false, image: false, heading: false, elements: [], counts: {}, ...own,
+  });
+  const FRAME = [
+    nature('hero', { h1: true, image: true, elements: ['text'] }),
+    nature('toc', { auto: true }),
+    nature('section', { heading: true, elements: ['text'] }),
+    nature('split', { heading: true, image: true, elements: ['text'] }),
+    nature('links', { auto: true }),
+    nature('faq', { heading: true, elements: ['toggle'] }),
+  ];
+
+  it('plans exactly as many blocks as the assembler asks for, of every kind', () => {
+    const { byType } = planShape(FRAME);
+    // The assembler looks a block up by its place on the page, so the filled blocks are keyed by
+    // it. Built here from planShape's own counts: if the two ever disagreed about how many blocks
+    // of a kind a page holds, a block would go unplanned and be dropped without a word.
+    const taken = new Map();
+    const filled = new Map();
+    FRAME.forEach((block, at) => {
+      if (block.auto || block.type === 'faq' || !(block.heading || block.h1)) return;
+      const nth = (taken.get(block.type) ?? 0) + 1;
+      taken.set(block.type, nth);
+      // A kind planShape left out entirely reads as zero, not as "no ceiling": that is the very
+      // drift this test exists to catch, and `nth > undefined` is false, which would let it pass.
+      if (nth > (byType[block.type] ?? 0)) return;
+      filled.set(at, { heading: `${block.type} ${nth}`, items: [{ kind: 'text', text: 'Body.' }] });
+    });
+    const { page } = assemblePage({
+      plan: { title: 'T', description: 'D', h1: 'H', images: [] },
+      blocks: FRAME,
+      sections: filled,
+      faq: [{ question: 'Q?', answer: 'A.' }],
+      pages: ['home'],
+      page: 'home',
+      labels: { toc: 'Contents', links: 'Other pages', faq: 'Questions' },
+    });
+    // Every block of the page survives: none was left without content to put in it.
+    expect(page.blocks.map((block) => block.type)).toEqual(FRAME.map((block) => block.type));
+  });
+
+  // The other half of the same rule: how many questions the FAQ is planned for is how many toggles
+  // the example's own FAQ held, and the schema is pinned to that number.
+  it('plans exactly as many questions as the example had', () => {
+    expect(planShape(FRAME).faq).toBe(1);
+    expect(planShape([...FRAME.slice(0, 5), nature('faq', { heading: true, elements: ['toggle', 'toggle', 'toggle'] })]).faq).toBe(3);
   });
 });

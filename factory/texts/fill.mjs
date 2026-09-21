@@ -35,7 +35,7 @@ async function askWithRetries(request, options, attempts) {
 }
 
 export async function fillSection(
-  { section, siblings, brand, locale, page, counts = {}, instructions, attempts = DEFAULT_ATTEMPTS },
+  { section, siblings, brand, locale, page, counts = {}, lengths = {}, instructions, attempts = DEFAULT_ATTEMPTS },
   options,
 ) {
   // The elements of this block, in the example's own order, with nothing taken off. The block's own
@@ -50,6 +50,15 @@ export async function fillSection(
     .map(([element, howMany]) => `${element} ${howMany}`)
     .join(', ');
 
+  // And how long each one runs, measured off the same example. A schema cannot pin a string's
+  // length, so this is the only way the measurement reaches the model at all.
+  const runs = [
+    lengths.text > 0 ? `each paragraph ${lengths.text}` : '',
+    lengths.listItem > 0 ? `each list item ${lengths.listItem}` : '',
+  ]
+    .filter(Boolean)
+    .join(', ');
+
   const brief = [
     `Brand: ${brand}`,
     `Language: ${locale}`,
@@ -57,6 +66,7 @@ export async function fillSection(
     `What this section covers: ${section.brief}`,
     `Write these elements, in this order: ${wanted.join(', ')}`,
     sizes === '' ? '' : `How many items each holds: ${sizes}.`,
+    runs === '' ? '' : `Write to these lengths, in characters, give or take a fifth: ${runs}.`,
     // Nothing is said about pictures, on purpose. A picture belongs to a block by its nature and is
     // placed by the factory, so there is no `image` element for the model to write and no name for
     // it to get wrong. Mentioning one at all would only invite it to write something that is then
@@ -86,13 +96,18 @@ export async function fillSection(
 }
 
 export async function fillFaq(
-  { questions, brand, locale, page, instructions, attempts = DEFAULT_ATTEMPTS },
+  { questions, brand, locale, page, lengths = {}, instructions, attempts = DEFAULT_ATTEMPTS },
   options,
 ) {
+  // The example's own answers set the length; "two or three sentences" is the fallback for an
+  // example whose FAQ had none to measure.
+  const long = lengths.answer > 0
+    ? `Answer each question in about ${lengths.answer} characters, in the same order:`
+    : 'Answer each question in two or three sentences, in the same order:';
   const brief = [
     `Brand: ${brand}`,
     `Language: ${locale}`,
-    'Answer each question in two or three sentences, in the same order:',
+    long,
     ...questions.map((question, index) => `${index + 1}. ${question}`),
   ].join('\n');
 

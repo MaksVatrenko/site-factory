@@ -193,7 +193,7 @@ export function trimPlan(plan, { links, pages, page, order = [], imageLabels = [
   return { plan: { ...plan, images, blocks }, warnings };
 }
 
-export async function planPage({ page, pages, brand, geo, locale, shape, links, instructions }, options) {
+export async function planPage({ page, pages, brand, geo, locale, shape, links, lengths = {}, instructions }, options) {
   // What we hand the model here used to be the bare file names ("home", "casino"), while trimPlan
   // accepted only written addresses ("/", "/casino") — home's above all, since it is never "/home".
   // The model then echoed back exactly what it was given, or the obvious slash-prefixed guess, and
@@ -235,6 +235,22 @@ export async function planPage({ page, pages, brand, geo, locale, shape, links, 
         ...shape.imageLabels.map((label, index) => `${index + 1}. ${label}`),
       ]
     : [];
+  // How long each of these runs in the example, in characters. Said in words because no schema can
+  // pin a string's length, and said at all because otherwise nothing carries the measurement to the
+  // model: it would be taken off the example, warned about afterwards, and never asked for. Only
+  // what this request writes is listed — the paragraphs and list rows belong to fill.mjs's brief.
+  const LENGTH_NAMES = {
+    title: 'the page title',
+    description: 'the page description',
+    h1: 'the h1',
+    h2: 'each section heading',
+    question: 'each FAQ question',
+  };
+  const wanted = Object.entries(LENGTH_NAMES)
+    .filter(([kind]) => lengths[kind] > 0)
+    .map(([kind, name]) => `${name} ${lengths[kind]}`)
+    .join(', ');
+
   const brief = [
     `Brand: ${brand}`,
     `Geo: ${geo}`,
@@ -243,12 +259,15 @@ export async function planPage({ page, pages, brand, geo, locale, shape, links, 
     `Pages on this site: ${addresses.join(', ')}`,
     'A link to another page of this site must use one of those exact addresses.',
     shapeLine,
+    wanted === '' ? '' : `Write to these lengths, in characters, give or take a fifth: ${wanted}.`,
     ...pictureLines,
     // What goes inside a section is not asked: the example already said, element by element and
     // in order, and the schema leaves the model no field to answer in.
     'Plan the page: a heading and a one-line brief for each section, and which other pages are',
     'worth linking to from it. Do not write the body text yet.',
-  ].join('\n');
+  ]
+    .filter(Boolean)
+    .join('\n');
 
   const { data, cost, usage } = await askJson(
     {

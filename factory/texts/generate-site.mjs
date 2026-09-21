@@ -175,6 +175,10 @@ export async function generateSite({
           // They exist to stop spam, so every page of every site from this theme gets the same
           // ceiling, straight from pictures.json.
           links: content.links,
+          // Measured off this page's own example, and stated in the brief: a schema cannot pin a
+          // string's length, so without this the numbers would be taken off the example, warned
+          // about after the fact, and never actually asked for.
+          lengths: frame.lengths,
           instructions,
         },
         options,
@@ -206,7 +210,7 @@ export async function generateSite({
         const siblings = headings.filter((heading) => heading !== section.heading);
         try {
           const filled = await fillSection(
-            { section, siblings, brand, locale: language, page, counts: section.counts, instructions },
+            { section, siblings, brand, locale: language, page, counts: section.counts, lengths: frame.lengths, instructions },
             options,
           );
           spent += filled.cost;
@@ -238,7 +242,7 @@ export async function generateSite({
       if (planned.plan.faq.length > 0) {
         try {
           const answered = await fillFaq(
-            { questions: planned.plan.faq, brand, locale: language, page, instructions },
+            { questions: planned.plan.faq, brand, locale: language, page, lengths: frame.lengths, instructions },
             options,
           );
           spent += answered.cost;

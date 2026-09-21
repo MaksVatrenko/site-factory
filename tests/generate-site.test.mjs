@@ -714,6 +714,41 @@ describe('every page is built from its own example', () => {
     expect(briefs.some((brief) => /How many items each holds: list 5/.test(brief))).toBe(true);
   });
 
+  // Measuring a length and never asking for it is the same as not measuring it. In v1 the lengths
+  // went to the model inside the theme's block description; that description is gone, and without
+  // this the numbers would only ever surface as a warning after the text came back the wrong size.
+  it("asks the model for the example's own lengths, request by request", async () => {
+    const dir = siteDir();
+    const fake = fakeOpenAi();
+    const briefs = new Map();
+    const fetchFn = async (url, init) => {
+      const body = JSON.parse(init.body);
+      briefs.set(body.text.format.name, String(body.input[0].content));
+      return fake.fetchFn(url, init);
+    };
+    const long = (n) => 'я'.repeat(n);
+    await run(dir, { fetchFn, ...everyPage({
+      title: long(48), description: long(145),
+      blocks: [
+        { type: 'hero', content: [h1(long(40)), para(long(124))] },
+        { type: 'section', content: [h2(long(30)), para(long(124)), { type: 'list', items: [long(41)] }] },
+        { type: 'faq', content: [h2(long(30)), { type: 'toggle', title: long(33), text: long(179) }] },
+      ],
+    }) });
+
+    // What the plan writes: the page's own fields, the section headings and the FAQ questions.
+    expect(briefs.get('page_plan')).toContain('the page title 48');
+    expect(briefs.get('page_plan')).toContain('the page description 145');
+    expect(briefs.get('page_plan')).toContain('the h1 40');
+    expect(briefs.get('page_plan')).toContain('each section heading 30');
+    expect(briefs.get('page_plan')).toContain('each FAQ question 33');
+    // What a section writes.
+    expect(briefs.get('section_content')).toContain('each paragraph 124');
+    expect(briefs.get('section_content')).toContain('each list item 41');
+    // And what the FAQ writes.
+    expect(briefs.get('faq_answers')).toContain('179 characters');
+  });
+
   // Lengths are measured off the example too, and they are only ever reported — but a report that
   // never fires is the same as none, so it is checked where it must fire: an example of very short
   // paragraphs and an answer that is not.
