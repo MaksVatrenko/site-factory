@@ -254,7 +254,7 @@ describe('factory API', () => {
     const start = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ site: '899ok', template: 'review', scheme: 'dark', domain }),
+      body: JSON.stringify({ skipTexts: true, site: '899ok', template: 'review', scheme: 'dark', domain }),
     }).then((r) => r.json());
 
     try {
@@ -276,7 +276,7 @@ describe('factory API', () => {
     const start = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+      body: JSON.stringify({ skipTexts: true,
         brand: 'API Test',
         scheme: 'dark',
         site: '899ok',
@@ -372,7 +372,7 @@ describe('factory API', () => {
     const start = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ site: '899ok', scheme: 'dark' }),
+      body: JSON.stringify({ skipTexts: true, site: '899ok', scheme: 'dark' }),
     }).then((r) => r.json());
 
     expect(start.domain).toBe('899ok');
@@ -448,7 +448,7 @@ describe('factory API', () => {
   it('refuses a second build for a domain that already has one running', async () => {
     const domain = 'concurrent-test.com';
     const headers = { 'Content-Type': 'application/json' };
-    const payload = JSON.stringify({ site: '899ok', domain });
+    const payload = JSON.stringify({ skipTexts: true, site: '899ok', domain });
 
     const first = await fetch(`${base}/api/generate`, { method: 'POST', headers, body: payload }).then(
       (r) => r.json(),
@@ -467,7 +467,7 @@ describe('factory API', () => {
     const response = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ site: 'does-not-exist' }),
+      body: JSON.stringify({ skipTexts: true, site: 'does-not-exist' }),
     });
     expect(response.status).toBe(400);
   });
@@ -483,7 +483,7 @@ describe('factory API', () => {
     const response = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ site: '../../../../etc', domain }),
+      body: JSON.stringify({ skipTexts: true, site: '../../../../etc', domain }),
     });
     expect(response.status).toBe(400);
     const data = await response.json();
@@ -497,7 +497,7 @@ describe('factory API', () => {
     const response = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ site: '899ok', domain: '../../../../etc/passwd' }),
+      body: JSON.stringify({ skipTexts: true, site: '899ok', domain: '../../../../etc/passwd' }),
     });
     expect(response.status).toBe(200);
 
@@ -512,7 +512,7 @@ describe('factory API', () => {
     const response = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ site: '899ok', domain: 'a'.repeat(300) }),
+      body: JSON.stringify({ skipTexts: true, site: '899ok', domain: 'a'.repeat(300) }),
     });
     expect(response.status).toBe(200);
 
@@ -626,7 +626,7 @@ describe('site, template and scheme are validated against the real lists, not re
       const response = await fetch(`${base}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ site: siteId, domain }),
+        body: JSON.stringify({ skipTexts: true, site: siteId, domain }),
       });
       expect(response.status).toBe(200);
 
@@ -651,7 +651,7 @@ describe('site, template and scheme are validated against the real lists, not re
       const response = await fetch(`${base}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ site: '899ok', scheme: schemeId, domain }),
+        body: JSON.stringify({ skipTexts: true, site: '899ok', scheme: schemeId, domain }),
       });
       expect(response.status).toBe(200);
 
@@ -687,7 +687,7 @@ describe('site, template and scheme are validated against the real lists, not re
       const response = await fetch(`${base}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ site: '899ok', template: templateId, domain }),
+        body: JSON.stringify({ skipTexts: true, site: '899ok', template: templateId, domain }),
       });
       expect(response.status).toBe(200);
 
@@ -706,7 +706,7 @@ describe('site, template and scheme are validated against the real lists, not re
     const response = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ site: '899ok', scheme: 'totally-bogus-scheme', domain }),
+      body: JSON.stringify({ skipTexts: true, site: '899ok', scheme: 'totally-bogus-scheme', domain }),
     });
     expect(response.status).toBe(400);
     const data = await response.json();
@@ -719,7 +719,7 @@ describe('site, template and scheme are validated against the real lists, not re
     const response = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ site: '899ok', template: 'totally-bogus-template', domain }),
+      body: JSON.stringify({ skipTexts: true, site: '899ok', template: 'totally-bogus-template', domain }),
     });
     expect(response.status).toBe(400);
     const data = await response.json();
@@ -732,7 +732,7 @@ describe('site, template and scheme are validated against the real lists, not re
     const response = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ site: '899ok', domain }),
+      body: JSON.stringify({ skipTexts: true, site: '899ok', domain }),
     });
     expect(response.status).toBe(200);
 
@@ -757,7 +757,7 @@ describe('site, template and scheme are validated against the real lists, not re
     const response = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ site: '899ok', template: 42, domain }),
+      body: JSON.stringify({ skipTexts: true, site: '899ok', template: 42, domain }),
     });
     expect(response.status).toBe(400);
     expect(existsSync(join('output', domain))).toBe(false);
@@ -769,7 +769,7 @@ describe('site, template and scheme are validated against the real lists, not re
     const response = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ site: '899ok', scheme: 42, domain }),
+      body: JSON.stringify({ skipTexts: true, site: '899ok', scheme: 42, domain }),
     });
     expect(response.status).toBe(400);
     expect(existsSync(join('output', domain))).toBe(false);
@@ -794,7 +794,7 @@ describe('form values reach the built HTML end to end (M3)', () => {
     const response = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+      body: JSON.stringify({ skipTexts: true,
         site: '899ok',
         scheme: 'dark',
         domain,
@@ -856,7 +856,7 @@ describe('final-fix-5: a successful build with no page at "/" still has a workin
     const start = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ site: siteId, domain }),
+      body: JSON.stringify({ skipTexts: true, site: siteId, domain }),
     }).then((r) => r.json());
 
     try {
@@ -884,7 +884,7 @@ describe('final-fix-5: a successful build with no page at "/" still has a workin
     const start = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ site: siteId, domain }),
+      body: JSON.stringify({ skipTexts: true, site: siteId, domain }),
     }).then((r) => r.json());
 
     try {
@@ -984,7 +984,7 @@ describe('pictures are generated before the build', () => {
     const start = await fetch(`${pictureBase}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ site: siteId, domain, ...extra }),
+      body: JSON.stringify({ skipTexts: true, site: siteId, domain, ...extra }),
     }).then((r) => r.json());
     const log = await readUntilDone(start.buildId, pictureBase);
     const status = await fetch(`${pictureBase}/api/builds/${start.buildId}`).then((r) => r.json());
@@ -1144,7 +1144,7 @@ describe('the logo is made before the pictures', () => {
       const start = await fetch(`${logoBase}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ site: siteId, domain }),
+        body: JSON.stringify({ skipTexts: true, site: siteId, domain }),
       }).then((r) => r.json());
       const log = await readUntilDone(start.buildId, logoBase);
       const status = await fetch(`${logoBase}/api/builds/${start.buildId}`).then((r) => r.json());
@@ -1181,7 +1181,7 @@ describe('the logo is made before the pictures', () => {
       const start = await fetch(`${logoBase}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ site: siteId, domain, regenerateLogo: true }),
+        body: JSON.stringify({ skipTexts: true, site: siteId, domain, regenerateLogo: true }),
       }).then((r) => r.json());
       const log = await readUntilDone(start.buildId, logoBase);
       expect(log).toContain('Логотип: делаю заново');
@@ -1435,7 +1435,9 @@ describe('zip archive completeness guard', () => {
   });
 });
 
-describe('the texts tab writes a whole site folder', () => {
+// One request, the whole site: the texts, then the pictures and the logo, then the build. It used
+// to be a tab of its own that stopped after the folder was written.
+describe('one request writes the texts and builds the site', () => {
   const siteId = 'texts-generation-fixture';
   const siteDir = join('data', 'sites', siteId);
   const SENTINEL = 'sentinel-openai-key-server-texts-2f8c';
@@ -1509,34 +1511,43 @@ describe('the texts tab writes a whole site folder', () => {
   afterAll(() => {
     textsServer?.close();
     rmSync(siteDir, { recursive: true, force: true });
+    // The run builds as well as writes now, so it leaves an output folder behind too.
+    rmSync(join('output', siteId), { recursive: true, force: true });
     rmSync(envDir, { recursive: true, force: true });
   });
 
   const start = (payload) =>
-    fetch(`${textsBase}/api/texts`, {
+    fetch(`${textsBase}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
 
-  it('writes the pages and site.json, and the new folder is listed as a site', async () => {
+  it('writes the pages, builds the site and reports it done — all from one request', async () => {
+    rmSync(join('output', siteId), { recursive: true, force: true });
     const response = await start({
-      template: 'review', out: siteId, brand: 'Acme', geo: 'Bangladesh', pages: 'home\ncasino',
+      template: 'review', site: siteId, brand: 'Acme', geo: 'Bangladesh', pages: 'home\ncasino',
+      skipImages: true,
     });
     expect(response.status).toBe(200);
-    const { jobId } = await response.json();
-    const log = await readUntilDone(jobId, textsBase);
+    const { buildId } = await response.json();
+    const log = await readUntilDone(buildId, textsBase);
     expect(log).toContain('event: done');
     expect(log).not.toContain(SENTINEL);
-    // Finding 1: a run that actually wrote pages must still be reported as a success — this is
-    // the honest counterpart to the "no key" failure test below.
+    // A run that actually wrote pages must still be reported as a success — the honest counterpart
+    // to the "no key" failure test below.
     expect(doneStatus(log)).toBe('ok');
 
     expect(existsSync(join(siteDir, 'home.json'))).toBe(true);
     expect(existsSync(join(siteDir, 'casino.json'))).toBe(true);
     expect(JSON.parse(readFileSync(join(siteDir, 'site.json'), 'utf8')).nav).toHaveLength(1);
 
-    // The point of the whole tab: the folder is now a site the Генерация tab can build.
+    // The whole point of the merge: one request, and what comes out the other end is a built site,
+    // not a folder somebody still has to go and build on another tab.
+    expect(existsSync(join('output', siteId, 'index.html'))).toBe(true);
+    expect(readFileSync(join('output', siteId, 'index.html'), 'utf8')).toContain('Acme');
+
+    // And the folder is now a site in its own right, listed like any other.
     const sites = await fetch(`${textsBase}/api/sites`).then((r) => r.json());
     expect(sites.sites.some((site) => site.id === siteId)).toBe(true);
   });
@@ -1551,14 +1562,14 @@ describe('the texts tab writes a whole site folder', () => {
     const out = 'texts-no-key-fixture';
     rmSync(join('data', 'sites', out), { recursive: true, force: true });
     try {
-      const response = await fetch(`${base}/api/texts`, {
+      const response = await fetch(`${base}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ template: 'review', out, brand: 'Acme', pages: 'home' }),
+        body: JSON.stringify({ template: 'review', site: out, brand: 'Acme', pages: 'home' }),
       });
       expect(response.status).toBe(200);
-      const { jobId } = await response.json();
-      const log = await readUntilDone(jobId);
+      const { buildId } = await response.json();
+      const log = await readUntilDone(buildId);
       expect(doneStatus(log)).toBe('failed');
       expect(existsSync(join('data', 'sites', out, 'home.json'))).toBe(false);
     } finally {
@@ -1567,7 +1578,7 @@ describe('the texts tab writes a whole site folder', () => {
   });
 
   it('refuses a page list with no home page, before spending anything', async () => {
-    const response = await start({ template: 'review', out: 'texts-no-home', brand: 'Acme', pages: 'casino' });
+    const response = await start({ template: 'review', site: 'texts-no-home', brand: 'Acme', pages: 'casino' });
     expect(response.status).toBe(400);
     expect((await response.json()).error).toContain('home');
     expect(existsSync(join('data', 'sites', 'texts-no-home'))).toBe(false);
@@ -1587,7 +1598,7 @@ describe('the texts tab writes a whole site folder', () => {
     // a stray folder left in the real data/sites/.
     rmSync(join('data', 'sites', out), { recursive: true, force: true });
     try {
-      const response = await start({ template: 'review', out, brand: 'Acme', geo: 42, pages: 'home' });
+      const response = await start({ template: 'review', site: out, brand: 'Acme', geo: 42, pages: 'home' });
       expect(response.status).toBe(400);
       expect((await response.json()).error).toContain('geo');
       expect(existsSync(join('data', 'sites', out))).toBe(false);
@@ -1619,7 +1630,7 @@ describe('the texts tab writes a whole site folder', () => {
     writeFileSync(join(templateDir, 'manifest.json'), JSON.stringify({ id: templateId, name: 'Fixture' }));
 
     try {
-      const response = await start({ template: templateId, out, brand: 'Acme', pages: 'home' });
+      const response = await start({ template: templateId, site: out, brand: 'Acme', pages: 'home' });
       expect(response.status).toBe(400);
       const data = await response.json();
       // Names both the template and its missing file, so this reads differently in the logs than
@@ -1642,7 +1653,7 @@ describe('the texts tab writes a whole site folder', () => {
     rmSync(join('data', 'sites', out), { recursive: true, force: true });
     try {
       const response = await start({
-        template: 'review', out, brand: 'Acme', example: 'no-such-example', pages: 'home',
+        template: 'review', site: out, brand: 'Acme', example: 'no-such-example', pages: 'home',
       });
       expect(response.status).toBe(400);
       expect((await response.json()).error).toContain('no-such-example');
@@ -1661,12 +1672,12 @@ describe('the texts tab writes a whole site folder', () => {
     const out = 'texts-random-example';
     rmSync(join('data', 'sites', out), { recursive: true, force: true });
     try {
-      const response = await start({ template: 'review', out, brand: 'Acme', example: '', pages: 'home' });
+      const response = await start({ template: 'review', site: out, brand: 'Acme', example: '', pages: 'home' });
       expect(response.status).toBe(200);
-      const { jobId } = await response.json();
+      const { buildId } = await response.json();
       // Drained, not abandoned: this app generates for real against its own fetchFn, and a job
       // still running when afterAll closes the server would go on writing into data/sites.
-      await readUntilDone(jobId, textsBase);
+      await readUntilDone(buildId, textsBase);
     } finally {
       rmSync(join('data', 'sites', out), { recursive: true, force: true });
     }
@@ -1681,7 +1692,7 @@ describe('the texts tab writes a whole site folder', () => {
     const out = 'texts-non-string-example';
     rmSync(join('data', 'sites', out), { recursive: true, force: true });
     try {
-      const response = await start({ template: 'review', out, brand: 'Acme', example: 42, pages: 'home' });
+      const response = await start({ template: 'review', site: out, brand: 'Acme', example: 42, pages: 'home' });
       expect(response.status).toBe(400);
       expect((await response.json()).error).toContain('example');
       expect(existsSync(join('data', 'sites', out))).toBe(false);
@@ -1691,11 +1702,11 @@ describe('the texts tab writes a whole site folder', () => {
   });
 
   it('refuses a second run into the same folder while the first is going', async () => {
-    const payload = { template: 'review', out: 'texts-busy', brand: 'Acme', pages: 'home' };
+    const payload = { template: 'review', site: 'texts-busy', brand: 'Acme', pages: 'home' };
     const first = await start(payload).then((r) => r.json());
     const second = await start(payload);
     expect(second.status).toBe(409);
-    await readUntilDone(first.jobId, textsBase);
+    await readUntilDone(first.buildId, textsBase);
     rmSync(join('data', 'sites', 'texts-busy'), { recursive: true, force: true });
   });
 });

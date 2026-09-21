@@ -10,3 +10,4 @@ handoff.md
 !.env.example
 .superpowers/
 .idea/
+.claude/

@@ -13,7 +13,6 @@
 
     <nav class="tabs" id="tabs">
       <button class="tab is-active" type="button" data-tab="generate">Генерация</button>
-      <button class="tab" type="button" data-tab="texts">Тексты</button>
       <button class="tab" type="button" data-tab="bulk">Массовая генерация</button>
       <button class="tab" type="button" data-tab="download">Скачать с сервера</button>
       <button class="tab" type="button" data-tab="projects">Проекты</button>
@@ -21,7 +20,7 @@
 
     <main>
       <section class="panel is-active" data-panel="generate">
-        <p class="hint">Бренд, шаблон, цветовая схема и папка с контентом → готовый сайт в output/</p>
+        <p class="hint">Бренд, гео, шаблон и список страниц → тексты, картинки, логотип и готовый сайт в output/</p>
 
         <form id="generate-form" class="grid">
           <fieldset class="card">
@@ -36,13 +35,24 @@
             <label>Шаблон<select name="template" id="field-template"></select></label>
             <p class="note" id="template-note"></p>
             <label>Цветовая схема<select name="scheme" id="field-scheme"></select></label>
-            <label>Сайт<select name="site" id="field-site"></select></label>
-            <p class="note">data/sites/[папка]/site.json + файлы страниц</p>
-            <p class="note">Пустые поля бренда, гео и языка берутся из site.json выбранного сайта</p>
+            <label>Папка<input name="site" id="field-site" list="site-options" placeholder="520bdapp" /></label>
+            <datalist id="site-options"></datalist>
+            <p class="note">data/sites/[папка] — новое имя или одна из тех, что уже есть</p>
+            <label>Пример<select name="example" id="field-example"></select></label>
+            <p class="note">«Случайно» — каждой странице свой пример из тех, что есть у неё</p>
+            <label class="check"><input name="skipTexts" type="checkbox" /> Только пересобрать, тексты не писать</label>
+            <p class="note">Папка должна уже быть. Бренд, гео и язык тогда можно не заполнять — возьмутся из site.json</p>
             <label class="check"><input name="skipImages" type="checkbox" /> Без генерации картинок и логотипа</label>
             <p class="note">Иначе перед сборкой делаются логотип, если его нет, и картинки для меток image, которых нет в images.json</p>
             <label class="check"><input name="regenerateLogo" type="checkbox" /> Перегенерировать логотип заново</label>
             <p class="note">Нарисует новый логотип, даже если он уже есть — случайный стиль из восьми в logo.json. Примерно $0.07 за сборку</p>
+          </fieldset>
+
+          <fieldset class="card">
+            <legend>Страницы</legend>
+            <label>По одной на строку<textarea name="pages" id="field-pages" rows="9"></textarea></label>
+            <p class="note">Имя файла становится адресом и задаёт тему страницы. home обязательна</p>
+            <p class="note">Страница, которая уже написана, не переписывается</p>
           </fieldset>
 
           <fieldset class="card">
@@ -65,39 +75,6 @@
 
         <button class="primary" id="submit" type="submit" form="generate-form">Сгенерировать</button>
         <pre class="log" id="log" aria-live="polite"></pre>
-      </section>
-
-      <section class="panel" data-panel="texts">
-        <p class="hint">Шаблон, бренд, гео и список страниц → готовая папка сайта в data/sites/</p>
-
-        <form id="texts-form" class="grid">
-          <fieldset class="card">
-            <legend>Новый сайт</legend>
-            <label>Шаблон<select name="template" id="texts-template"></select></label>
-            <label>Пример<select name="example" id="texts-example"></select></label>
-            <p class="note">«Случайно» — каждой странице свой пример из тех, что есть у неё</p>
-            <label>Папка<input name="out" type="text" placeholder="520bdapp" required /></label>
-            <label>Бренд<input name="brand" type="text" placeholder="520BD" required /></label>
-            <label>Гео<select name="geo" id="texts-geo"></select></label>
-            <label>Язык<select name="locale" id="texts-locale"></select></label>
-            <p class="note">Пустое поле языка — язык определяется по гео</p>
-          </fieldset>
-
-          <fieldset class="card">
-            <legend>Страницы</legend>
-            <label>По одной на строку<textarea name="pages" id="texts-pages" rows="9"></textarea></label>
-            <p class="note">Имя файла становится адресом и задаёт тему страницы. home обязательна</p>
-          </fieldset>
-
-          <fieldset class="card">
-            <legend>Результат</legend>
-            <p class="status" id="texts-status" aria-live="polite">Готово к генерации</p>
-            <p class="note">Папка появится в списке сайтов на вкладке «Генерация»</p>
-          </fieldset>
-        </form>
-
-        <button class="primary" id="texts-submit" type="submit" form="texts-form">Сгенерировать тексты</button>
-        <pre class="log" id="texts-log" aria-live="polite"></pre>
       </section>
 
       <section class="panel" data-panel="bulk">

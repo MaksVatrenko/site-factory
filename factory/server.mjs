@@ -245,22 +245,6 @@ export function startBuild(options, spawnFn = spawn) {
   return build;
 }
 
-// A job that is not a build: same record, same log stream, no Astro. Generating texts writes a site
-// folder instead of building one, but the form should watch it exactly the same way — so it shares
-// `builds` and therefore GET /api/builds/:id/log without that route knowing anything new.
-export function startJob({ domain }, work) {
-  const job = { id: randomUUID(), status: 'running', domain, outDir: '', lines: [], listeners: new Set() };
-  builds.set(job.id, job);
-  Promise.resolve()
-    .then(() => work((line) => pushLine(job, line)))
-    .then(() => finishBuild(job, 'ok'))
-    .catch((error) => {
-      pushLine(job, `Не удалось: ${error.message}`);
-      finishBuild(job, 'failed');
-    });
-  return job;
-}
-
 // Content is not required to place a page at "/" — a site whose only page is not at "/", like
 // the broken test fixture (tests/fixtures/sites/broken, whose only page is "/sloppy") — so a
 // build can finish cleanly and report success while writing no root index.html at all.
@@ -391,32 +375,17 @@ export function createApp({
     }
   });
 
+  // One request, the whole site: the texts, then the logo and the pictures, then the build. It was
+  // two — a «Тексты» tab that wrote data/sites/<папка> and a «Генерация» tab that built it — and
+  // splitting them meant the owner filled the brand, the geo and the language twice and waited for
+  // two runs to make one site. The stages themselves are unchanged and still skip what is already
+  // done: a page file on disk is not rewritten, a logo that exists is not redrawn.
   app.post('/api/generate', (req, res) => {
     const body = req.body ?? {};
 
-    // site, template and scheme are ids the server's own list endpoints already read verbatim
-    // from disk (folder names, template ids, scheme filenames). They must be checked against
-    // those exact lists, not rewritten with safeName — safeName is for `domain`, which is
-    // correct there because that value names a directory this server creates. Mangling a real id
-    // before checking it makes a legitimately listed value fail to round-trip: it stops matching
-    // the entry it came from (see finding M2).
-    const siteInput = trimmedString(body.site);
-    const site = siteInput === '' ? '899ok' : siteInput;
-    if (!listSiteNames().includes(site)) {
-      res.status(400).json({ error: `Папка с сайтом «${site}» не найдена` });
-      return;
-    }
-    const siteDir = join(SITES_DIR, site);
-
-    const domain = safeName(body.domain, site);
-    if (isBuildRunning(domain)) {
-      res.status(409).json({ error: `Сборка для домена «${domain}» уже выполняется` });
-      return;
-    }
-
-    // Empty/absent template or scheme stay valid — they mean "use the default". A *present*
-    // value of the wrong type is neither of those things, so it is refused the same way an
-    // unknown string id already is, instead of being coerced into '' and treated as absent.
+    // Empty/absent template or scheme stay valid — they mean "use the default". A *present* value
+    // of the wrong type is neither of those things, so it is refused the same way an unknown
+    // string id already is, instead of being coerced into '' and treated as absent.
     if (isPresentNonString(body.template)) {
       res.status(400).json({ error: 'Поле «template» должно быть строкой' });
       return;
@@ -429,10 +398,10 @@ export function createApp({
       res.status(400).json({ error: `Шаблон «${templateInput}» не найден` });
       return;
     }
-    // An empty template is passed straight through: the engine's own loadTemplate('') already
-    // falls back to listTemplates()[0] (see src/lib/templates.mjs), and with one template on
-    // disk that fallback is unambiguous — there is no second, general-purpose template left to
-    // prefer over it.
+    // An empty template is passed straight through to the build: the engine's own loadTemplate('')
+    // already falls back to listTemplates()[0] (see src/lib/templates.mjs). The texts stage needs a
+    // concrete one, so it resolves the same fallback itself, here.
+    const template = templateInput || listTemplates(ROOT)[0]?.id || '';
 
     if (isPresentNonString(body.scheme)) {
       res.status(400).json({ error: 'Поле «scheme» должно быть строкой' });
@@ -444,22 +413,155 @@ export function createApp({
       return;
     }
 
+    if (isPresentNonString(body.brand)) {
+      res.status(400).json({ error: 'Поле «brand» должно быть строкой' });
+      return;
+    }
+    const brand = trimmedString(body.brand);
+
+    // Neither geo nor language has a "must not be empty" check — both are meaningfully blank, one
+    // meaning "take it from site.json" and the other "work it out from the geo". That is exactly
+    // why a present value of the wrong type needs refusing here: trimmedString(42) is '', so
+    // without this a number would sail through as "not given" and the site would come out in the
+    // wrong language with nothing having said so.
+    for (const field of ['geo', 'locale']) {
+      if (isPresentNonString(body[field])) {
+        res.status(400).json({ error: `Поле «${field}» должно быть строкой` });
+        return;
+      }
+    }
+
+    // Strictly `true`, like the two checkboxes below: anything else that happens to arrive in that
+    // field ("on" from a plain form post, 1, "false") means "no".
+    const skipTexts = body.skipTexts === true;
+
+    // The folder in data/sites. Rebuilding one means it has to exist; writing texts means it does
+    // not have to, because this is the request that makes it — so the name is put through safeName
+    // there, exactly as the «Тексты» tab used to do, since it names a directory the server creates.
+    let site;
+    if (skipTexts) {
+      // Checked against the list read verbatim from disk rather than rewritten with safeName:
+      // mangling a real folder name before checking it makes a legitimately listed value fail to
+      // round-trip and stop matching the entry it came from (see finding M2).
+      const siteInput = trimmedString(body.site);
+      site = siteInput === '' ? '899ok' : siteInput;
+      if (!listSiteNames().includes(site)) {
+        res.status(400).json({ error: `Папка с сайтом «${site}» не найдена` });
+        return;
+      }
+    } else {
+      site = safeName(body.site, '');
+      if (site === '') {
+        res.status(400).json({ error: 'Нужно имя папки для сайта' });
+        return;
+      }
+    }
+    const siteDir = join(SITES_DIR, site);
+
+    // Everything the texts stage needs, checked here rather than inside the run: a typo must come
+    // back as a refused request, not as a job that starts and immediately gives up. All of it is
+    // free, and all of it happens before the first paid request.
+    let pages = [];
+    let example = '';
+    if (!skipTexts) {
+      try {
+        loadTemplatePictures(template, ROOT);
+        loadExamples(template, ROOT);
+      } catch (error) {
+        res.status(400).json({ error: error.message });
+        return;
+      }
+
+      // Empty/absent example stays valid — it means «Случайно», an example drawn per page.
+      if (isPresentNonString(body.example)) {
+        res.status(400).json({ error: 'Поле «example» должно быть строкой' });
+        return;
+      }
+      example = trimmedString(body.example);
+      if (example !== '') {
+        const byPage = loadExamples(template, ROOT);
+        // Every page must have it, not just one: the run builds the whole site from this name.
+        const missing = Object.entries(byPage)
+          .filter(([, list]) => !list.some((one) => one.name === example))
+          .map(([address]) => address);
+        if (missing.length > 0) {
+          res.status(400).json({ error: `Примера «${example}» нет у страниц: ${missing.join(', ')}` });
+          return;
+        }
+      }
+
+      if (brand === '') {
+        res.status(400).json({ error: 'Нужно название бренда' });
+        return;
+      }
+
+      const raw = Array.isArray(body.pages) ? body.pages : String(body.pages ?? '').split(/[\s,]+/);
+      pages = [...new Set(raw.map((name) => safeName(name, '')).filter(Boolean))];
+      if (!pages.includes('home')) {
+        res.status(400).json({ error: 'В списке страниц нужна home — иначе у сайта не будет главной' });
+        return;
+      }
+    }
+
+    const domain = safeName(body.domain, site);
+    if (isBuildRunning(domain)) {
+      res.status(409).json({ error: `Сборка для домена «${domain}» уже выполняется` });
+      return;
+    }
+    // The texts stage writes into data/sites/<папка>, which a second request could be writing into
+    // at the same time under a different domain. Guarded by the folder name as well as the domain.
+    if (!skipTexts && site !== domain && isBuildRunning(site)) {
+      res.status(409).json({ error: `Для папки «${site}» уже что-то выполняется` });
+      return;
+    }
+
     const outDir = join(OUTPUT_DIR, domain);
     const sitePublic = join(siteDir, 'public');
-    const brand = String(body.brand ?? '');
+    const geo = String(body.geo ?? '');
+    const locale = String(body.locale ?? '');
     // Strictly `true`, exactly like skipImages below: this checkbox spends money, so anything else
-    // that happens to arrive in that field ("on" from a plain form post, 1, "false") means "no".
+    // that happens to arrive in that field means "no".
     const regenerateLogo = body.regenerateLogo === true;
+    const skipImages = body.skipImages === true;
 
-    // Before the build: the logo first (a site without one gets it, and `force` draws a new one
-    // over a site that already has it), then any missing pictures — unless the form asked for a
-    // plain rebuild, which skips both steps and so outranks the regenerate checkbox. The .env is
-    // read here, per request and once for both steps, so a key added while the factory is running
-    // is picked up without a restart.
+    // Before the build, in this order and no other: the texts (the pictures stage reads the page
+    // files to know what to draw), then the logo — a site without one gets it, and `force` draws a
+    // new one over a site that already has it — then any missing pictures. The .env is read here,
+    // per request and once per stage, so a key added while the factory is running is picked up
+    // without a restart.
     const prepare =
-      body.skipImages === true
+      skipTexts && skipImages
         ? undefined
         : async (log) => {
+            if (!skipTexts) {
+              const summary = await generateSite({
+                siteDir,
+                templateId: template,
+                brand,
+                geo,
+                locale,
+                pages,
+                config: readOpenAiConfig(envFile),
+                root: ROOT,
+                promptFile: TEXTS_PROMPTS_FILE,
+                geosFile,
+                example,
+                fetchFn,
+                log,
+              });
+              // generateSite never throws — a bad key, an empty balance, or a broken theme all just
+              // become a log line so a half-written folder stays inspectable (see generate-site.mjs).
+              // Building on top of nothing would fail later and less clearly, so the run stops here
+              // instead. A page file actually on disk (freshly written, or already there from an
+              // earlier run this one resumed) is what "enough to build" means; site.json alone is
+              // the frame, not a page, so it does not count.
+              const pageFiles = new Set([...summary.written, ...summary.skipped]);
+              pageFiles.delete('site.json');
+              if (pageFiles.size === 0) {
+                throw new Error('ни одна страница не была написана — смотри лог');
+              }
+            }
+            if (skipImages) return;
             const config = readRunwareConfig(envFile);
             await generateLogo({
               siteDir,
@@ -488,131 +590,13 @@ export function createApp({
         SITE_URL: `https://${domain}`,
         DOMAIN: domain,
         BRAND: brand,
-        GEO: String(body.geo ?? ''),
-        LOCALE: String(body.locale ?? ''),
+        GEO: geo,
+        LOCALE: locale,
         PARTNER_URL: String(body.partnerUrl ?? ''),
       }),
     });
 
-    res.json({ buildId: build.id, domain, outDir });
-  });
-
-  app.post('/api/texts', (req, res) => {
-    const body = req.body ?? {};
-
-    // Empty/absent template stays valid — it means "use the default" — but a *present* value of
-    // the wrong type is neither of those things, exactly like /api/generate's own guard above.
-    if (isPresentNonString(body.template)) {
-      res.status(400).json({ error: 'Поле «template» должно быть строкой' });
-      return;
-    }
-    const templateInput = trimmedString(body.template);
-    const template = templateInput || listTemplates(ROOT)[0]?.id || '';
-    if (!listTemplates(ROOT).some((candidate) => candidate.id === template)) {
-      res.status(400).json({ error: `Шаблон «${template}» не найден` });
-      return;
-    }
-    // A theme with no pictures.json or no examples cannot be generated for at all, and saying so
-    // now costs nothing — finding out after the first paid request would not.
-    try {
-      loadTemplatePictures(template, ROOT);
-      loadExamples(template, ROOT);
-    } catch (error) {
-      res.status(400).json({ error: error.message });
-      return;
-    }
-
-    // Empty/absent example stays valid — it means «Случайно», an example drawn per page. A present
-    // value has to name one that exists, and that is checked here rather than inside the run: a
-    // typo must come back as a refused request, not as a job that starts and immediately gives up.
-    if (isPresentNonString(body.example)) {
-      res.status(400).json({ error: 'Поле «example» должно быть строкой' });
-      return;
-    }
-    const example = trimmedString(body.example);
-    if (example !== '') {
-      const byPage = loadExamples(template, ROOT);
-      // Every page must have it, not just one: the run builds the whole site from this name.
-      const missing = Object.entries(byPage)
-        .filter(([, list]) => !list.some((one) => one.name === example))
-        .map(([address]) => address);
-      if (missing.length > 0) {
-        res.status(400).json({ error: `Примера «${example}» нет у страниц: ${missing.join(', ')}` });
-        return;
-      }
-    }
-
-    const site = safeName(body.out, '');
-    if (site === '') {
-      res.status(400).json({ error: 'Нужно имя папки для нового сайта' });
-      return;
-    }
-
-    if (isPresentNonString(body.brand)) {
-      res.status(400).json({ error: 'Поле «brand» должно быть строкой' });
-      return;
-    }
-    const brand = trimmedString(body.brand);
-    if (brand === '') {
-      res.status(400).json({ error: 'Нужно название бренда' });
-      return;
-    }
-
-    if (isPresentNonString(body.geo)) {
-      res.status(400).json({ error: 'Поле «geo» должно быть строкой' });
-      return;
-    }
-    const geo = trimmedString(body.geo);
-
-    if (isPresentNonString(body.locale)) {
-      res.status(400).json({ error: 'Поле «locale» должно быть строкой' });
-      return;
-    }
-    const locale = trimmedString(body.locale);
-
-    const raw = Array.isArray(body.pages) ? body.pages : String(body.pages ?? '').split(/[\s,]+/);
-    const pages = [...new Set(raw.map((name) => safeName(name, '')).filter(Boolean))];
-    if (!pages.includes('home')) {
-      res.status(400).json({ error: 'В списке страниц нужна home — иначе у сайта не будет главной' });
-      return;
-    }
-
-    if (isBuildRunning(site)) {
-      res.status(409).json({ error: `Для папки «${site}» уже что-то выполняется` });
-      return;
-    }
-
-    const job = startJob({ domain: site }, async (log) => {
-      const summary = await generateSite({
-        siteDir: join(SITES_DIR, site),
-        templateId: template,
-        brand,
-        geo,
-        locale,
-        pages,
-        config: readOpenAiConfig(envFile),
-        root: ROOT,
-        promptFile: TEXTS_PROMPTS_FILE,
-        geosFile,
-        example,
-        fetchFn,
-        log,
-      });
-      // generateSite never throws — a bad key, an empty balance, or a broken template all just
-      // become a log line so a half-written folder stays inspectable (see generate-site.mjs). But
-      // startJob only marks the job 'failed' when the work function throws, and the form's `done`
-      // event has nothing else to go on — so without this, every one of those runs would still
-      // report success. A page file actually on disk (freshly written, or already there from an
-      // earlier run this one resumed) is what "success" means here; site.json alone is the frame,
-      // not a page, so it does not count.
-      const pageFiles = new Set([...summary.written, ...summary.skipped]);
-      pageFiles.delete('site.json');
-      if (pageFiles.size === 0) {
-        throw new Error('ни одна страница не была написана — смотри лог');
-      }
-    });
-
-    res.json({ jobId: job.id, site });
+    res.json({ buildId: build.id, domain, outDir, site });
   });
 
   app.get('/api/builds/:id', (req, res) => {

@@ -17,6 +17,19 @@ function appendLog(line) {
   logBox.scrollTop = logBox.scrollHeight;
 }
 
+// The site folder is typed, not picked: it may be one that exists or one this run is about to
+// make, and a select can only offer the first kind.
+function fillDatalist(list, values) {
+  list.replaceChildren(
+    ...values.map((value) => {
+      const option = document.createElement('option');
+      option.value = value.id ?? value;
+      if (value.name) option.label = value.name;
+      return option;
+    }),
+  );
+}
+
 function fillSelect(select, values) {
   select.replaceChildren(
     ...values.map((value) => {
@@ -39,17 +52,16 @@ document.querySelector('#tabs').addEventListener('click', (event) => {
   }
 });
 
-// Every geo/language select keeps this as its first option. Both fields are meaningfully empty:
-// on «Генерация» that means "take it from site.json", on «Тексты» a blank language means "work it
-// out from the geo" (see generateSite). fillSelect reads value.id/value.name, and `??` only falls
-// back on null/undefined, so an id/name of '' survives as a real, selectable empty option instead
-// of being replaced by anything.
+// Every geo/language select keeps this as its first option. Both fields are meaningfully empty: a
+// blank geo means "take it from site.json" when nothing is being written, and a blank language
+// means "work it out from the geo" (see generateSite). fillSelect reads value.id/value.name, and
+// `??` only falls back on null/undefined, so an id/name of '' survives as a real, selectable empty
+// option instead of being replaced by anything.
 const BLANK_OPTION = { id: '', name: '' };
 
-// Wires one tab's own geo select to its own language select: picking a geo preselects the
-// language the table has for it, without touching the other tab's fields — each call closes over
-// its own pair, so the two tabs never share one. The person stays free to change the language
-// afterwards; this only runs again on the next geo change, never on its own.
+// Wires the geo select to the language select: picking a geo preselects the language the table has
+// for it. The person stays free to change the language afterwards; this only runs again on the next
+// geo change, never on its own.
 function syncLocaleWithGeo(geoField, localeField, countries) {
   geoField.addEventListener('change', () => {
     const country = countries.find((c) => c.name === geoField.value);
@@ -69,13 +81,12 @@ async function loadLists() {
     ]);
 
     fillSelect(document.querySelector('#field-template'), templates.templates);
-    fillSelect(document.querySelector('#texts-template'), templates.templates);
     fillSelect(document.querySelector('#field-scheme'), schemes.schemes);
     // /api/sites reports each folder's id, page count and (when site.json declares one) brand
     // name; the option text is built here so the picker shows something meaningful — which
     // folder, how big it is, whose content it is — instead of a bare folder name.
-    fillSelect(
-      document.querySelector('#field-site'),
+    fillDatalist(
+      document.querySelector('#site-options'),
       sites.sites.map((site) => {
         const label = `${site.id} — ${site.pages} стр.`;
         return { id: site.id, name: site.brand ? `${label} · ${site.brand}` : label };
@@ -87,10 +98,9 @@ async function loadLists() {
     // countries they use most stay at the top of the dropdown.
     const geoOptions = [BLANK_OPTION, ...geos.countries.map((c) => ({ id: c.name, name: c.name }))];
     const localeOptions = [BLANK_OPTION, ...geos.locales.map((locale) => ({ id: locale, name: locale }))];
-    for (const id of ['field-geo', 'texts-geo']) fillSelect(document.querySelector(`#${id}`), geoOptions);
-    for (const id of ['field-locale', 'texts-locale']) fillSelect(document.querySelector(`#${id}`), localeOptions);
+    fillSelect(document.querySelector('#field-geo'), geoOptions);
+    fillSelect(document.querySelector('#field-locale'), localeOptions);
     syncLocaleWithGeo(document.querySelector('#field-geo'), document.querySelector('#field-locale'), geos.countries);
-    syncLocaleWithGeo(document.querySelector('#texts-geo'), document.querySelector('#texts-locale'), geos.countries);
 
     // Examples belong to a theme, so this list is refilled whenever the theme changes — a name from
     // one theme means nothing to another, and offering it would offer a choice that fails.
@@ -100,14 +110,14 @@ async function loadLists() {
     // example is not an unfilled field — it is a choice of its own, "an example per page", and the
     // person making it has to see what they chose instead of an empty line. /api/examples answers
     // with an empty list when the theme cannot be read, so «Случайно» stays selectable regardless.
-    const textsTemplate = document.querySelector('#texts-template');
+    const templateField = document.querySelector('#field-template');
     const fillExamples = async () => {
-      const answer = await fetch(`/api/examples?template=${encodeURIComponent(textsTemplate.value)}`)
+      const answer = await fetch(`/api/examples?template=${encodeURIComponent(templateField.value)}`)
         .then((r) => r.json())
         .catch(() => ({ examples: [] }));
-      fillSelect(document.querySelector('#texts-example'), [{ id: '', name: 'Случайно' }, ...answer.examples]);
+      fillSelect(document.querySelector('#field-example'), [{ id: '', name: 'Случайно' }, ...answer.examples]);
     };
-    textsTemplate.addEventListener('change', fillExamples);
+    templateField.addEventListener('change', fillExamples);
     await fillExamples();
 
     const describe = () => {
@@ -163,12 +173,29 @@ function followBuild(buildId, domain) {
 // которая заведомо ничего не сделает, читается как поломка, а не как правило.
 const skipImagesField = form.elements.skipImages;
 const regenerateLogoField = form.elements.regenerateLogo;
+const skipTextsField = form.elements.skipTexts;
+const pagesField = document.querySelector('#field-pages');
+const exampleField = document.querySelector('#field-example');
 function syncRegenerateLogo() {
   regenerateLogoField.disabled = skipImagesField.checked;
   if (skipImagesField.checked) regenerateLogoField.checked = false;
 }
 skipImagesField.addEventListener('change', syncRegenerateLogo);
 syncRegenerateLogo();
+
+// «Только пересобрать» means nothing is written, so the fields that say what to write are of no
+// use — shown greyed rather than hidden, so the list somebody typed is still theirs when they
+// change their mind, and so the checkbox visibly explains what it turned off.
+function syncTexts() {
+  for (const field of [pagesField, exampleField]) field.disabled = skipTextsField.checked;
+}
+skipTextsField.addEventListener('change', syncTexts);
+syncTexts();
+
+// The pages of the supplied examples, which is what a new site is normally made of. Kept as plain
+// text the owner edits: the list is theirs, and a page the theme has no example for is refused by
+// the server with its name in the message.
+pagesField.value = ['home', 'casino', 'slots', 'games', 'betting', 'bonus', 'app', 'login'].join('\n');
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -177,15 +204,18 @@ form.addEventListener('submit', async (event) => {
   result.hidden = true;
   // FormData reports a checkbox as "on" or leaves it out; the server wants a real boolean.
   const payload = Object.fromEntries(new FormData(form).entries());
-  payload.skipImages = form.elements.skipImages.checked;
-  payload.regenerateLogo = form.elements.regenerateLogo.checked;
-  setStatus(
-    payload.skipImages
-      ? 'Собираем…'
-      : payload.regenerateLogo
-        ? 'Делаем логотип заново, генерируем картинки, собираем…'
-        : 'Генерируем логотип и картинки, собираем…',
-  );
+  payload.skipImages = skipImagesField.checked;
+  payload.regenerateLogo = regenerateLogoField.checked;
+  payload.skipTexts = skipTextsField.checked;
+  // A disabled field is left out of FormData entirely, and the server reads a missing page list as
+  // "no pages" — which is only right when nothing is being written.
+  if (payload.skipTexts) delete payload.pages;
+  const stages = [
+    payload.skipTexts ? '' : 'Пишем тексты',
+    payload.skipImages ? '' : payload.regenerateLogo ? 'делаем логотип заново и картинки' : 'генерируем логотип и картинки',
+    'собираем',
+  ].filter(Boolean);
+  setStatus(`${stages.join(', ')}…`);
 
   try {
     const response = await fetch('/api/generate', {
@@ -202,6 +232,9 @@ form.addEventListener('submit', async (event) => {
     }
 
     followBuild(data.buildId, data.domain);
+    // A folder this run has just made only shows up among the suggestions once the lists are read
+    // again, and re-reading them now costs nothing.
+    if (!payload.skipTexts) loadLists();
   } catch (error) {
     setStatus(`Ошибка запроса: ${error.message}`, 'bad');
     submitButton.disabled = false;
@@ -209,66 +242,3 @@ form.addEventListener('submit', async (event) => {
 });
 
 loadLists();
-
-// The texts tab. It watches its job through the very same log stream a build uses, so there is
-// nothing new to learn here: post, then follow /api/builds/<id>/log until it says done.
-const textsForm = document.querySelector('#texts-form');
-const textsSubmit = document.querySelector('#texts-submit');
-const textsStatus = document.querySelector('#texts-status');
-const textsLog = document.querySelector('#texts-log');
-const textsPages = document.querySelector('#texts-pages');
-
-const DEFAULT_PAGES = ['home', 'casino', 'slots', 'games', 'betting', 'bonus', 'app', 'login'];
-textsPages.value = DEFAULT_PAGES.join('\n');
-
-function followTextsJob(jobId) {
-  const stream = new EventSource(`/api/builds/${jobId}/log`);
-  stream.addEventListener('message', (event) => {
-    textsLog.textContent += `${JSON.parse(event.data)}\n`;
-    textsLog.scrollTop = textsLog.scrollHeight;
-  });
-  stream.addEventListener('done', (event) => {
-    stream.close();
-    textsSubmit.disabled = false;
-    const ok = JSON.parse(event.data) === 'ok';
-    textsStatus.textContent = ok ? 'Готово — папка появилась на вкладке «Генерация»' : 'Не получилось — смотри лог';
-    textsStatus.className = ok ? 'status is-ok' : 'status is-bad';
-    // The new folder only shows up in the site picker once the lists are read again.
-    if (ok) loadLists();
-  });
-  stream.addEventListener('error', () => {
-    stream.close();
-    textsSubmit.disabled = false;
-    textsStatus.textContent = 'Связь с сервером прервалась';
-    textsStatus.className = 'status is-bad';
-  });
-}
-
-textsForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  textsSubmit.disabled = true;
-  textsLog.textContent = '';
-  textsStatus.textContent = 'Пишем тексты…';
-  textsStatus.className = 'status';
-
-  const payload = Object.fromEntries(new FormData(textsForm).entries());
-  try {
-    const response = await fetch('/api/texts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      textsStatus.textContent = data.error ?? 'Сервер отклонил запрос';
-      textsStatus.className = 'status is-bad';
-      textsSubmit.disabled = false;
-      return;
-    }
-    followTextsJob(data.jobId);
-  } catch (error) {
-    textsStatus.textContent = `Ошибка запроса: ${error.message}`;
-    textsStatus.className = 'status is-bad';
-    textsSubmit.disabled = false;
-  }
-});
