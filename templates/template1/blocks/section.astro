@@ -3,7 +3,7 @@ import { asEntries, asText } from '../../_shared/props.mjs';
 import Content from '../Content.astro';
 
 // The plainest shell: spacing, the anchor id, the container. What the section holds, and in what
-// order, is entirely its content — see templates/review/Content.astro.
+// order, is entirely its content — see templates/template1/Content.astro.
 const { content, anchor, site, templateId } = Astro.props;
 const entries = asEntries(content);
 const anchorId = asText(anchor);

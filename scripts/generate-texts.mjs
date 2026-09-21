@@ -49,11 +49,11 @@ try {
   process.exit(1);
 }
 
-const { template = 'review', out = '', brand = '', geo = '', locale = '', pages = '', example = '' } = parsed;
+const { template = 'template1', out = '', brand = '', geo = '', locale = '', pages = '', example = '' } = parsed;
 
 if (out === '' || brand === '') {
   console.error(
-    'Использование: npm run generate:texts -- --template review --out <папка> --brand <бренд> --geo <гео> [--locale en-US] [--pages home,casino] [--example 899ok]',
+    'Использование: npm run generate:texts -- --template template1 --out <папка> --brand <бренд> --geo <гео> [--locale en-US] [--pages home,casino] [--example 899ok]',
   );
   process.exit(1);
 }

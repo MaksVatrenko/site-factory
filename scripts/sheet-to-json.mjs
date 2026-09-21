@@ -254,7 +254,7 @@ function groupTrailingCards(content) {
 //     section -> `faq`: the h2 title, then one `toggle` per question.
 //   - nothing but a single run of list items under the h2 -> `toc`: the title and that list.
 //   - nothing at all under the h2 -> `links`, the reference site's "other pages" grid (its links
-//     come from the site's nav, not the spreadsheet — see templates/review/blocks/links.astro).
+//     come from the site's nav, not the spreadsheet — see templates/template1/blocks/links.astro).
 // Anything else stays an ordinary `section`, its trailing run of text-only h3s folded into cards.
 //
 // Exported so the same rules can be applied to page files converted before a shape was

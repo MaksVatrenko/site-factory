@@ -54,7 +54,7 @@ describe('final-fix-6, F4: buildProber resolves an absolute OUT_DIR instead of n
     Object.assign(process.env, {
       SITE_DIR: contentDir,
       OUT_DIR: absoluteOutDir,
-      TEMPLATE: 'review',
+      TEMPLATE: 'template1',
       SCHEME: 'dark',
       PUBLIC_DIR: '',
       BRAND: '',

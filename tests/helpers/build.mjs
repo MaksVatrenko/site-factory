@@ -6,7 +6,7 @@ const ASTRO_BIN = join('node_modules', '.bin', 'astro');
 
 export function buildSite({
   site = '899ok',
-  template = 'review',
+  template = 'template1',
   scheme = 'dark',
   outDir,
   siteDir,

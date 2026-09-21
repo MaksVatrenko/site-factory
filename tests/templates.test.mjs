@@ -45,8 +45,8 @@ describe('template registry', () => {
   });
 
   it('reads a manifest by id', () => {
-    const manifest = readManifest('review');
-    expect(manifest.id).toBe('review');
+    const manifest = readManifest('template1');
+    expect(manifest.id).toBe('template1');
     expect(manifest.blocks).toContain('hero');
     expect(manifest.elements).toContain('title');
     expect(manifest.defaultScheme).toBeTruthy();
@@ -69,7 +69,7 @@ describe('template registry', () => {
   });
 
   it('reports a block file that does not exist', () => {
-    const broken = { id: 'review', blocks: ['hero', 'imaginary'] };
+    const broken = { id: 'template1', blocks: ['hero', 'imaginary'] };
     expect(missingBlockFiles(broken)).toEqual(['imaginary']);
   });
 
@@ -77,12 +77,12 @@ describe('template registry', () => {
   // support for must have a matching templates/<id>/elements/<type>.astro file, exactly like a
   // block type must -- see src/components/ElementRenderer.astro.
   it('reports an element file that does not exist', () => {
-    const broken = { id: 'review', elements: ['title', 'imaginary'] };
+    const broken = { id: 'template1', elements: ['title', 'imaginary'] };
     expect(missingElementFiles(broken)).toEqual(['imaginary']);
   });
 
   it('treats a manifest with no elements field as declaring none', () => {
-    expect(missingElementFiles({ id: 'review' })).toEqual([]);
+    expect(missingElementFiles({ id: 'template1' })).toEqual([]);
   });
 
   it('throws when a manifest id does not match its folder', () => {

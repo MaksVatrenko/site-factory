@@ -12,15 +12,15 @@ function outputPathFor(slug) {
 }
 
 // Mirrors the exact command the spec asks a human to run to check this template by hand:
-//   SITE_DIR=data/sites/899ok TEMPLATE=review SCHEME=dark OUT_DIR=output/899ok
+//   SITE_DIR=data/sites/899ok TEMPLATE=template1 SCHEME=dark OUT_DIR=output/899ok
 //   SITE_URL=https://899ok-bd.net npm run build:site
-describe('review template: the real client site (data/sites/899ok)', () => {
+describe('тема template1: the real client site (data/sites/899ok)', () => {
   let outDir;
 
   beforeAll(() => {
     outDir = buildSite({
-      outDir: join('output', 'test-review-899ok'),
-      env: { SITE_DIR, TEMPLATE: 'review', SCHEME: 'dark' },
+      outDir: join('output', 'test-template1-899ok'),
+      env: { SITE_DIR, TEMPLATE: 'template1', SCHEME: 'dark' },
     }).outDir;
   });
 
@@ -76,7 +76,7 @@ describe('review template: the real client site (data/sites/899ok)', () => {
 // alongside its "type" the way a real page file on disk does (see src/lib/site-dir.mjs). Shared
 // by every describe block below that needs a single-purpose fixture site.
 function buildSingleBlockPage(blocks, { nav } = {}) {
-  const dir = mkdtempSync(join(tmpdir(), 'site-factory-review-'));
+  const dir = mkdtempSync(join(tmpdir(), 'site-factory-template1-'));
   writeFileSync(
     join(dir, 'site.json'),
     JSON.stringify({
@@ -95,7 +95,7 @@ function buildSingleBlockPage(blocks, { nav } = {}) {
   return dir;
 }
 
-describe('review template: resilience to unusual content shapes', () => {
+describe('тема template1: resilience to unusual content shapes', () => {
   it('still builds a section stripped down to just a heading', () => {
     const dir = buildSingleBlockPage([
       {
@@ -105,8 +105,8 @@ describe('review template: resilience to unusual content shapes', () => {
     ]);
     try {
       const { outDir } = buildSite({
-        outDir: join('output', 'test-review-heading-only'),
-        env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'dark' },
+        outDir: join('output', 'test-template1-heading-only'),
+        env: { SITE_DIR: dir, TEMPLATE: 'template1', SCHEME: 'dark' },
       });
       const html = readOutput(outDir);
       expect(html).toContain('Just a heading, nothing else');
@@ -163,8 +163,8 @@ describe('review template: resilience to unusual content shapes', () => {
     );
     try {
       const { outDir } = buildSite({
-        outDir: join('output', 'test-review-scrambled'),
-        env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'dark' },
+        outDir: join('output', 'test-template1-scrambled'),
+        env: { SITE_DIR: dir, TEMPLATE: 'template1', SCHEME: 'dark' },
       });
       const html = readOutput(outDir);
 
@@ -195,11 +195,11 @@ describe('review template: resilience to unusual content shapes', () => {
   });
 });
 
-describe('review template: a section renders its content array in exactly the given order', () => {
+describe('тема template1: a section renders its content array in exactly the given order', () => {
   it('allows a paragraph after a table, two headings in a row, and a chosen heading level', () => {
     // This is the headline capability the content/element refactor exists for: the old fixed
     // field order (heading, paragraphs, list, table, subsections) could never produce this shape
-    // at all. See templates/review/blocks/section.astro and src/components/ElementRenderer.astro.
+    // at all. See templates/template1/blocks/section.astro and src/components/ElementRenderer.astro.
     const dir = buildSingleBlockPage([
       {
         type: 'section',
@@ -218,8 +218,8 @@ describe('review template: a section renders its content array in exactly the gi
     ]);
     try {
       const { outDir } = buildSite({
-        outDir: join('output', 'test-review-content-order'),
-        env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'dark' },
+        outDir: join('output', 'test-template1-content-order'),
+        env: { SITE_DIR: dir, TEMPLATE: 'template1', SCHEME: 'dark' },
       });
       const html = readOutput(outDir);
 
@@ -253,8 +253,8 @@ describe('review template: a section renders its content array in exactly the gi
     ]);
     try {
       const { outDir, log } = buildSite({
-        outDir: join('output', 'test-review-title-h1-guard'),
-        env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'dark' },
+        outDir: join('output', 'test-template1-title-h1-guard'),
+        env: { SITE_DIR: dir, TEMPLATE: 'template1', SCHEME: 'dark' },
       });
       const html = readOutput(outDir);
       expect(html.match(/<h1\b/g)).toHaveLength(1);
@@ -280,8 +280,8 @@ describe('review template: a section renders its content array in exactly the gi
     ]);
     try {
       const { outDir } = buildSite({
-        outDir: join('output', 'test-review-toggle'),
-        env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'dark' },
+        outDir: join('output', 'test-template1-toggle'),
+        env: { SITE_DIR: dir, TEMPLATE: 'template1', SCHEME: 'dark' },
       });
       const html = readOutput(outDir);
       expect(html).toMatch(/<details[^>]*class="rtoggle"/);
@@ -306,8 +306,8 @@ describe('review template: a section renders its content array in exactly the gi
     ]);
     try {
       const { outDir, log } = buildSite({
-        outDir: join('output', 'test-review-unknown-block'),
-        env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'dark' },
+        outDir: join('output', 'test-template1-unknown-block'),
+        env: { SITE_DIR: dir, TEMPLATE: 'template1', SCHEME: 'dark' },
       });
       const html = readOutput(outDir);
       expect(html).toContain('Promo Heading');
@@ -319,7 +319,7 @@ describe('review template: a section renders its content array in exactly the gi
   });
 });
 
-describe('review template: links inside body text, and card sets', () => {
+describe('тема template1: links inside body text, and card sets', () => {
   it('renders [label](/href) as a real link and leaves the rest of the sentence alone', () => {
     const dir = buildSingleBlockPage([
       {
@@ -340,8 +340,8 @@ describe('review template: links inside body text, and card sets', () => {
     ]);
     try {
       const { outDir } = buildSite({
-        outDir: join('output', 'test-review-links'),
-        env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'dark' },
+        outDir: join('output', 'test-template1-links'),
+        env: { SITE_DIR: dir, TEMPLATE: 'template1', SCHEME: 'dark' },
       });
       const html = readOutput(outDir);
 
@@ -373,8 +373,8 @@ describe('review template: links inside body text, and card sets', () => {
     ]);
     try {
       const { outDir } = buildSite({
-        outDir: join('output', 'test-review-unsafe-link'),
-        env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'dark' },
+        outDir: join('output', 'test-template1-unsafe-link'),
+        env: { SITE_DIR: dir, TEMPLATE: 'template1', SCHEME: 'dark' },
       });
       const html = readOutput(outDir);
       expect(html).not.toContain('javascript:');
@@ -407,8 +407,8 @@ describe('review template: links inside body text, and card sets', () => {
     ]);
     try {
       const { outDir } = buildSite({
-        outDir: join('output', 'test-review-cards'),
-        env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'dark' },
+        outDir: join('output', 'test-template1-cards'),
+        env: { SITE_DIR: dir, TEMPLATE: 'template1', SCHEME: 'dark' },
       });
       const html = readOutput(outDir);
       expect(html).toContain('class="rcards"');
@@ -425,8 +425,8 @@ describe('review template: links inside body text, and card sets', () => {
 
   it('puts the contents heading outside the contents card, level with every other heading', () => {
     const { outDir } = buildSite({
-      outDir: join('output', 'test-review-toc-heading'),
-      env: { SITE_DIR, TEMPLATE: 'review', SCHEME: 'dark' },
+      outDir: join('output', 'test-template1-toc-heading'),
+      env: { SITE_DIR, TEMPLATE: 'template1', SCHEME: 'dark' },
     });
     const html = readOutput(outDir);
     const card = html.match(/<nav class="toc__card"[\s\S]*?<\/nav>/);
@@ -438,7 +438,7 @@ describe('review template: links inside body text, and card sets', () => {
   });
 });
 
-describe('review template: pictures from images.json', () => {
+describe('тема template1: pictures from images.json', () => {
   // A single-page site with three real picture files in its public folder and a registry naming
   // them — the shape a real site folder has once it carries pictures.
   function buildWithPictures(blocks, outName) {
@@ -459,7 +459,7 @@ describe('review template: pictures from images.json', () => {
     try {
       return buildSite({
         outDir: join('output', outName),
-        env: { SITE_DIR: dir, PUBLIC_DIR: publicDir, TEMPLATE: 'review', SCHEME: 'dark' },
+        env: { SITE_DIR: dir, PUBLIC_DIR: publicDir, TEMPLATE: 'template1', SCHEME: 'dark' },
       });
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -472,7 +472,7 @@ describe('review template: pictures from images.json', () => {
         { type: 'hero', props: { content: [{ type: 'title', h1: 'Pictures' }, { image: 'hero' }] } },
         { type: 'section', props: { content: [{ type: 'title', h2: 'Below' }, { image: 'section' }] } },
       ],
-      'test-review-pictures',
+      'test-template1-pictures',
     );
     const html = readOutput(outDir);
     const hero = html.match(/<img[^>]*src="\/images\/hero\.webp"[^>]*>/)?.[0] ?? '';
@@ -500,7 +500,7 @@ describe('review template: pictures from images.json', () => {
           },
         },
       ],
-      'test-review-card-picture',
+      'test-template1-card-picture',
     );
     expect(readOutput(outDir)).toMatch(/<img[^>]*src="\/images\/card\.webp"[^>]*alt="Card picture"/);
   });
@@ -508,14 +508,14 @@ describe('review template: pictures from images.json', () => {
   it('leaves out a picture it cannot find, and says so in the log', () => {
     const { outDir, log } = buildWithPictures(
       [{ type: 'section', props: { content: [{ type: 'title', h1: 'Gap' }, { image: 'nowhere' }] } }],
-      'test-review-missing-picture',
+      'test-template1-missing-picture',
     );
     expect(readOutput(outDir)).not.toMatch(/<img\b/);
     expect(log).toContain('картинки «nowhere» нет в images.json');
   });
 });
 
-describe('review template: the block cut in half', () => {
+describe('тема template1: the block cut in half', () => {
   let html;
 
   // Its own fixture rather than buildSingleBlockPage's: this block is half picture, and a picture
@@ -546,7 +546,7 @@ describe('review template: the block cut in half', () => {
     try {
       const { outDir } = buildSite({
         outDir: join('output', outName),
-        env: { SITE_DIR: dir, PUBLIC_DIR: join(dir, 'public'), TEMPLATE: 'review', SCHEME: 'dark' },
+        env: { SITE_DIR: dir, PUBLIC_DIR: join(dir, 'public'), TEMPLATE: 'template1', SCHEME: 'dark' },
       });
       return readOutput(outDir);
     } finally {
@@ -576,7 +576,7 @@ describe('review template: the block cut in half', () => {
           ],
         },
       },
-    ], 'test-review-split');
+    ], 'test-template1-split');
   });
 
   // The picture is not an element among the words — it is the other half of the block. Left in
@@ -617,7 +617,7 @@ describe('review template: the block cut in half', () => {
   it('draws a half with no picture in it at all rather than an empty column', () => {
     const alone = buildWith(
       [{ type: 'split', props: { content: [{ type: 'text', text: 'Words alone.' }] } }],
-      'test-review-split-nopic',
+      'test-template1-split-nopic',
     );
     expect(alone).toContain('Words alone.');
     expect(alone.match(/<section class="rsplit section"[\s\S]*?<\/section>/)[0]).not.toContain('<img');

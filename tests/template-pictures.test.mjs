@@ -17,7 +17,7 @@ const MANIFEST = {
   elements: ['title', 'text', 'list', 'table', 'cards', 'toggle', 'image'],
 };
 
-// A throwaway template tree, so these tests never depend on what templates/review happens to hold.
+// A throwaway template tree, so these tests never depend on what templates/template1 happens to hold.
 function writePictures(pictures, { manifest = MANIFEST } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'site-factory-pictures-'));
   roots.push(root);

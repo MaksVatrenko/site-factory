@@ -21,7 +21,7 @@ npm run dev
 
 ```bash
 SITE_DIR=data/sites/899ok \
-TEMPLATE=review SCHEME=dark OUT_DIR=output/899ok-bd.net \
+TEMPLATE=template1 SCHEME=dark OUT_DIR=output/899ok-bd.net \
 SITE_URL=https://899ok-bd.net \
 npm run build:site
 ```
@@ -160,7 +160,7 @@ Ideogram вырезает её из фона. Получаются
 картинки, сборка.
 
 ```bash
-npm run generate:texts -- --template review --out 520bdapp \
+npm run generate:texts -- --template template1 --out 520bdapp \
   --brand "520BD" --geo Bangladesh --pages home,casino,slots,bonus \
   --layout long-review
 ```

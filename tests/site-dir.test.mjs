@@ -321,7 +321,7 @@ describe('a page whose blocks are reordered or partially stripped still builds',
         title: 'Mixed',
         description: 'd',
         // Out of the "natural" hero-first order, with a stripped answer, and a block type
-        // ("gallery") the review template has no shell for.
+        // ("gallery") the тема template1 has no shell for.
         blocks: [
           {
             type: 'faq',

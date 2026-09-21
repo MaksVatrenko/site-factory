@@ -150,7 +150,7 @@ function geosOnDisk() {
 // loadLayouts states, restated here rather than imported for exactly that reason.
 // The source sites the review theme has an example from on every one of its pages — which is what
 // the picker may offer, since a run builds the whole site from one name.
-function examplesOnDisk(templateId = 'review') {
+function examplesOnDisk(templateId = 'template1') {
   const dir = join('templates', templateId, 'examples');
   const lists = readdirSync(dir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
@@ -212,7 +212,7 @@ describe('factory API', () => {
   // A route that answered ids alone would leave the list unreadable, and one that answered whole
   // layout files would ship every block list to the browser to be thrown away there.
   it('lists the source sites a theme has an example from on every page', async () => {
-    const data = await fetch(`${base}/api/examples?template=review`).then((r) => r.json());
+    const data = await fetch(`${base}/api/examples?template=template1`).then((r) => r.json());
     expect(data.examples).toEqual(examplesOnDisk());
     expect(data.examples.length).toBeGreaterThan(0);
   });
@@ -254,7 +254,7 @@ describe('factory API', () => {
     const start = await fetch(`${base}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ skipTexts: true, site: '899ok', template: 'review', scheme: 'dark', domain }),
+      body: JSON.stringify({ skipTexts: true, site: '899ok', template: 'template1', scheme: 'dark', domain }),
     }).then((r) => r.json());
 
     try {
@@ -1526,7 +1526,7 @@ describe('one request writes the texts and builds the site', () => {
   it('writes the pages, builds the site and reports it done — all from one request', async () => {
     rmSync(join('output', siteId), { recursive: true, force: true });
     const response = await start({
-      template: 'review', site: siteId, brand: 'Acme', geo: 'Bangladesh', pages: 'home\ncasino',
+      template: 'template1', site: siteId, brand: 'Acme', geo: 'Bangladesh', pages: 'home\ncasino',
       skipImages: true,
     });
     expect(response.status).toBe(200);
@@ -1565,7 +1565,7 @@ describe('one request writes the texts and builds the site', () => {
       const response = await fetch(`${base}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ template: 'review', site: out, brand: 'Acme', pages: 'home' }),
+        body: JSON.stringify({ template: 'template1', site: out, brand: 'Acme', pages: 'home' }),
       });
       expect(response.status).toBe(200);
       const { buildId } = await response.json();
@@ -1578,7 +1578,7 @@ describe('one request writes the texts and builds the site', () => {
   });
 
   it('refuses a page list with no home page, before spending anything', async () => {
-    const response = await start({ template: 'review', site: 'texts-no-home', brand: 'Acme', pages: 'casino' });
+    const response = await start({ template: 'template1', site: 'texts-no-home', brand: 'Acme', pages: 'casino' });
     expect(response.status).toBe(400);
     expect((await response.json()).error).toContain('home');
     expect(existsSync(join('data', 'sites', 'texts-no-home'))).toBe(false);
@@ -1598,7 +1598,7 @@ describe('one request writes the texts and builds the site', () => {
     // a stray folder left in the real data/sites/.
     rmSync(join('data', 'sites', out), { recursive: true, force: true });
     try {
-      const response = await start({ template: 'review', site: out, brand: 'Acme', geo: 42, pages: 'home' });
+      const response = await start({ template: 'template1', site: out, brand: 'Acme', geo: 42, pages: 'home' });
       expect(response.status).toBe(400);
       expect((await response.json()).error).toContain('geo');
       expect(existsSync(join('data', 'sites', out))).toBe(false);
@@ -1620,7 +1620,7 @@ describe('one request writes the texts and builds the site', () => {
   // The loadTemplatePictures branch itself: a template that IS in the real list (its manifest.json
   // exists, so it passes the guard above) but has no blocks.json beside it. Same fixture recipe
   // as "accepts a template id safeName would mangle past recognition" earlier in this file, minus
-  // blocks.json. The id sorts after 'review' (the only real template on disk) and is not a real
+  // blocks.json. The id sorts after 'template1' (the only real template on disk) and is not a real
   // id, so nothing could ever pick it up as the "first available" fallback template by accident.
   it('refuses a template that cannot describe itself', async () => {
     const templateId = 'texts-missing-blocks-fixture';
@@ -1653,7 +1653,7 @@ describe('one request writes the texts and builds the site', () => {
     rmSync(join('data', 'sites', out), { recursive: true, force: true });
     try {
       const response = await start({
-        template: 'review', site: out, brand: 'Acme', example: 'no-such-example', pages: 'home',
+        template: 'template1', site: out, brand: 'Acme', example: 'no-such-example', pages: 'home',
       });
       expect(response.status).toBe(400);
       expect((await response.json()).error).toContain('no-such-example');
@@ -1672,7 +1672,7 @@ describe('one request writes the texts and builds the site', () => {
     const out = 'texts-random-example';
     rmSync(join('data', 'sites', out), { recursive: true, force: true });
     try {
-      const response = await start({ template: 'review', site: out, brand: 'Acme', example: '', pages: 'home' });
+      const response = await start({ template: 'template1', site: out, brand: 'Acme', example: '', pages: 'home' });
       expect(response.status).toBe(200);
       const { buildId } = await response.json();
       // Drained, not abandoned: this app generates for real against its own fetchFn, and a job
@@ -1692,7 +1692,7 @@ describe('one request writes the texts and builds the site', () => {
     const out = 'texts-non-string-example';
     rmSync(join('data', 'sites', out), { recursive: true, force: true });
     try {
-      const response = await start({ template: 'review', site: out, brand: 'Acme', example: 42, pages: 'home' });
+      const response = await start({ template: 'template1', site: out, brand: 'Acme', example: 42, pages: 'home' });
       expect(response.status).toBe(400);
       expect((await response.json()).error).toContain('example');
       expect(existsSync(join('data', 'sites', out))).toBe(false);
@@ -1702,7 +1702,7 @@ describe('one request writes the texts and builds the site', () => {
   });
 
   it('refuses a second run into the same folder while the first is going', async () => {
-    const payload = { template: 'review', site: 'texts-busy', brand: 'Acme', pages: 'home' };
+    const payload = { template: 'template1', site: 'texts-busy', brand: 'Acme', pages: 'home' };
     const first = await start(payload).then((r) => r.json());
     const second = await start(payload);
     expect(second.status).toBe(409);

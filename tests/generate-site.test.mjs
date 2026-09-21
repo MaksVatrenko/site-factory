@@ -168,7 +168,7 @@ const DEFAULT_EXAMPLE = examplePage([
   },
 ]);
 
-// A templates root of this file's own. Every run here uses one, because templates/review/examples
+// A templates root of this file's own. Every run here uses one, because templates/template1/examples
 // belongs to the owner: they add an example and every seeded choice in this file moves, so a suite
 // that read it would go red on a change that broke nothing. It happened once already, with layouts.
 // The manifest is copied from the real theme rather than invented: what the theme can draw is the
@@ -176,9 +176,9 @@ const DEFAULT_EXAMPLE = examplePage([
 function templateRootWith(pages = {}, pictures = { hero: 'after-text' }) {
   const root = mkdtempSync(join(tmpdir(), 'site-factory-template-'));
   dirs.push(root);
-  const dir = join(root, 'templates', 'review');
+  const dir = join(root, 'templates', 'template1');
   mkdirSync(dir, { recursive: true });
-  copyFileSync(join(process.cwd(), 'templates', 'review', 'manifest.json'), join(dir, 'manifest.json'));
+  copyFileSync(join(process.cwd(), 'templates', 'template1', 'manifest.json'), join(dir, 'manifest.json'));
   writeFileSync(
     join(dir, 'pictures.json'),
     JSON.stringify({ pictures, links: { perBlock: [0, 2], perPage: [0, 8] } }),
@@ -203,7 +203,7 @@ const everyPage = (page, pictures) => ({ root: templateRootWith({ home: page, ca
 const run = (dir, overrides = {}) => {
   const lines = [];
   return generateSite({
-    siteDir: dir, templateId: 'review', brand: 'Acme', geo: 'Bangladesh', locale: '',
+    siteDir: dir, templateId: 'template1', brand: 'Acme', geo: 'Bangladesh', locale: '',
     pages: PAGES, config: CONFIG, root: templateRootWith(),
     promptFile: join('factory', 'prompts', 'texts.json'),
     geosFile: join('factory', 'geos.json'),
@@ -806,7 +806,7 @@ describe('the real examples of the theme', () => {
     for (const address of PAGES) {
       const page = JSON.parse(readFileSync(join(dir, `${address}.json`), 'utf8'));
       const example = JSON.parse(
-        readFileSync(join('templates', 'review', 'examples', `${page.example}.json`), 'utf8'),
+        readFileSync(join('templates', 'template1', 'examples', `${page.example}.json`), 'utf8'),
       );
       const wanted = shapeOf(example);
 
@@ -838,7 +838,7 @@ describe('the real examples of the theme', () => {
     for (const address of PAGES) {
       const page = JSON.parse(readFileSync(join(dir, `${address}.json`), 'utf8'));
       const example = JSON.parse(
-        readFileSync(join('templates', 'review', 'examples', `${page.example}.json`), 'utf8'),
+        readFileSync(join('templates', 'template1', 'examples', `${page.example}.json`), 'utf8'),
       );
       for (const [at, block] of page.blocks.entries()) {
         if (AUTO.has(block.type)) continue;
@@ -879,7 +879,7 @@ describe('a generated folder builds', () => {
     const { execFileSync } = await import('node:child_process');
     const out = join(dir, '..', 'out');
     execFileSync(join('node_modules', '.bin', 'astro'), ['build'], {
-      env: { ...process.env, SITE_DIR: dir, PUBLIC_DIR: publicDir, TEMPLATE: 'review', SCHEME: 'dark', OUT_DIR: out, SITE_URL: 'https://example.com' },
+      env: { ...process.env, SITE_DIR: dir, PUBLIC_DIR: publicDir, TEMPLATE: 'template1', SCHEME: 'dark', OUT_DIR: out, SITE_URL: 'https://example.com' },
       stdio: 'pipe',
     });
     expect(existsSync(join(out, 'index.html'))).toBe(true);

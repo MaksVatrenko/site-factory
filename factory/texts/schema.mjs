@@ -54,7 +54,7 @@ const ELEMENT_DEFS = {
   image: object({ kind: kind('image'), name: { type: 'string' } }),
   // A call to action. `href` is null far more often than not: a button with none goes to the site's
   // partner link, which is a setting of the build and not something the model could know or should
-  // guess (see templates/review/elements/buttons.astro). It is offered at all so a button can point
+  // guess (see templates/template1/elements/buttons.astro). It is offered at all so a button can point
   // at another page of this site — "see the full bonus terms" — rather than at the operator.
   buttons: object({
     kind: kind('buttons'),

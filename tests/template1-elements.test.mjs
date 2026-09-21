@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildSite, readOutput } from './helpers/build.mjs';
 
-// The four content elements added to the review template: a call to action, a row of claims, a
-// divider, and a numbered run of instructions. See templates/review/elements/.
+// The four content elements added to the тема template1: a call to action, a row of claims, a
+// divider, and a numbered run of instructions. See templates/template1/elements/.
 //
 // A real Astro build takes about a second per page, so this file builds two pages and asks each of
 // them every question it can, rather than one page per assertion: one page wired to a partner link
@@ -13,7 +13,7 @@ import { buildSite, readOutput } from './helpers/build.mjs';
 
 const PARTNER_URL = 'https://partner.example/go';
 
-// The same fixture shape tests/review-template.test.mjs writes with buildSingleBlockPage — a real
+// The same fixture shape tests/template1.test.mjs writes with buildSingleBlockPage — a real
 // SITE_DIR folder, one site.json plus one page file, each block's props flattened alongside its
 // "type" the way a page file on disk does (see src/lib/site-dir.mjs) — plus the one site setting
 // these elements read: partnerUrl.
@@ -45,7 +45,7 @@ function buildFixturePage(blocks, { partnerUrl, outName }) {
       // PARTNER_URL is an operator override that beats site.json (see src/lib/site-context.mjs),
       // so it is pinned empty here: otherwise one exported variable in the shell running the tests
       // would decide what these pages link to.
-      env: { SITE_DIR: dir, TEMPLATE: 'review', SCHEME: 'dark', PARTNER_URL: '' },
+      env: { SITE_DIR: dir, TEMPLATE: 'template1', SCHEME: 'dark', PARTNER_URL: '' },
     });
     return readOutput(outDir);
   } finally {
@@ -83,7 +83,7 @@ function markupOf(html) {
 }
 
 // Every stylesheet the page carries. The template inlines them all rather than linking one (see
-// tests/review-template.test.mjs), so the CSS that actually ships is right here in the HTML.
+// tests/template1.test.mjs), so the CSS that actually ships is right here in the HTML.
 function stylesheetOf(html) {
   return [...html.matchAll(/<style>([\s\S]*?)<\/style>/g)]
     .map((match) => match[1])
@@ -142,7 +142,7 @@ function childrenOf(html, className) {
   }));
 }
 
-describe('review elements: a page wired to the site partner link', () => {
+describe('template1 elements: a page wired to the site partner link', () => {
   let html;
 
   beforeAll(() => {
@@ -195,7 +195,7 @@ describe('review elements: a page wired to the site partner link', () => {
           },
         },
       ],
-      { partnerUrl: PARTNER_URL, outName: 'test-review-elements' },
+      { partnerUrl: PARTNER_URL, outName: 'test-template1-elements' },
     );
   });
 
@@ -409,7 +409,7 @@ describe('review elements: a page wired to the site partner link', () => {
   });
 });
 
-describe('review elements: a site with no partner link', () => {
+describe('template1 elements: a site with no partner link', () => {
   let html;
 
   beforeAll(() => {
@@ -439,7 +439,7 @@ describe('review elements: a site with no partner link', () => {
           },
         },
       ],
-      { outName: 'test-review-elements-no-partner' },
+      { outName: 'test-template1-elements-no-partner' },
     );
   });
 
@@ -473,7 +473,7 @@ describe('review elements: a site with no partner link', () => {
 
 // Two defects found by reviewing the components against their own comments rather than by reading
 // the page: both are invisible on screen, and both change what the page promises.
-describe('review template: what a button is held to before it is drawn', () => {
+describe('тема template1: what a button is held to before it is drawn', () => {
   let html;
 
   beforeAll(() => {
@@ -496,7 +496,7 @@ describe('review template: what a button is held to before it is drawn', () => {
           },
         },
       ],
-      { outName: 'test-review-buttons-edges' },
+      { outName: 'test-template1-buttons-edges' },
     );
   });
 
