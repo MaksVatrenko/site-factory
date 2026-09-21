@@ -205,10 +205,10 @@ export function assemblePage({ plan, blocks, example = '', sections, faq, pages,
     // Every block the model writes, the first screen included: it is an ordinary content block
     // that happens to carry the page's own heading instead of a section heading. Filled any other
     // way, it could only ever hold what that other way knew about — which is how its call to action
-    // and its row of claims came to be declared in blocks.json, described to the model, and then
-    // impossible to produce.
+    // and its row of claims were once declared, described to the model, and still impossible to
+    // produce, because the one path that filled the first screen knew about neither.
     if (block.heading || block.h1) {
-      // Looked up by the block's own place in the layout, not taken from the front of a queue. A
+      // Looked up by the block's own place on the page, not taken from the front of a queue. A
       // page can hold more than one kind of content block now, and they are not interchangeable: a
       // section dropped upstream would shift every later entry up by one, and a half-and-half block
       // would end up drawing a section's table in a column half as wide.
@@ -298,7 +298,7 @@ export function assemblePage({ plan, blocks, example = '', sections, faq, pages,
 
   noteLength('title страницы', plan.title, lengths.title, warnings);
   noteLength('description страницы', plan.description, lengths.description, warnings);
-  // The h1 belongs here with them: blocks.json gives it a limit, it is the most prominent text on
+  // The h1 belongs here with them: the example gives it a length, it is the most prominent text on
   // the page, and unlike the item counts it is never trimmed anywhere earlier in the pipeline.
   noteLength('h1 страницы', plan.h1, lengths.h1, warnings);
 

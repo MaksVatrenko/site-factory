@@ -143,8 +143,8 @@ function geosOnDisk() {
   return JSON.parse(readFileSync(join('factory', 'geos.json'), 'utf8'));
 }
 
-// Same principle once more, applied to layouts/: reads the folder itself instead of calling
-// loadLayouts, so the /api/layouts assertion below does not check that function against itself,
+// Same principle once more, applied to the theme's examples: reads the folders itself instead of
+// calling loadExamples, so the /api/examples assertion below does not check that function against itself,
 // and survives a second layout file being added later. The id is the file name and the name is
 // prose inside the file (falling back to the id when a file gives none) — the same two-line rule
 // loadLayouts states, restated here rather than imported for exactly that reason.
@@ -1596,7 +1596,7 @@ describe('the texts tab writes a whole site folder', () => {
     }
   });
 
-  // Review finding on Task 12: this test's name claimed to cover loadTemplateBlocks's own
+  // Review finding on Task 12: this test's name claimed to cover the theme check's own
   // guard (a template with no blocks.json), but 'nope' is never in the template list at all, so
   // the request is rejected by the earlier unknown-template-id check instead and never reaches
   // that branch. Renamed to say what it actually exercises; the test below takes over the branch
@@ -1606,7 +1606,7 @@ describe('the texts tab writes a whole site folder', () => {
     expect(response.status).toBe(400);
   });
 
-  // The loadTemplateBlocks branch itself: a template that IS in the real list (its manifest.json
+  // The loadTemplatePictures branch itself: a template that IS in the real list (its manifest.json
   // exists, so it passes the guard above) but has no blocks.json beside it. Same fixture recipe
   // as "accepts a template id safeName would mangle past recognition" earlier in this file, minus
   // blocks.json. The id sorts after 'review' (the only real template on disk) and is not a real
