@@ -35,16 +35,20 @@ async function askWithRetries(request, options, attempts) {
 }
 
 export async function fillSection(
-  { section, siblings, brand, locale, instructions, attempts = DEFAULT_ATTEMPTS },
+  { section, siblings, brand, locale, page, counts = {}, instructions, attempts = DEFAULT_ATTEMPTS },
   options,
 ) {
-  // Every element the plan chose, with nothing taken off. A block's own heading used to have to be
-  // subtracted here, because content.json's "title" meant the heading and the subheading at once
-  // and the plan could not tell them apart. blocks.json separates them: the heading is a nature of
-  // the block, written by the factory from the plan so the contents and the heading can never
-  // disagree, and `title` in a block's content is the optional h3 inside it. Subtracting one now
-  // would eat that h3 — asked for by the plan, never written, never seen.
+  // The elements of this block, in the example's own order, with nothing taken off. The block's own
+  // heading is not among them: the factory writes it from the plan, so the table of contents and
+  // the heading can never disagree, and asking for it here would print it on the page twice.
   const wanted = section.elements;
+
+  // How long each collection runs, measured off the same example the sequence came from. The schema
+  // cannot say it — strict mode pins how many elements there are, not how many items are inside the
+  // third of them — so it is asked for in words here and cut back to size on arrival (assemble.mjs).
+  const sizes = Object.entries(counts)
+    .map(([element, howMany]) => `${element} ${howMany}`)
+    .join(', ');
 
   const brief = [
     `Brand: ${brand}`,
@@ -52,6 +56,7 @@ export async function fillSection(
     `Section heading: ${section.heading}`,
     `What this section covers: ${section.brief}`,
     `Write these elements, in this order: ${wanted.join(', ')}`,
+    sizes === '' ? '' : `How many items each holds: ${sizes}.`,
     // Nothing is said about pictures, on purpose. A picture belongs to a block by its nature and is
     // placed by the factory, so there is no `image` element for the model to write and no name for
     // it to get wrong. Mentioning one at all would only invite it to write something that is then
@@ -70,7 +75,9 @@ export async function fillSection(
       input: brief,
       schemaName: 'section_content',
       schema: sectionSchema(wanted),
-      cacheKey: 'site-factory-fill',
+      // Named by page, like every other call of this run: the instructions hold this page's own
+      // examples, and a key shared across pages would have them evicting one another.
+      cacheKey: `site-factory-fill:${page}`,
     },
     options,
     attempts,
@@ -79,7 +86,7 @@ export async function fillSection(
 }
 
 export async function fillFaq(
-  { questions, brand, locale, instructions, attempts = DEFAULT_ATTEMPTS },
+  { questions, brand, locale, page, instructions, attempts = DEFAULT_ATTEMPTS },
   options,
 ) {
   const brief = [
@@ -90,7 +97,7 @@ export async function fillFaq(
   ].join('\n');
 
   const { data, cost, usage } = await askWithRetries(
-    { instructions, input: brief, schemaName: 'faq_answers', schema: faqSchema(questions.length), cacheKey: 'site-factory-faq' },
+    { instructions, input: brief, schemaName: 'faq_answers', schema: faqSchema(questions.length), cacheKey: `site-factory-faq:${page}` },
     options,
     attempts,
   );

@@ -61,12 +61,11 @@ function syncLocaleWithGeo(geoField, localeField, countries) {
 
 async function loadLists() {
   try {
-    const [templates, schemes, sites, geos, layouts] = await Promise.all([
+    const [templates, schemes, sites, geos] = await Promise.all([
       fetch('/api/templates').then((r) => r.json()),
       fetch('/api/schemes').then((r) => r.json()),
       fetch('/api/sites').then((r) => r.json()),
       fetch('/api/geos').then((r) => r.json()),
-      fetch('/api/layouts').then((r) => r.json()),
     ]);
 
     fillSelect(document.querySelector('#field-template'), templates.templates);
@@ -93,12 +92,23 @@ async function loadLists() {
     syncLocaleWithGeo(document.querySelector('#field-geo'), document.querySelector('#field-locale'), geos.countries);
     syncLocaleWithGeo(document.querySelector('#texts-geo'), document.querySelector('#texts-locale'), geos.countries);
 
+    // Examples belong to a theme, so this list is refilled whenever the theme changes — a name from
+    // one theme means nothing to another, and offering it would offer a choice that fails.
+    //
     // Not BLANK_OPTION, though the empty id is the same one: in the geo and language fields a blank
     // name reads as "this field is not filled in", and that is exactly what it means there. An empty
-    // layout is not an unfilled field — it is a choice of its own, "a layout per page", and the
-    // person making it has to see what they chose instead of an empty line. /api/layouts answers
-    // with an empty list when the folder cannot be read, so «Случайно» stays selectable regardless.
-    fillSelect(document.querySelector('#texts-layout'), [{ id: '', name: 'Случайно' }, ...layouts.layouts]);
+    // example is not an unfilled field — it is a choice of its own, "an example per page", and the
+    // person making it has to see what they chose instead of an empty line. /api/examples answers
+    // with an empty list when the theme cannot be read, so «Случайно» stays selectable regardless.
+    const textsTemplate = document.querySelector('#texts-template');
+    const fillExamples = async () => {
+      const answer = await fetch(`/api/examples?template=${encodeURIComponent(textsTemplate.value)}`)
+        .then((r) => r.json())
+        .catch(() => ({ examples: [] }));
+      fillSelect(document.querySelector('#texts-example'), [{ id: '', name: 'Случайно' }, ...answer.examples]);
+    };
+    textsTemplate.addEventListener('change', fillExamples);
+    await fillExamples();
 
     const describe = () => {
       const chosen = templates.templates.find(

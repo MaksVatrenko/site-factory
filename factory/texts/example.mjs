@@ -229,3 +229,52 @@ export function frameOf(example, { content, autoBlocks }) {
     lengths: Object.fromEntries(Object.entries(measured).map(([kind, values]) => [kind, median(values)])),
   };
 }
+
+// Which blocks of a page are handed an entry from the plan's `sections`. This predicate and the
+// order of branches in assemble.mjs's own walk are one rule written twice — keep them identical.
+// Counting by name here ("blocks called section") and dispatching by nature there is how the two
+// lists would come to disagree: a second kind of content block would be planned for zero times and
+// then silently dropped when the page was put together, with nothing anywhere saying why.
+export const takesASection = (block) =>
+  !block.auto && block.type !== 'faq' && (block.heading === true || block.h1 === true);
+
+const countOf = (blocks, type) => blocks.filter((block) => block.type === type).length;
+
+// What the plan request has to pin down, read off a frame. Everything here is exact — the example
+// said how many of everything there is — where v1 could still leave a range for the model to choose
+// inside. That is the point of the change: the page comes out the shape of the example, not the
+// shape of a budget.
+export function planShape(blocks) {
+  const imageLabels = [];
+  const seen = new Map();
+  for (const block of blocks) {
+    const at = (seen.get(block.type) ?? 0) + 1;
+    seen.set(block.type, at);
+    // The label goes into the brief, so the model knows what the picture is of. A bare type says
+    // enough while there is one such block; past that it has to say which one, or two pictures of
+    // one page are briefed identically and come back as the same picture twice.
+    if (block.image) {
+      imageLabels.push(at === 1 && countOf(blocks, block.type) === 1 ? block.type : `${block.type} ${at}`);
+    }
+  }
+  const faq = blocks.find((block) => block.type === 'faq');
+  // How many questions is how many toggles the example's own FAQ holds — the sequence already says
+  // it, and a count beside it would be the same number written twice, free to disagree with itself.
+  const questions = faq?.elements?.filter((element) => element === 'toggle').length ?? 0;
+  return {
+    // One count per kind, not one total: each kind is asked for separately, so the plan can hold
+    // nine sections and two half-blocks without either being described as the other.
+    byType: Object.fromEntries(
+      Object.entries(Object.groupBy(blocks.filter(takesASection), (block) => block.type)).map(
+        ([type, list]) => [type, list.length],
+      ),
+    ),
+    // The same blocks again, as the order they stand in on the page. The counts above say how many
+    // of each to ask for; this says which comes first, which the per-page link budget needs — it is
+    // spent top to bottom, and the plan's per-kind arrays cannot say what follows what.
+    order: blocks.filter(takesASection).map((block) => block.type),
+    faq: questions,
+    images: imageLabels.length,
+    imageLabels,
+  };
+}

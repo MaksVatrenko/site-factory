@@ -10,7 +10,6 @@ const CONFIG = {
   priceCachedInput: 0.02,
   priceOutput: 1.2,
 };
-const SECTION_CONTENT = { title: [0, 1], text: [2, 6], list: [0, 1], table: [0, 1] };
 const PAGES = ['home', 'casino', 'bonus'];
 
 function plannedSection(overrides = {}) {
@@ -18,35 +17,35 @@ function plannedSection(overrides = {}) {
 }
 
 describe('buildInstructions', () => {
-  it('puts the rules, the template description and the examples in one unchanging block', () => {
+  it('puts the rules and this page\'s examples in one block', () => {
     const text = buildInstructions({
       rules: ['Be clear.'],
-      templateText: '- section: between 8 and 10',
-      examples: [{ title: 'Casino', blocks: [] }],
+      examples: [{ title: 'Casino', blocks: [] }, { title: 'Slots', blocks: [] }],
     });
     expect(text).toContain('Be clear.');
-    expect(text).toContain('between 8 and 10');
     expect(text).toContain('"title": "Casino"');
+    // Every example of the page, not one of them: the chosen one gives the shape, the rest give
+    // the tone and the depth.
+    expect(text).toContain('"title": "Slots"');
   });
 
-  // The prompt cache only hits on an unchanged prefix, so nothing page-specific may live here.
-  it('does not change from page to page', () => {
-    const args = { rules: ['Be clear.'], templateText: 'x', examples: [] };
+  // The prompt cache only hits on an unchanged prefix. This no longer carries across pages — the
+  // examples differ — but within one page it is what the other eleven requests read back.
+  it('does not change between two requests about one page', () => {
+    const args = { rules: ['Be clear.'], examples: [{ title: 'Casino', blocks: [] }] };
     expect(buildInstructions(args)).toBe(buildInstructions(args));
   });
 });
 
 describe('trimPlan', () => {
-  // The two link budgets, in the spelling blocks.json uses. Everything else a plan used to be
-  // trimmed against — how many pictures a page may hold, where they belong — is gone: the layout
-  // settled it, and the schema pinned it, so there is nothing left here to ration.
+  // The two link budgets, in the spelling pictures.json uses. Everything else a plan used to be
+  // trimmed against — how many pictures a page may hold, what goes inside a block — is gone: the
+  // example settled it and the schema pinned it, so there is nothing left here to ration.
   const links = { perBlock: [0, 5], perPage: [0, 10] };
   const base = { title: 'T', description: 'D', h1: 'H', images: [], faq: ['q1', 'q2'] };
   const args = {
     links,
     pages: PAGES,
-    // One entry per kind of block, because each kind is asked for with its own list of elements.
-    contentByType: { section: SECTION_CONTENT },
     imageLabels: ['hero'],
   };
 
@@ -150,16 +149,6 @@ describe('trimPlan', () => {
     expect(result.warnings.join(' ')).toContain('сверх бюджета ссылок на страницу');
   });
 
-  it('drops elements asked for more often than the template allows', () => {
-    const plan = {
-      ...base,
-      blocks: { section: [plannedSection({ elements: ['text', 'text', 'list', 'list', 'list'] }), plannedSection()] },
-    };
-    const result = trimPlan(plan, args);
-    expect(result.plan.blocks.section[0].elements.filter((e) => e === 'list')).toHaveLength(1);
-    expect(result.warnings.join(' ')).toContain('list');
-  });
-
   // Finding: games.json's picture came back named with a whole sentence, which becomes both a key
   // in images.json and the file name the picture stage writes. Every name is slugged: lower case,
   // spaces/underscores to hyphens, anything else dropped, repeated hyphens collapsed, capped.
@@ -260,8 +249,7 @@ describe('planPage', () => {
     const result = await planPage(
       {
         page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], images: 1, imageLabels: ['hero'] },
-        contentByType: { section: SECTION_CONTENT },
+        shape: { byType: { section: 1 }, order: ['section'], faq: 1, images: 1, imageLabels: ['hero'] },
         instructions: 'RULES',
       },
       { config: CONFIG, fetchFn, sleep: async () => {} },
@@ -292,9 +280,8 @@ describe('planPage', () => {
     await planPage(
       {
         page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], images: 1, imageLabels: ['hero'] },
+        shape: { byType: { section: 1 }, order: ['section'], faq: 1, images: 1, imageLabels: ['hero'] },
         links: { perBlock: [0, 2], perPage: [0, 8] },
-        contentByType: { section: SECTION_CONTENT },
         instructions: 'RULES',
       },
       { config: CONFIG, fetchFn, sleep: async () => {} },
@@ -326,9 +313,8 @@ describe('planPage', () => {
     await planPage(
       {
         page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], images: 1, imageLabels: ['hero'] },
+        shape: { byType: { section: 1 }, order: ['section'], faq: 1, images: 1, imageLabels: ['hero'] },
         links: { perBlock: [0, 2], perPage: [0, 8] },
-        contentByType: { section: SECTION_CONTENT },
         instructions: 'RULES',
       },
       { config: CONFIG, fetchFn, sleep: async () => {} },
@@ -339,86 +325,6 @@ describe('planPage', () => {
     expect(content).not.toMatch(/Pages on this site:.*\/casino/);
   });
 
-  // Finding: planPage used to take a manifest-wide `elements` list as well as `sectionContent`, and
-  // schema.mjs's planSchema offered the model whichever list the caller passed — the template's
-  // whole vocabulary, not the "section" block's own. This template's `toggle` is real (the `faq`
-  // block supports it) but section content does not have it at all, so a plan describing an
-  // ordinary section made of toggles was always going to lose every one of them to trimPlan, and the
-  // section along with it. There is no `elements` parameter left to disagree with sectionContent —
-  // proving the model is never even offered something trimPlan can only strip back out.
-  // Mutation-proven: see live-fixes-report.md.
-  it("never offers a section an element sectionContent does not list, even one the template supports elsewhere (toggle, real only for the faq block)", async () => {
-    let body;
-    const fetchFn = async (_url, init) => {
-      body = JSON.parse(init.body);
-      return answer({
-        title: 'T', description: 'D', h1: 'H', images: ['lobby'],
-        blocks: { section: [plannedSection()], faq: ['q1'] },
-      });
-    };
-    await planPage(
-      {
-        page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], images: 1, imageLabels: ['hero'] },
-        contentByType: { section: SECTION_CONTENT },
-        instructions: 'RULES',
-      },
-      { config: CONFIG, fetchFn, sleep: async () => {} },
-    );
-    const offered =
-      body.text.format.schema.properties.blocks.properties.section.items.properties.elements.items.enum;
-    expect(offered).toEqual(Object.keys(SECTION_CONTENT));
-    expect(offered).not.toContain('toggle');
-  });
-
-  // The layout may pin an element to zero — that is what «точные количества вместо диапазонов»
-  // means — and an element the block may not hold must not be offered to the model at all. Offered,
-  // the model spends output on it, trimPlan strips every copy back out on arrival, the log fills
-  // with removals and the section comes back shorter than the page asked for. This is the same
-  // defect that lost a whole section to «toggle» on the live run of 2026-09-18, one layer down.
-  it('never offers an element the layout pinned to zero', async () => {
-    let body;
-    const fetchFn = async (_url, init) => {
-      body = JSON.parse(init.body);
-      return answer({
-        title: 'T', description: 'D', h1: 'H', images: ['lobby'],
-        blocks: { section: [plannedSection()], faq: ['q1'] },
-      });
-    };
-    await planPage(
-      {
-        page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], images: 1, imageLabels: ['hero'] },
-        contentByType: { section: { ...SECTION_CONTENT, table: [0, 0] } },
-        instructions: 'RULES',
-      },
-      { config: CONFIG, fetchFn, sleep: async () => {} },
-    );
-    const offered =
-      body.text.format.schema.properties.blocks.properties.section.items.properties.elements.items.enum;
-    expect(offered).not.toContain('table');
-    expect(offered).toContain('text');
-  });
-
-  // planSchema itself already refuses to build a schema with nothing usable in it (see
-  // texts-schema.test.mjs) — this is the same guard, reached the new way, through sectionContent
-  // alone rather than through a separate `elements` argument.
-  it("still refuses to plan when sectionContent has nothing usable in it", async () => {
-    const fetchFn = async () => {
-      throw new Error('сеть не должна была понадобиться — схема обязана отказать раньше');
-    };
-    await expect(
-      planPage(
-        {
-          page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-          shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], images: 1, imageLabels: ['hero'] },
-          contentByType: { section: {} },
-          instructions: 'RULES',
-        },
-        { config: CONFIG, fetchFn, sleep: async () => {} },
-      ),
-    ).rejects.toThrow(/элемент/);
-  });
 
   // Fix for games.json naming its picture a whole sentence: corrected after the fact in trimPlan,
   // but also asked for up front, so the model has less to be corrected on. The brief also has to
@@ -436,8 +342,7 @@ describe('planPage', () => {
     await planPage(
       {
         page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], images: 1, imageLabels: ['hero'] },
-        contentByType: { section: SECTION_CONTENT },
+        shape: { byType: { section: 1 }, order: ['section'], faq: 1, images: 1, imageLabels: ['hero'] },
         instructions: 'RULES',
       },
       { config: CONFIG, fetchFn, sleep: async () => {} },
@@ -463,34 +368,11 @@ describe('planPage', () => {
     await planPage(
       {
         page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        shape: { byType: { section: 1 }, order: ['section'], faq: [1, 1], images: 0, imageLabels: [] },
-        contentByType: { section: SECTION_CONTENT },
+        shape: { byType: { section: 1 }, order: ['section'], faq: 1, images: 0, imageLabels: [] },
         instructions: 'RULES',
       },
       { config: CONFIG, fetchFn, sleep: async () => {} },
     );
     expect(String(body.input[0].content)).not.toMatch(/picture/i);
-  });
-
-  // A range the layout left open reaches the brief as a range, so the model knows it may choose.
-  it('tells the model a range where the layout left one', async () => {
-    let body;
-    const fetchFn = async (_url, init) => {
-      body = JSON.parse(init.body);
-      return answer({
-        title: 'T', description: 'D', h1: 'H', images: ['lobby'],
-        blocks: { section: [plannedSection()], faq: ['q1', 'q2', 'q3', 'q4', 'q5'] },
-      });
-    };
-    await planPage(
-      {
-        page: 'casino', pages: PAGES, brand: 'Acme', geo: 'Bangladesh', locale: 'en-US',
-        shape: { byType: { section: 1 }, order: ['section'], faq: [5, 8], images: 1, imageLabels: ['hero'] },
-        contentByType: { section: SECTION_CONTENT },
-        instructions: 'RULES',
-      },
-      { config: CONFIG, fetchFn, sleep: async () => {} },
-    );
-    expect(String(body.input[0].content)).toContain('5–8 FAQ questions');
   });
 });

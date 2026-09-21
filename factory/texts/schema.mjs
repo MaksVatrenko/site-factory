@@ -84,54 +84,35 @@ const ELEMENT_DEFS = {
 
 export const ELEMENT_KINDS = Object.freeze(Object.keys(ELEMENT_DEFS));
 
-// The counts come from the layout (see layouts.mjs's planShape), so the model cannot return eight
-// sections when the page is meant to have nine. Where the layout left a range — what it did not
-// pin down — the range reaches the schema as minItems/maxItems and the model chooses inside it, by
-// the subject of the page. `sections` is always exact: a layout says how many blocks it has.
-export function planSchema({ byType, faq, images, choosesElements = {} }, contentByType) {
-  // One array per kind of content block, each offering only what that kind may hold. Two kinds are
-  // two different questions — a half-and-half block holds a heading, a paragraph or two and a call
-  // to action, a section holds tables and card sets besides — and one shared list would offer the
-  // half-block a table it cannot hold, only for trimPlan to take every copy back off on arrival.
-  const blockTypes = Object.entries(byType).map(([type, count]) => {
-    const known = Object.entries(contentByType[type] ?? {})
-      // An element the layout pinned to zero is not on offer either: the model would spend output
-      // on it and trimPlan would strip it, leaving a shorter block and a log full of removals.
-      .filter(([element, range]) => range[1] > 0 && Object.hasOwn(ELEMENT_DEFS, element))
-      .map(([element]) => element);
-    // A layout that spelled out the sequence for every block of this kind has already answered
-    // what goes inside it, so the question is not asked at all: an answer nobody reads is output
-    // paid for, and one that disagreed with the page being built would be worse than useless.
-    const asks = choosesElements[type] !== false;
-    // Same guard as sectionSchema, for the same reason: an empty `known` leaves `elements` an
-    // `enum: []` — a schema nothing can satisfy, so the request is paid for and fails every time.
-    if (asks && known.length === 0) {
-      throw new Error(`ни один элемент блока «${type}» не описан схемой — генерировать нечего`);
-    }
-    return [
-      type,
-      {
-        type: 'array',
-        minItems: count,
-        maxItems: count,
-        items: object({
-          heading: string,
-          brief: string,
-          ...(asks ? { elements: { type: 'array', items: { type: 'string', enum: known } } } : {}),
-          links: strings,
-        }),
-      },
-    ];
-  });
+// The counts come from the example (see example.mjs's planShape), so the model cannot return eight
+// sections when the example has nine. Everything here is exact: the shape of the page is not a
+// budget to choose inside any more, it is a page that already exists and is being matched.
+export function planSchema({ byType, faq, images }) {
+  // One array per kind of content block. Two kinds are two different questions — a half-and-half
+  // block holds a heading, a paragraph or two and a call to action, a section holds tables and card
+  // sets besides — and one shared list would describe them as interchangeable when they are not.
+  //
+  // What goes inside a block is not asked at all, and that is the whole change: the example says,
+  // element by element and in order, so an answer would be output paid for and thrown away — or,
+  // worse, an answer that disagreed with the page about to be built from it.
+  const blockTypes = Object.entries(byType).map(([type, count]) => [
+    type,
+    {
+      type: 'array',
+      minItems: count,
+      maxItems: count,
+      items: object({ heading: string, brief: string, links: strings }),
+    },
+  ]);
   if (blockTypes.length === 0) {
-    throw new Error('в раскладке нет ни одного блока, который пишет модель — генерировать нечего');
+    throw new Error('в примере нет ни одного блока, который пишет модель — генерировать нечего');
   }
   return object({
     title: { type: 'string' },
     description: { type: 'string' },
     h1: { type: 'string' },
-    // One name per picture the layout has, in the layout's own order — a plain list rather than a
-    // field on each block, because a picture belongs to a place and places are what a layout lists.
+    // One name per picture the theme places, in page order — a plain list rather than a field on
+    // each block, because a picture belongs to a place and places are what the frame lists.
     // Nothing here is nullable: a block with a picture has one. There is no budget to overshoot, no
     // optional field to leave null, and no way to name a picture for a block that has none.
     images: { type: 'array', minItems: images, maxItems: images, items: string },
@@ -139,7 +120,7 @@ export function planSchema({ byType, faq, images, choosesElements = {} }, conten
     // the theme's word and not ours: a theme is free to call a block `title`, and at the top level
     // that would collide with the page's own title.
     blocks: object(Object.fromEntries(blockTypes)),
-    faq: { type: 'array', minItems: faq[0], maxItems: faq[1], items: { type: 'string' } },
+    faq: { type: 'array', minItems: faq, maxItems: faq, items: { type: 'string' } },
   });
 }
 

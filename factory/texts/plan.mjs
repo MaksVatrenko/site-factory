@@ -6,16 +6,23 @@ import { pageAddress, resolveLink, isSelfLink } from './links.mjs';
 // which is the point — it buys coherence (sections that do not repeat one another, links spread
 // sensibly) without paying for prose until the shape is agreed.
 
-// Everything here is identical for every page of every site built from this template, so it goes in
-// `instructions` and is what the prompt cache actually caches. Nothing page-specific may be added:
-// one changed byte and every later request pays full price.
-export function buildInstructions({ rules, templateText, examples }) {
+// Everything the model is told that does not change from request to request, which is what the
+// prompt cache actually caches (see docs/prompts.md). In v1 this was the same for a whole run, so
+// the cache carried across pages. It cannot be any more: the examples belong to a page, and they
+// are the largest thing here by far. So the cache carries within a page instead — the first of a
+// page's twelve requests pays for its examples in full and the other eleven read them back — and
+// every cache key below names the page, or the entries would evict each other for no gain.
+//
+// Nothing page-specific beyond the examples may be added: one changed byte and every later request
+// of the page pays full price.
+export function buildInstructions({ rules, examples }) {
   const parts = [
     'You are writing content for a website. Return only what the schema asks for.',
     rules.join('\n'),
-    'The page must follow this structure:',
-    templateText,
-    'Examples of finished pages in this template — follow their structure and depth, never their wording:',
+    // The structure is not described in words at all. It is pinned by the schema, element by
+    // element, from the example itself — a sentence about it could only repeat that or contradict it.
+    'Finished pages of this kind, taken from other sites. Follow their structure, their depth and',
+    'the subjects they cover. Never follow their wording, and never mention their brands:',
     ...examples.map((example) => JSON.stringify(example, null, 2)),
   ];
   return parts.join('\n\n');
@@ -72,7 +79,7 @@ const RESERVED_IMAGE_NAMES = new Set(['logo', 'logo-square']);
 // off. Trimming only ever removes — it cannot manufacture a missing element out of nothing — so
 // there is no matching check for too few; every removal is written to `warnings` so the run's log
 // says what happened.
-export function trimPlan(plan, { links, pages, page, contentByType, order = [], imageLabels = [] }) {
+export function trimPlan(plan, { links, pages, page, order = [], imageLabels = [] }) {
   const warnings = [];
 
   // No budget left to spend: a picture exists because a block carries one by its nature, and the
@@ -108,9 +115,9 @@ export function trimPlan(plan, { links, pages, page, contentByType, order = [], 
     claimImage(raw, `для блока «${imageLabels[index] ?? index + 1}»`),
   );
 
-  // Two budgets, which do survive: they exist to stop link spam, not to ration anything the layout
+  // Two budgets, which do survive: they exist to stop link spam, not to ration anything the example
   // decides. `links` is optional here because trimPlan is also called directly by its own tests —
-  // through generateSite it always arrives, since loadTemplateBlocks fills both budgets in, with a
+  // through generateSite it always arrives, since loadTemplatePictures fills both budgets in, with a
   // default of no links at all for a theme that says nothing about them. So this `?? Infinity` is
   // a fallback for a caller that leaves the argument out, not the "theme said nothing" case: that
   // one already arrives as zero.
@@ -135,11 +142,10 @@ export function trimPlan(plan, { links, pages, page, contentByType, order = [], 
     next.set(type, at + 1);
     const section = plan.blocks?.[type]?.[at];
     if (!section) continue;
-    const allowed = contentByType[type] ?? {};
-    (blocks[type] ??= []).push(trimOne(section, allowed));
+    (blocks[type] ??= []).push(trimOne(section));
   }
 
-  function trimOne(section, sectionContent) {
+  function trimOne(section) {
     // A link that recognisably names a page of this site is repaired to that page's canonical
     // address rather than discarded — the brief hands the model page names, not a spelling rule
     // (see planPage below), so a bare name or an obvious near-miss is the model doing the expected
@@ -178,42 +184,16 @@ export function trimPlan(plan, { links, pages, page, contentByType, order = [], 
       })
       .filter(Boolean);
 
-    // There is no `image` element any more — loadTemplateBlocks refuses one outright, so no theme
-    // can offer the model a picture to place. The only cap left is per kind: at most one table, at
-    // most one card set, whatever blocks.json allows a block of this sort to hold.
-    // A block whose sequence the layout spelled out has no `elements` in the plan at all: the
-    // schema did not ask. There is nothing to cap, and resolveLayout already held that sequence to
-    // the same ranges this loop enforces.
-    if (!Array.isArray(section.elements)) return { ...section, links };
-    const used = new Map();
-    const elements = section.elements.filter((element) => {
-      const max = sectionContent[element]?.[1] ?? 0;
-      const seen = used.get(element) ?? 0;
-      if (seen >= max) {
-        warnings.push(`элемент ${element} в разделе «${section.heading}» сверх нормы шаблона — убран`);
-        return false;
-      }
-      used.set(element, seen + 1);
-      return true;
-    });
-
-    return { ...section, links, elements };
+    // What goes inside a block is the example's, not the plan's: the schema never asked, so
+    // there is nothing here to cap. In v1 this was where a section that came back with two tables
+    // lost one of them.
+    return { ...section, links };
   }
 
   return { plan: { ...plan, images, blocks }, warnings };
 }
 
-export async function planPage(
-  { page, pages, brand, geo, locale, shape, links, contentByType, instructions },
-  options,
-) {
-  // What each kind of block may hold comes from contentByType and from nowhere else — never from
-  // the theme's whole vocabulary (manifest.json's `elements`), which a block can support only in
-  // some other block (this theme's `toggle`, real only for its `faq`). The manifest and the block's
-  // own allowance used to be handed in separately, and the two disagreeing is exactly how a plan got
-  // offered `toggle` for an ordinary section, had all six copies stripped by trimPlan for being over
-  // the (zero) allowance, and lost the section entirely. planSchema below reads one source, and
-  // trimPlan measures against that same source, so there is nothing left to disagree.
+export async function planPage({ page, pages, brand, geo, locale, shape, links, instructions }, options) {
   // What we hand the model here used to be the bare file names ("home", "casino"), while trimPlan
   // accepted only written addresses ("/", "/casino") — home's above all, since it is never "/home".
   // The model then echoed back exactly what it was given, or the obvious slash-prefixed guess, and
@@ -228,9 +208,9 @@ export async function planPage(
     .filter((candidate) => pageAddress(candidate) !== pageAddress(page))
     .map(pageAddress);
   const maxPageLinks = links?.perPage?.[1];
-  // The layout decided the composition, so the brief states it rather than asking for it. A range
-  // left over is one the layout did not pin down and the model is free to choose inside.
-  const count = ([min, max]) => (min === max ? String(min) : `${min}–${max}`);
+  // The example decided the composition, so the brief states it rather than asking for it. Nothing
+  // here is a range any more: the page being matched already has one of everything.
+  //
   // Named by kind, because a page can hold more than one: nine sections and two half-and-half
   // blocks are nine plus two different things to plan, and calling them all "sections" would tell
   // the model that eleven interchangeable blocks are what it is writing.
@@ -238,8 +218,8 @@ export async function planPage(
     .map(([type, howMany]) => `${howMany} ${type}`)
     .join(', ');
   const shapeLine = Number.isFinite(maxPageLinks)
-    ? `This page is made of: ${composition}. It has ${count(shape.faq)} FAQ questions and at most ${maxPageLinks} internal links.`
-    : `This page is made of: ${composition}. It has ${count(shape.faq)} FAQ questions.`;
+    ? `This page is made of: ${composition}. It has ${shape.faq} FAQ questions and at most ${maxPageLinks} internal links.`
+    : `This page is made of: ${composition}. It has ${shape.faq} FAQ questions.`;
   // Where the pictures go is settled: each one belongs to a block that carries one by nature. The
   // model is asked only to name them, and told which block each name is for, so a name can mean
   // something — "hero" says nothing about a picture, "slot-reels" says what to draw.
@@ -264,8 +244,10 @@ export async function planPage(
     'A link to another page of this site must use one of those exact addresses.',
     shapeLine,
     ...pictureLines,
-    'Plan the page: a heading and a one-line brief for each section, which elements suit it and',
-    'which other pages are worth linking to. Do not write the body text yet.',
+    // What goes inside a section is not asked: the example already said, element by element and
+    // in order, and the schema leaves the model no field to answer in.
+    'Plan the page: a heading and a one-line brief for each section, and which other pages are',
+    'worth linking to from it. Do not write the body text yet.',
   ].join('\n');
 
   const { data, cost, usage } = await askJson(
@@ -273,10 +255,12 @@ export async function planPage(
       instructions,
       input: brief,
       schemaName: 'page_plan',
-      schema: planSchema(shape, contentByType),
+      schema: planSchema(shape),
       // One cache per call type: the schema is part of the cached prefix, and plan and fill have
       // different schemas, so they cannot share an entry anyway.
-      cacheKey: 'site-factory-plan',
+      // Named by page: the instructions above hold this page's own examples, so a key shared with
+      // another page would have the two evicting each other's cache entry on every request.
+      cacheKey: `site-factory-plan:${page}`,
     },
     options,
   );
@@ -285,7 +269,6 @@ export async function planPage(
     links,
     pages,
     page,
-    contentByType,
     order: shape.order,
     imageLabels: shape.imageLabels,
   });

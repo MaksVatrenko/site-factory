@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { generateSite } from '../factory/texts/generate-site.mjs';
@@ -23,10 +23,12 @@ afterEach(() => {
   dirs = [];
 });
 
-function siteDir() {
+// The folder's own name is the seed every page's example is drawn with, so a test that cares which
+// one gets drawn says which folder it is building into.
+function siteDir(name = 'newsite') {
   const dir = mkdtempSync(join(tmpdir(), 'site-factory-generate-site-'));
   dirs.push(dir);
-  return join(dir, 'newsite');
+  return join(dir, name);
 }
 
 function reply(data) {
@@ -98,7 +100,6 @@ function fakeOpenAi({
             Array.from({ length: list.minItems }, (_, index) => ({
               heading: type === 'section' ? `Section ${index + 1}` : `${type} ${index + 1}`,
               brief: 'b',
-              elements: ['title', 'text'],
               links: [],
             })),
           ]),
@@ -133,32 +134,79 @@ function fakeOpenAi({
   return { fetchFn, asked };
 }
 
-// A layouts folder of this file's own. Every run here uses one, because the real layouts/ belongs
-// to the owner: they add a layout and every seeded choice in this file moves, so a suite that read
-// it would go red on a change that broke nothing. It did, once — four layouts on disk instead of
-// one, and five tests failed while the code was correct.
-function layoutsDirWith(layout, name = 'probe') {
-  const dir = mkdtempSync(join(tmpdir(), 'site-factory-layouts-'));
-  dirs.push(dir);
-  writeFileSync(join(dir, `${name}.json`), JSON.stringify(layout));
-  return dir;
+// The pieces an example page is written out of, in the content format rowsToPage produces.
+const h1 = (words = 'Заголовок страницы') => ({ type: 'title', h1: words });
+const h2 = (words) => ({ type: 'title', h2: words });
+const para = (words = 'Абзац примера, достаточно длинный чтобы быть похожим на правду.') => ({ type: 'text', text: words });
+const PIECE = {
+  text: para(),
+  list: { type: 'list', items: ['Раз', 'Два', 'Три'] },
+  table: { type: 'table', columns: ['A', 'B'], rows: [['1', '2'], ['3', '4']] },
+  cards: { type: 'cards', items: [{ title: 'Карточка', text: 'Текст' }, { title: 'Ещё', text: 'Текст' }] },
+  steps: { type: 'steps', items: [{ title: 'Шаг', text: 'как' }] },
+  line: { type: 'line' },
+  buttons: { type: 'buttons', items: [{ text: 'Открыть' }] },
+  info: { type: 'info', items: ['Раз', 'Два', 'Три'] },
+};
+const section = (n, kinds = ['text']) => ({
+  type: 'section',
+  content: [h2(`Раздел ${n}`), ...kinds.map((kind) => PIECE[kind])],
+});
+const half = (type, n) => ({ type, content: [h2(`Половина ${n}`), para(), PIECE.buttons] });
+const examplePage = (blocks) => ({ title: 'Заголовок примера', description: 'Описание примера.', blocks });
+
+// Close enough to the supplied examples to be worth testing against — a first screen, a contents,
+// a run of sections, the service blocks — and short enough not to pay for nine fills per page.
+const DEFAULT_EXAMPLE = examplePage([
+  { type: 'hero', content: [h1(), para()] },
+  { type: 'toc', content: [h2('Содержание'), PIECE.list] },
+  ...Array.from({ length: 9 }, (_, index) => section(index + 1)),
+  { type: 'links', content: [h2('Другие страницы')] },
+  {
+    type: 'faq',
+    content: [h2('Вопросы'), ...Array.from({ length: 5 }, (_, i) => ({ type: 'toggle', title: `Вопрос ${i + 1}?`, text: 'Ответ.' }))],
+  },
+]);
+
+// A templates root of this file's own. Every run here uses one, because templates/review/examples
+// belongs to the owner: they add an example and every seeded choice in this file moves, so a suite
+// that read it would go red on a change that broke nothing. It happened once already, with layouts.
+// The manifest is copied from the real theme rather than invented: what the theme can draw is the
+// theme's own fact, and a test that made it up could pass against a vocabulary nothing supports.
+function templateRootWith(pages = {}, pictures = { hero: 'after-text' }) {
+  const root = mkdtempSync(join(tmpdir(), 'site-factory-template-'));
+  dirs.push(root);
+  const dir = join(root, 'templates', 'review');
+  mkdirSync(dir, { recursive: true });
+  copyFileSync(join(process.cwd(), 'templates', 'review', 'manifest.json'), join(dir, 'manifest.json'));
+  writeFileSync(
+    join(dir, 'pictures.json'),
+    JSON.stringify({ pictures, links: { perBlock: [0, 2], perPage: [0, 8] } }),
+  );
+  for (const page of PAGES) {
+    const address = join(dir, 'examples', page);
+    mkdirSync(address, { recursive: true });
+    // One page may have several examples — that is the ordinary case, four source sites per page —
+    // so a value here is either the one example or a { имя: пример } map of them.
+    const one = pages[page] ?? DEFAULT_EXAMPLE;
+    const many = Array.isArray(one.blocks) ? { 1: one } : one;
+    for (const [name, example] of Object.entries(many)) {
+      writeFileSync(join(address, `${name}.json`), JSON.stringify(example));
+    }
+  }
+  return root;
 }
 
-// Close enough to the shipped long review to be worth testing against — a first screen, a contents,
-// a run of sections, the service blocks — and short enough not to pay for nine fills per page.
-const DEFAULT_LAYOUT = {
-  name: 'Длинный обзор',
-  blocks: ['hero', 'toc', { type: 'section', count: 9 }, 'links', 'faq'],
-};
+// Every page of the site built from the same example, so a test that writes one shape gets it.
+const everyPage = (page, pictures) => ({ root: templateRootWith({ home: page, casino: page }, pictures) });
 
 const run = (dir, overrides = {}) => {
   const lines = [];
   return generateSite({
     siteDir: dir, templateId: 'review', brand: 'Acme', geo: 'Bangladesh', locale: '',
-    pages: PAGES, config: CONFIG, root: process.cwd(),
+    pages: PAGES, config: CONFIG, root: templateRootWith(),
     promptFile: join('factory', 'prompts', 'texts.json'),
     geosFile: join('factory', 'geos.json'),
-    layoutsDir: layoutsDirWith(DEFAULT_LAYOUT),
     sleep: async () => {}, log: (line) => lines.push(line),
     ...overrides,
   }).then((summary) => ({ summary, lines }));
@@ -220,11 +268,11 @@ describe('generateSite', () => {
     }
   });
 
-  // Раскладка названа в строке готовности страницы, чтобы по логу было видно, какую смотришь.
-  it('names the layout each page was built from', async () => {
+  // Пример назван в строке готовности страницы, чтобы по логу было видно, с какого он сайта.
+  it('names the example each page was built from', async () => {
     const dir = siteDir();
     const { lines } = await run(dir, fakeOpenAi());
-    expect(lines.find((line) => line.includes('home.json готова'))).toMatch(/Длинный обзор/);
+    expect(lines.find((line) => line.includes('home.json готова'))).toMatch(/пример «1»/);
   });
 
   // A section that comes back truncated still ran the model and still cost money — that attempt's
@@ -484,167 +532,247 @@ describe('generateSite', () => {
   });
 });
 
-// The real proof: what this writes is a site folder Astro can build, not merely valid JSON.
-// A layouts folder of this test's own, so a layout can say something the shipped one does not.
-describe('the layout decides what goes inside a block', () => {
-  // The whole reason a layout may carry numbers at all. resolveLayout worked these out correctly
-  // from the start — and generate-site.mjs then handed the plan the theme's ranges instead, so a
-  // layout pinning "no tables here" produced a page with tables in it, byte for byte the same page
-  // as a layout that had said nothing. Checked through the request the model actually receives,
-  // because the defect lived in the wiring between two modules that were each right on their own.
-  it('offers the model what the layout allows, not what the theme allows', async () => {
+describe('the example decides what goes inside a block', () => {
+  // The change v2 is for. The model used to be asked which elements a section should hold, and
+  // could answer anything the theme allowed. Now the example says, element by element, and the
+  // question is not in the request at all — checked through the request the model actually
+  // receives, because an answer nobody reads is output paid for.
+  it('never asks the model what goes inside a block', async () => {
     const dir = siteDir();
     const fake = fakeOpenAi();
     const asked = [];
     const fetchFn = async (url, init) => {
       const body = JSON.parse(init.body);
-      if (body.text.format.name === 'page_plan') {
-        asked.push(
-          body.text.format.schema.properties.blocks.properties.section.items.properties.elements.items.enum,
-        );
-      }
+      if (body.text.format.name === 'page_plan') asked.push(body.text.format.schema.properties.blocks.properties);
       return fake.fetchFn(url, init);
     };
-    await run(dir, {
-      fetchFn,
-      layoutsDir: layoutsDirWith({
-        name: 'Проба',
-        blocks: [
-          'hero',
-          'toc',
-          {
-            type: 'section',
-            count: 2,
-            content: { text: 2, list: 0, steps: 0, table: 0, cards: 0, line: 0, buttons: 0 },
-          },
-          'links',
-          'faq',
-        ],
-      }),
-    });
+    await run(dir, { fetchFn, ...everyPage(examplePage([
+      { type: 'hero', content: [h1(), para()] },
+      section(1, ['text', 'list', 'cards']),
+      { type: 'faq', content: [h2('Вопросы'), { type: 'toggle', title: 'В?', text: 'О.' }] },
+    ])) });
 
-    // The theme allows title, text, list, table and cards; this layout allows only text.
     expect(asked.length).toBeGreaterThan(0);
-    for (const offered of asked) expect(offered).toEqual(['text']);
-
-    // And the page really does come out without them, not merely with them stripped after the fact.
-    const page = JSON.parse(readFileSync(join(dir, 'home.json'), 'utf8'));
-    const section = page.blocks.find((block) => block.type === 'section');
-    expect(section.content.map((item) => item.type)).toEqual(['title', 'text']); // h2 heading + one text
-    expect(page.blocks.filter((block) => block.type === 'section')).toHaveLength(2);
+    for (const byType of asked) {
+      expect(byType.section.items.properties).not.toHaveProperty('elements');
+      // The rest of the question stands: what the block is about is still the model's to write.
+      expect(byType.section.items.properties).toHaveProperty('heading');
+    }
   });
-});
 
-describe('a layout that spells out what each block holds', () => {
-  // The end the whole mechanism exists for: the owner writes a page design, block by block, and the
-  // page comes out in that order. Checked through the written file rather than through the request,
-  // because "the order I asked for" is a fact about the page, not about what was asked.
-  it('builds each block in the order the layout named, element for element', async () => {
+  // The end the whole mechanism exists for: SEO hands over a page, and the page comes out in that
+  // shape. Checked through the written file rather than through the request, because "the shape of
+  // the example" is a fact about the page, not about what was asked.
+  it('builds each block in the order the example had, element for element', async () => {
     const dir = siteDir();
-    const fake = fakeOpenAi();
-    let asked;
-    const fetchFn = async (url, init) => {
-      const body = JSON.parse(init.body);
-      if (body.text.format.name === 'page_plan') {
-        asked = body.text.format.schema.properties.blocks.properties;
-      }
-      return fake.fetchFn(url, init);
-    };
-    await run(dir, {
-      fetchFn,
-      layoutsDir: layoutsDirWith({
-        name: 'Проба',
-        blocks: [
-          'hero',
-          'toc',
-          { type: 'section', elements: ['text', 'list', 'cards'] },
-          { type: 'section', elements: ['text', 'text', 'text', 'list', 'line', 'buttons'] },
-          'links',
-          'faq',
-        ],
-      }),
-    });
-
-    // Nothing left to ask about this kind, so the question is gone from the request entirely.
-    expect(asked.section.items.properties).not.toHaveProperty('elements');
+    await run(dir, { ...fakeOpenAi(), ...everyPage(examplePage([
+      { type: 'hero', content: [h1(), para()] },
+      { type: 'toc', content: [h2('Содержание'), PIECE.list] },
+      section(1, ['text', 'list', 'cards']),
+      section(2, ['text', 'text', 'text', 'list', 'line', 'buttons']),
+      { type: 'links', content: [h2('Другие страницы')] },
+      { type: 'faq', content: [h2('Вопросы'), { type: 'toggle', title: 'В?', text: 'О.' }] },
+    ])) });
 
     const page = JSON.parse(readFileSync(join(dir, 'home.json'), 'utf8'));
     const sections = page.blocks.filter((block) => block.type === 'section');
     expect(sections).toHaveLength(2);
-    // The h2 the factory writes, then exactly what the layout listed, in that order.
+    // The h2 the factory writes, then exactly what the example held, in that order.
     expect(sections[0].content.map((item) => item.type)).toEqual(['title', 'text', 'list', 'cards']);
     expect(sections[1].content.map((item) => item.type)).toEqual([
       'title', 'text', 'text', 'text', 'list', 'line', 'buttons',
     ]);
   });
 
-  it('refuses a layout naming an element the block cannot hold, before paying for anything', async () => {
+  // The example's own item counts reach the page, section by section: this is the whole of what a
+  // block's counts are for, and they are not the theme's and not the page's but the block's.
+  it("cuts a list back to what the example's own block held", async () => {
     const dir = siteDir();
-    const { lines } = await run(dir, {
-      ...fakeOpenAi(),
-      layoutsDir: layoutsDirWith({
-        name: 'Проба',
-        blocks: ['hero', { type: 'section', elements: ['text', 'toggle'] }, 'faq'],
-      }),
-    });
-    expect(lines.join('\n')).toContain('toggle');
+    const fake = fakeOpenAi();
+    const fetchFn = async (url, init) => {
+      const body = JSON.parse(init.body);
+      if (body.text.format.name !== 'section_content') return fake.fetchFn(url, init);
+      return reply({ items: [{ kind: 'list', items: ['1', '2', '3', '4', '5', '6', '7', '8'] }] });
+    };
+    await run(dir, { fetchFn, ...everyPage(examplePage([
+      { type: 'hero', content: [h1(), para()] },
+      { type: 'section', content: [h2('Раздел'), { type: 'list', items: ['Раз', 'Два'] }] },
+      { type: 'faq', content: [h2('Вопросы'), { type: 'toggle', title: 'В?', text: 'О.' }] },
+    ])) });
+
+    const page = JSON.parse(readFileSync(join(dir, 'home.json'), 'utf8'));
+    const list = page.blocks.find((block) => block.type === 'section').content[1];
+    expect(list.items).toEqual(['1', '2']);
+  });
+
+  it('refuses an example holding an element the theme cannot draw, before paying for anything', async () => {
+    const dir = siteDir();
+    const { lines } = await run(dir, { ...fakeOpenAi(), ...everyPage(examplePage([
+      { type: 'hero', content: [h1(), para()] },
+      { type: 'section', content: [h2('Раздел'), { type: 'video', src: 'х' }] },
+      { type: 'faq', content: [h2('Вопросы'), { type: 'toggle', title: 'В?', text: 'О.' }] },
+    ])) });
+    expect(lines.join('\n')).toContain('video');
     expect(existsSync(join(dir, 'home.json'))).toBe(false);
+  });
+});
+
+describe('every page is built from its own example', () => {
+  // The seeded choice has to reach the frame, not just the log line. With one example per page the
+  // two cannot disagree; with two, taking the first instead of the chosen one builds a page of the
+  // wrong shape while still reporting the right name.
+  it('builds the page from the example it says it built it from', async () => {
+    // "site2" rather than the usual name because its seed draws neither page's first example —
+    // with the first one drawn, taking the first instead of the chosen one is invisible, which is
+    // exactly how this test passed against the mutation it was written to catch.
+    const dir = siteDir('site2');
+    // Four examples per page, as the supplied ones are, each a different length, so which one was
+    // used is readable off the built page.
+    const sized = (howMany) => examplePage([
+      { type: 'hero', content: [h1(), para()] },
+      ...Array.from({ length: howMany }, (_, index) => section(index + 1)),
+      { type: 'faq', content: [h2('Вопросы'), { type: 'toggle', title: 'В?', text: 'О.' }] },
+    ]);
+    const four = { 1: sized(1), 2: sized(2), 3: sized(3), 4: sized(4) };
+    await run(dir, { ...fakeOpenAi(), root: templateRootWith({ home: four, casino: four }) });
+
+    for (const address of PAGES) {
+      const page = JSON.parse(readFileSync(join(dir, `${address}.json`), 'utf8'));
+      const sections = page.blocks.filter((block) => block.type === 'section').length;
+      // The example's name is how many sections it has, so the page and its record must agree.
+      expect(`${address}/${sections}`).toBe(page.example);
+    }
+  });
+
+  // The instructions are the expensive part of every request, and they are this page's examples.
+  // One set for the whole run would describe casino's page with home's examples — the v1 behaviour,
+  // correct then and wrong now.
+  it("sends each page its own examples, not the first page's", async () => {
+    const dir = siteDir();
+    const fake = fakeOpenAi();
+    const seen = new Map();
+    const fetchFn = async (url, init) => {
+      const body = JSON.parse(init.body);
+      const page = /^Page: (.+)$/m.exec(String(body.input[0].content))?.[1];
+      if (page) seen.set(page, String(body.instructions));
+      return fake.fetchFn(url, init);
+    };
+    const mark = (word) => examplePage([
+      { type: 'hero', content: [h1(word), para()] },
+      section(1),
+      { type: 'faq', content: [h2('Вопросы'), { type: 'toggle', title: 'В?', text: 'О.' }] },
+    ]);
+    await run(dir, { fetchFn, root: templateRootWith({ home: mark('ГЛАВНАЯ'), casino: mark('КАЗИНО') }) });
+
+    expect(seen.get('home')).toContain('ГЛАВНАЯ');
+    expect(seen.get('home')).not.toContain('КАЗИНО');
+    expect(seen.get('casino')).toContain('КАЗИНО');
+  });
+
+  // The cache is keyed per page for the same reason: two pages sharing a key would evict each
+  // other's entry on every request, and every request of the run would pay full price.
+  it('gives every page its own cache key', async () => {
+    const dir = siteDir();
+    const fake = fakeOpenAi();
+    const byPage = new Map();
+    const fetchFn = async (url, init) => {
+      const body = JSON.parse(init.body);
+      const page = /^Page: (.+)$/m.exec(String(body.input[0].content))?.[1];
+      if (page && body.prompt_cache_key) {
+        if (!byPage.has(page)) byPage.set(page, new Set());
+        byPage.get(page).add(body.prompt_cache_key);
+      }
+      return fake.fetchFn(url, init);
+    };
+    await run(dir, { fetchFn });
+
+    const home = byPage.get('home');
+    expect(home.size).toBeGreaterThan(0);
+    for (const key of home) expect(key).toContain('home');
+    // Not one key shared by both: that is the whole point.
+    for (const key of byPage.get('casino') ?? []) expect(home.has(key)).toBe(false);
+  });
+
+  // How many items a collection holds cannot be pinned by the schema — strict mode counts elements,
+  // not what is inside the third of them — so it is asked for in words, from the example's own block.
+  it("tells each section how long the example's own lists were", async () => {
+    const dir = siteDir();
+    const fake = fakeOpenAi();
+    const briefs = [];
+    const fetchFn = async (url, init) => {
+      const body = JSON.parse(init.body);
+      if (body.text.format.name === 'section_content') briefs.push(String(body.input[0].content));
+      return fake.fetchFn(url, init);
+    };
+    await run(dir, { fetchFn, ...everyPage(examplePage([
+      { type: 'hero', content: [h1(), para()] },
+      { type: 'section', content: [h2('Раздел'), { type: 'list', items: ['Раз', 'Два', 'Три', 'Четыре', 'Пять'] }] },
+      { type: 'faq', content: [h2('Вопросы'), { type: 'toggle', title: 'В?', text: 'О.' }] },
+    ])) });
+
+    expect(briefs.length).toBeGreaterThan(0);
+    expect(briefs.some((brief) => /How many items each holds: list 5/.test(brief))).toBe(true);
+  });
+
+  // Lengths are measured off the example too, and they are only ever reported — but a report that
+  // never fires is the same as none, so it is checked where it must fire: an example of very short
+  // paragraphs and an answer that is not.
+  it("measures a paragraph against the example's own paragraphs", async () => {
+    const dir = siteDir();
+    const terse = { type: 'text', text: 'Коротко.' };
+    const { lines } = await run(dir, { ...fakeOpenAi(), ...everyPage(examplePage([
+      { type: 'hero', content: [h1(), terse] },
+      { type: 'section', content: [h2('Раздел'), terse] },
+      { type: 'faq', content: [h2('Вопросы'), { type: 'toggle', title: 'В?', text: 'О.' }] },
+    ])) });
+
+    expect(lines.join('\n')).toMatch(/text абзаца: \d+ знаков вместо 8/);
   });
 });
 
 describe('a page made of more than one kind of block', () => {
   // The whole reason the plan is keyed by kind rather than holding one list of "sections". Two
-  // kinds are two different questions: a half-and-half block holds a heading, a paragraph or two,
-  // a list and a call to action; a section holds tables, card sets and numbered steps besides. One
-  // shared list would offer the half-block a table it cannot hold — the model paying for output
-  // that trimPlan then strips back out, which is the defect this whole shape exists to prevent.
-  it('asks for each kind with its own list of what may go inside it', async () => {
+  // kinds are two different questions, and a page that holds both must plan for both — a shared
+  // list would describe eleven interchangeable blocks where there are nine of one and two of another.
+  it('asks for each kind separately, counting each', async () => {
     const dir = siteDir();
     const fake = fakeOpenAi();
     let byType;
     const fetchFn = async (url, init) => {
       const body = JSON.parse(init.body);
-      if (body.text.format.name === 'page_plan') {
-        byType = body.text.format.schema.properties.blocks.properties;
-      }
+      if (body.text.format.name === 'page_plan') byType = body.text.format.schema.properties.blocks.properties;
       return fake.fetchFn(url, init);
     };
-    await run(dir, {
-      fetchFn,
-      layoutsDir: layoutsDirWith({
-        name: 'Витрина',
-        blocks: ['hero', 'toc', { type: 'section', count: 2 }, 'split', 'split-left', 'links', 'faq'],
-      }),
-    });
+    await run(dir, { fetchFn, ...everyPage(examplePage([
+      { type: 'hero', content: [h1(), para()] },
+      { type: 'toc', content: [h2('Содержание'), PIECE.list] },
+      section(1), section(2),
+      half('split', 1), half('split-left', 2),
+      { type: 'links', content: [h2('Другие страницы')] },
+      { type: 'faq', content: [h2('Вопросы'), { type: 'toggle', title: 'В?', text: 'О.' }] },
+    ])) });
 
     // The first screen is among them: it is a block the model writes, like the rest.
     expect(Object.keys(byType).sort()).toEqual(['hero', 'section', 'split', 'split-left']);
     expect(byType.section.minItems).toBe(2);
     expect(byType.split.minItems).toBe(1);
-    const offered = (type) => byType[type].items.properties.elements.items.enum;
-    expect(offered('section')).toContain('table');
-    expect(offered('split')).not.toContain('table');
-    expect(offered('split')).not.toContain('cards');
-    expect(offered('split')).toContain('buttons');
-    // Mirrored or not, the two halves hold the same things: the side the picture takes is the
-    // block's identity, not a different kind of content.
-    expect(offered('split-left')).toEqual(offered('split'));
   });
 
-  it('builds every kind the layout named, in the order the layout gave', async () => {
+  it('builds every kind the example had, in the order the example gave', async () => {
     const dir = siteDir();
-    await run(dir, {
-      ...fakeOpenAi(),
-      layoutsDir: layoutsDirWith({
-        name: 'Витрина',
-        blocks: ['hero', 'toc', 'section', 'split', 'split-left', 'links', 'faq'],
-      }),
-    });
+    await run(dir, { ...fakeOpenAi(), ...everyPage(examplePage([
+      { type: 'hero', content: [h1(), para()] },
+      { type: 'toc', content: [h2('Содержание'), PIECE.list] },
+      section(1),
+      half('split', 1), half('split-left', 2),
+      { type: 'links', content: [h2('Другие страницы')] },
+      { type: 'faq', content: [h2('Вопросы'), { type: 'toggle', title: 'В?', text: 'О.' }] },
+    ]), { hero: 'after-text', split: true, 'split-left': true }) });
     const page = JSON.parse(readFileSync(join(dir, 'home.json'), 'utf8'));
     expect(page.blocks.map((block) => block.type)).toEqual([
       'hero', 'toc', 'section', 'split', 'split-left', 'links', 'faq',
     ]);
-    // One picture per block that carries one by nature: the first screen and both halves.
+    // One picture per block the theme puts one in: the first screen and both halves.
     expect((JSON.stringify(page).match(/"image":/g) ?? [])).toHaveLength(3);
   });
 });
@@ -682,13 +810,13 @@ describe('a generated folder builds', () => {
     expect(html).toContain('Section 1');
     expect(html).toContain('Body text of the section.');
 
-    // The layout is recorded in every page file, and must stay there: src/lib/site-dir.mjs reads a
+    // The example is recorded in every page file, and must stay there: src/lib/site-dir.mjs reads a
     // page by title, description and blocks, so the field is inert by construction. Inert by
     // construction is still worth holding to account — a leak into a built page would be silent,
     // and this is the one test in the suite that runs the engine end to end against real output.
-    expect(JSON.parse(readFileSync(join(dir, 'casino.json'), 'utf8')).layout).toBe('probe');
-    expect(html).not.toContain('"layout"');
-    expect(readFileSync(join(out, 'index.html'), 'utf8')).not.toContain('"layout"');
+    expect(JSON.parse(readFileSync(join(dir, 'casino.json'), 'utf8')).example).toBe('casino/1');
+    expect(html).not.toContain('"example"');
+    expect(readFileSync(join(out, 'index.html'), 'utf8')).not.toContain('"example"');
 
     // The picture belongs to the first screen and to nothing else — checked in the delivered HTML,
     // not in the JSON, because "one picture" is a promise about the page a reader gets. A card that

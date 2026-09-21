@@ -85,13 +85,13 @@ describe('npm run generate:texts', () => {
   // a typo into a run that starts, writes nothing and reports success. The name has to be echoed
   // back: "раскладка не найдена" alone leaves the reader guessing which of the two words they
   // typed the shell mangled.
-  it('refuses a --layout that names no real layout', () => {
-    const out = 'texts-cli-bad-layout';
+  it('refuses an --example that names no real example', () => {
+    const out = 'texts-cli-bad-example';
     rmSync(join('data', 'sites', out), { recursive: true, force: true });
     try {
-      const result = runCli('--out', out, '--brand', 'Acme', '--layout', 'no-such-layout');
+      const result = runCli('--out', out, '--brand', 'Acme', '--example', 'no-such-example');
       expect(result.status).toBe(1);
-      expect(result.stderr).toContain('no-such-layout');
+      expect(result.stderr).toContain('no-such-example');
       // The other half of "before anything is paid for": refused at the argument stage, the run
       // never starts, so no half-made site folder is left behind for the owner to wonder about.
       expect(existsSync(join('data', 'sites', out))).toBe(false);

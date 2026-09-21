@@ -28,31 +28,31 @@ const SECTIONS = [
 ];
 const FAQ = [{ question: 'Is it safe?', answer: 'Yes.' }];
 
-const LENGTHS = {
-  title: 60,
-  description: [120, 160],
-  h1: 60,
-  text: [200, 400],
-  listItems: [3, 8],
-  tableRows: [3, 10],
-  cards: [2, 4],
-};
-// A layout already resolved against the theme — what generate-site.mjs hands the assembler. Every
-// entry carries its own nature, and nothing here says "hero" to the assembler except the block's
-// own type, which it only ever passes through.
+// Character lengths only. How many items a list or a table holds is the block's own business now,
+// measured off the example block by block — one section's five-row list says nothing about what
+// another section's table may hold.
+const LENGTHS = { title: 60, description: [120, 160], h1: 60, text: [200, 400] };
+// A frame read off an example — what generate-site.mjs hands the assembler. Every entry carries its
+// own nature, and nothing here says "hero" to the assembler except the block's own type, which it
+// only ever passes through.
 const nature = (type, own) => ({
-  type, auto: false, h1: false, image: false, heading: false, content: {}, ...own,
+  type, auto: false, h1: false, image: false, heading: false, elements: [], counts: {}, ...own,
 });
-const HERO = nature('hero', { h1: true, image: true, content: { text: [1, 2] } });
+const HERO = nature('hero', { h1: true, image: true, elements: ['text'] });
 const TOC = nature('toc', { auto: true });
-const SECTION = nature('section', { heading: true, content: { title: [0, 1], text: [2, 6] } });
+const SECTION = nature('section', {
+  heading: true,
+  elements: ['text'],
+  // What the example's own section held, which is the ceiling the answer is cut back to.
+  counts: { list: 8, table: 10, cards: 4 },
+});
 const LINKS = nature('links', { auto: true });
-const FAQ_BLOCK = nature('faq', { heading: true, content: { toggle: [5, 8] } });
+const FAQ_BLOCK = nature('faq', { heading: true, elements: ['toggle'] });
 const BLOCKS = [HERO, TOC, SECTION, SECTION, LINKS, FAQ_BLOCK];
 
-// The assembler looks a filled block up by its place in the layout, not by its turn in a queue:
+// The assembler looks a filled block up by its place on the page, not by its turn in a queue:
 // a page can hold more than one kind of content block, and they are not interchangeable. Tests
-// still write a plain list, and this pairs it with the layout's own content blocks in order.
+// still write a plain list, and this pairs it with the frame's own content blocks in order.
 function byPlace(blocks, sections) {
   const places = blocks
     .map((block, at) => ({ block, at }))
@@ -74,16 +74,16 @@ const build = (overrides = {}) => {
 const blockOf = (page, type) => page.blocks.find((block) => block.type === type);
 
 describe('assemblePage', () => {
-  // Which layout built the page, kept in the page itself. The field is for the owner and for us,
+  // Which example built the page, kept in the page itself. The field is for the owner and for us,
   // not for the reader: src/lib/site-dir.mjs reads a page by title, description and blocks and
   // never looks at the rest, so it reaches no built site.
-  it('records which layout the page was built from', () => {
-    const { page } = build({ layout: 'long-review' });
-    expect(page.layout).toBe('long-review');
-    expect(Object.keys(page)).toEqual(['title', 'description', 'layout', 'blocks']);
+  it('records which example the page was built from', () => {
+    const { page } = build({ example: 'casino/899ok' });
+    expect(page.example).toBe('casino/899ok');
+    expect(Object.keys(page)).toEqual(['title', 'description', 'example', 'blocks']);
   });
 
-  it('builds the page in our own content format, in layout order', () => {
+  it('builds the page in our own content format, in the example\'s order', () => {
     const { page } = build();
     expect(page.title).toBe('Casino guide');
     expect(page.description).toBe('A description of the page.');
@@ -448,7 +448,7 @@ describe('the elements a call-to-action page is made of', () => {
 
   // Unlike a character length, an item count can be cut cleanly — spec §9: "лишнее отбрасывается,
   // строка в лог" — so these three, unlike the text/h1 lengths above, actually get trimmed.
-  it('trims a list past the template maximum, and logs what was cut', () => {
+  it('trims a list past what the example\'s own block held, and logs what was cut', () => {
     const items = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
     const sections = [HERO_ITEMS, { heading: 'Payments', items: [{ kind: 'list', items }] }, SECTIONS[1]];
     const { page, warnings } = build({ sections });
@@ -457,7 +457,7 @@ describe('the elements a call-to-action page is made of', () => {
     expect(warnings.join(' ')).toContain('пунктов списка: 10 вместо 8');
   });
 
-  it('trims a table past the template row maximum, and logs what was cut', () => {
+  it('trims a table past what the example\'s own block held, and logs what was cut', () => {
     const rows = Array.from({ length: 12 }, (_, index) => [`r${index + 1}`]);
     const sections = [HERO_ITEMS, { heading: 'Payments', items: [{ kind: 'table', columns: ['A'], rows }] }, SECTIONS[1]];
     const { page, warnings } = build({ sections });
@@ -466,7 +466,7 @@ describe('the elements a call-to-action page is made of', () => {
     expect(warnings.join(' ')).toContain('строк таблицы: 12 вместо 10');
   });
 
-  it('trims a card set past the template maximum, and logs what was cut', () => {
+  it('trims a card set past what the example\'s own block held, and logs what was cut', () => {
     const cards = Array.from({ length: 6 }, (_, index) => ({ title: `C${index + 1}`, text: 'T', image: null }));
     const sections = [HERO_ITEMS, { heading: 'Payments', items: [{ kind: 'cards', cards }] }, SECTIONS[1]];
     const { page, warnings } = build({ sections });

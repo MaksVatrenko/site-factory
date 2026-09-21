@@ -148,15 +148,21 @@ function geosOnDisk() {
 // and survives a second layout file being added later. The id is the file name and the name is
 // prose inside the file (falling back to the id when a file gives none) — the same two-line rule
 // loadLayouts states, restated here rather than imported for exactly that reason.
-function layoutsOnDisk() {
-  return readdirSync('layouts')
-    .filter((file) => file.endsWith('.json'))
-    .sort()
-    .map((file) => {
-      const id = file.slice(0, -'.json'.length);
-      const raw = JSON.parse(readFileSync(join('layouts', file), 'utf8'));
-      return { id, name: typeof raw.name === 'string' && raw.name !== '' ? raw.name : id };
-    });
+// The source sites the review theme has an example from on every one of its pages — which is what
+// the picker may offer, since a run builds the whole site from one name.
+function examplesOnDisk(templateId = 'review') {
+  const dir = join('templates', templateId, 'examples');
+  const lists = readdirSync(dir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) =>
+      readdirSync(join(dir, entry.name))
+        .filter((file) => file.endsWith('.json'))
+        .sort()
+        .map((file) => file.slice(0, -'.json'.length)),
+    );
+  return (lists[0] ?? [])
+    .filter((name) => lists.every((list) => list.includes(name)))
+    .map((name) => ({ id: name, name }));
 }
 
 // Same "read the filesystem independently" principle as the two helpers above, applied to a site
@@ -205,9 +211,10 @@ describe('factory API', () => {
   // pair a dropdown needs — the id that goes back to the server and the prose name a person reads.
   // A route that answered ids alone would leave the list unreadable, and one that answered whole
   // layout files would ship every block list to the browser to be thrown away there.
-  it('lists layouts read from disk, each with its id and its readable name', async () => {
-    const data = await fetch(`${base}/api/layouts`).then((r) => r.json());
-    expect(data.layouts).toEqual(layoutsOnDisk());
+  it('lists the source sites a theme has an example from on every page', async () => {
+    const data = await fetch(`${base}/api/examples?template=review`).then((r) => r.json());
+    expect(data.examples).toEqual(examplesOnDisk());
+    expect(data.examples.length).toBeGreaterThan(0);
   });
 
   it('lists site folders read from disk, each with its page count and brand name', async () => {
@@ -596,26 +603,11 @@ describe('GET /api/geos survives a broken geos.json', () => {
 // a usable layout is right and happens elsewhere; refusing to draw the page is not.
 // Pointed at a throwaway folder, the same isolation the geosFile tests above use: the real
 // layouts/ is expected to be in working order, and a test may not break it to find out.
-describe('GET /api/layouts survives a broken layouts folder', () => {
-  let dir;
-  afterAll(() => {
-    if (dir) rmSync(dir, { recursive: true, force: true });
-  });
-
-  it('answers with an empty list, not an error, when a layout file cannot be read', async () => {
-    dir = mkdtempSync(join(tmpdir(), 'site-factory-broken-layouts-'));
-    writeFileSync(join(dir, 'long-review.json'), '{ not json');
-
-    const app = createApp({ envFile: NO_ENV_FILE, fetchFn: refuseNetwork, layoutsDir: dir });
-    const brokenServer = app.listen(0);
-    await new Promise((resolve) => brokenServer.once('listening', resolve));
-    try {
-      const response = await fetch(`http://127.0.0.1:${brokenServer.address().port}/api/layouts`);
-      expect(response.status).toBe(200);
-      expect((await response.json()).layouts).toEqual([]);
-    } finally {
-      brokenServer.close();
-    }
+describe('GET /api/examples survives a theme with no examples', () => {
+  it('answers with an empty list, not an error', async () => {
+    const response = await fetch(`${base}/api/examples?template=no-such-theme`);
+    expect(response.status).toBe(200);
+    expect((await response.json()).examples).toEqual([]);
   });
 });
 
@@ -1633,27 +1625,27 @@ describe('the texts tab writes a whole site folder', () => {
       // Names both the template and its missing file, so this reads differently in the logs than
       // the unknown-id guard's "не найден" message above -- the owner can tell the two failures apart.
       expect(data.error).toContain(templateId);
-      expect(data.error).toContain('blocks.json');
+      expect(data.error).toContain('pictures.json');
       expect(existsSync(join('data', 'sites', out))).toBe(false);
     } finally {
       rmSync(templateDir, { recursive: true, force: true });
     }
   });
 
-  // Task 9: `layout` is the one field of this form whose value names a file on disk, and an
-  // unknown one is refused here rather than left to the run. The run is where it would otherwise
-  // surface — pickLayouts throws for an id it cannot find — but by then this request has already
-  // been answered 200, so a typo would come back as a job that starts and instantly dies, with the
+  // `example` is the one field of this form whose value names a file on disk, and an unknown one
+  // is refused here rather than left to the run. The run is where it would otherwise surface —
+  // pickExamples throws for a name it cannot find — but by then this request has already been
+  // answered 200, so a typo would come back as a job that starts and instantly dies, with the
   // reason buried in the log, instead of as a refused form with the word to fix in it.
-  it('refuses a layout that is not in the real list, before any folder is made', async () => {
-    const out = 'texts-bad-layout';
+  it('refuses an example that is not in the real list, before any folder is made', async () => {
+    const out = 'texts-bad-example';
     rmSync(join('data', 'sites', out), { recursive: true, force: true });
     try {
       const response = await start({
-        template: 'review', out, brand: 'Acme', layout: 'no-such-layout', pages: 'home',
+        template: 'review', out, brand: 'Acme', example: 'no-such-example', pages: 'home',
       });
       expect(response.status).toBe(400);
-      expect((await response.json()).error).toContain('no-such-layout');
+      expect((await response.json()).error).toContain('no-such-example');
       // The "before" half of the claim above: nothing started, so nothing was made. A folder here
       // would mean the check moved behind startJob and the refusal is now merely cosmetic.
       expect(existsSync(join('data', 'sites', out))).toBe(false);
@@ -1662,14 +1654,14 @@ describe('the texts tab writes a whole site folder', () => {
     }
   });
 
-  // An empty layout is not a missing one: «Случайно» — a layout drawn per page — is a real choice
-  // in the dropdown, and the value it sends is ''. Checking every value against the list of real
-  // ids, without excepting '', would refuse the option the form offers first.
-  it('accepts an empty layout as «Случайно»', async () => {
-    const out = 'texts-random-layout';
+  // An empty example is not a missing one: «Случайно» — an example drawn per page — is a real
+  // choice in the dropdown, and the value it sends is ''. Checking every value against the list of
+  // real names, without excepting '', would refuse the option the form offers first.
+  it('accepts an empty example as «Случайно»', async () => {
+    const out = 'texts-random-example';
     rmSync(join('data', 'sites', out), { recursive: true, force: true });
     try {
-      const response = await start({ template: 'review', out, brand: 'Acme', layout: '', pages: 'home' });
+      const response = await start({ template: 'review', out, brand: 'Acme', example: '', pages: 'home' });
       expect(response.status).toBe(200);
       const { jobId } = await response.json();
       // Drained, not abandoned: this app generates for real against its own fetchFn, and a job
@@ -1682,16 +1674,16 @@ describe('the texts tab writes a whole site folder', () => {
 
   // The same asymmetry the non-string geo test above describes, in the field where it bites
   // hardest: trimmedString(42) is '', and '' is not "nothing given" here — it is the valid
-  // «Случайно». So without this guard a layout sent as a number would not be refused and would not
-  // be honoured either; it would quietly become "any layout at all", and the site would come out
-  // composed differently from what was asked for, with nothing anywhere having said so.
-  it('refuses a present but non-string layout instead of silently treating it as «Случайно»', async () => {
-    const out = 'texts-non-string-layout';
+  // «Случайно». So without this guard an example sent as a number would not be refused and would
+  // not be honoured either; it would quietly become "any example at all", and the site would come
+  // out built from a different page than the one asked for, with nothing anywhere having said so.
+  it('refuses a present but non-string example instead of silently treating it as «Случайно»', async () => {
+    const out = 'texts-non-string-example';
     rmSync(join('data', 'sites', out), { recursive: true, force: true });
     try {
-      const response = await start({ template: 'review', out, brand: 'Acme', layout: 42, pages: 'home' });
+      const response = await start({ template: 'review', out, brand: 'Acme', example: 42, pages: 'home' });
       expect(response.status).toBe(400);
-      expect((await response.json()).error).toContain('layout');
+      expect((await response.json()).error).toContain('example');
       expect(existsSync(join('data', 'sites', out))).toBe(false);
     } finally {
       rmSync(join('data', 'sites', out), { recursive: true, force: true });

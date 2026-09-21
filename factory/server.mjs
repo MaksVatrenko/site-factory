@@ -16,8 +16,8 @@ import { generateMissingImages } from './images/generate.mjs';
 import { generateLogo } from './images/logo.mjs';
 import { readOpenAiConfig } from './texts/env.mjs';
 import { generateSite } from './texts/generate-site.mjs';
-import { loadTemplateBlocks } from './texts/template.mjs';
-import { loadLayouts } from './texts/layouts.mjs';
+import { loadTemplatePictures } from './texts/template.mjs';
+import { loadExamples } from './texts/example.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -31,10 +31,6 @@ const IMAGE_PROMPTS_FILE = join(HERE, 'prompts', 'images.json');
 const LOGO_PROMPTS_FILE = join(HERE, 'prompts', 'logo.json');
 const TEXTS_PROMPTS_FILE = join(HERE, 'prompts', 'texts.json');
 const GEOS_FILE = join(HERE, 'geos.json');
-// Layouts sit outside factory/ on purpose: they are the composition of a page, which does not
-// belong to one theme and is not a prompt — they are the owner's own files, like templates/.
-const LAYOUTS_DIR = join(ROOT, 'layouts');
-
 const builds = new Map();
 
 const MAX_NAME_LENGTH = 100;
@@ -344,7 +340,6 @@ export function createApp({
   promptFile = IMAGE_PROMPTS_FILE,
   logoPromptFile = LOGO_PROMPTS_FILE,
   geosFile = GEOS_FILE,
-  layoutsDir = LAYOUTS_DIR,
 } = {}) {
   const app = express();
   app.use(express.json());
@@ -377,15 +372,22 @@ export function createApp({
     }
   });
 
-  // Fills the «Раскладка» list on the Тексты tab. Same reasoning as /api/geos above: a layouts
-  // folder that cannot be read must not stop somebody building a site on the other tab, so this
+  // Fills the «Пример» list on the Тексты tab: the source sites this theme has examples from, by
+  // the file name they share across every page folder. Same reasoning as /api/geos above — a theme
+  // whose examples cannot be read must not stop somebody building a site on the other tab, so this
   // reports an empty list instead of a 500. The generation itself still refuses to start, loudly,
-  // in generateSite — and that is the right place for it, since only a run actually needs a layout.
-  app.get('/api/layouts', (_req, res) => {
+  // in generateSite, and that is the right place for it: only a run actually needs an example.
+  app.get('/api/examples', (req, res) => {
+    const template = trimmedString(req.query.template) || listTemplates(ROOT)[0]?.id || '';
     try {
-      res.json({ layouts: loadLayouts(layoutsDir).map(({ id, name }) => ({ id, name })) });
+      const byPage = loadExamples(template, ROOT);
+      // Only the names every page has. One page short and the site could not be built from it, so
+      // offering it would be offering a choice that fails.
+      const lists = Object.values(byPage).map((list) => list.map((one) => one.name));
+      const everywhere = (lists[0] ?? []).filter((name) => lists.every((list) => list.includes(name)));
+      res.json({ examples: everywhere.map((name) => ({ id: name, name })) });
     } catch {
-      res.json({ layouts: [] });
+      res.json({ examples: [] });
     }
   });
 
@@ -510,33 +512,32 @@ export function createApp({
       res.status(400).json({ error: `Шаблон «${template}» не найден` });
       return;
     }
-    // A template with no blocks.json cannot be generated for at all, and saying so now costs
-    // nothing — finding out after the first paid request would not.
+    // A theme with no pictures.json or no examples cannot be generated for at all, and saying so
+    // now costs nothing — finding out after the first paid request would not.
     try {
-      loadTemplateBlocks(template, ROOT);
+      loadTemplatePictures(template, ROOT);
+      loadExamples(template, ROOT);
     } catch (error) {
       res.status(400).json({ error: error.message });
       return;
     }
 
-    // Empty/absent layout stays valid — it means «Случайно», a layout drawn per page. A present
+    // Empty/absent example stays valid — it means «Случайно», an example drawn per page. A present
     // value has to name one that exists, and that is checked here rather than inside the run: a
     // typo must come back as a refused request, not as a job that starts and immediately gives up.
-    if (isPresentNonString(body.layout)) {
-      res.status(400).json({ error: 'Поле «layout» должно быть строкой' });
+    if (isPresentNonString(body.example)) {
+      res.status(400).json({ error: 'Поле «example» должно быть строкой' });
       return;
     }
-    const layout = trimmedString(body.layout);
-    if (layout !== '') {
-      let known;
-      try {
-        known = loadLayouts(layoutsDir);
-      } catch (error) {
-        res.status(400).json({ error: error.message });
-        return;
-      }
-      if (!known.some((candidate) => candidate.id === layout)) {
-        res.status(400).json({ error: `Раскладка «${layout}» не найдена` });
+    const example = trimmedString(body.example);
+    if (example !== '') {
+      const byPage = loadExamples(template, ROOT);
+      // Every page must have it, not just one: the run builds the whole site from this name.
+      const missing = Object.entries(byPage)
+        .filter(([, list]) => !list.some((one) => one.name === example))
+        .map(([address]) => address);
+      if (missing.length > 0) {
+        res.status(400).json({ error: `Примера «${example}» нет у страниц: ${missing.join(', ')}` });
         return;
       }
     }
@@ -593,8 +594,7 @@ export function createApp({
         root: ROOT,
         promptFile: TEXTS_PROMPTS_FILE,
         geosFile,
-        layoutsDir,
-        layout,
+        example,
         fetchFn,
         log,
       });

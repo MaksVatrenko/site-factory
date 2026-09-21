@@ -4,8 +4,8 @@ import { buildInstructions, planPage } from './plan.mjs';
 import { fillFaq, fillSection } from './fill.mjs';
 import { assemblePage, AUTO_BLOCKS } from './assemble.mjs';
 import { generateSiteJson } from './site-json.mjs';
-import { contentByType, loadLayouts, pickLayouts, planShape, resolveLayout, takesASection } from './layouts.mjs';
-import { describeBlocks, loadTemplateBlocks, loadTemplateExamples } from './template.mjs';
+import { frameOf, loadExamples, pickExamples, planShape, takesASection } from './example.mjs';
+import { loadTemplatePictures } from './template.mjs';
 import { languageFor, loadTextsPromptFile } from './texts-prompts.mjs';
 import { loadGeos } from '../geos.mjs';
 
@@ -38,12 +38,11 @@ export async function generateSite({
   root = process.cwd(),
   promptFile,
   geosFile,
-  layoutsDir = join(root, 'layouts'),
-  // Empty means «Случайно»: every page draws its own layout from the folder, by a seed on the site
-  // and the page name. A named one goes to every page of the site instead — that is how a layout
-  // gets looked at without re-running generation ten times, and how something already shown to a
-  // client is shown again.
-  layout = '',
+  // Empty means «Случайно»: every page draws its own example from the ones it has, by a seed on the
+  // site and the page name. A named one — the file name of a source site — goes to every page of
+  // the site instead: that is how one example gets looked at without re-running generation eight
+  // times, and how something already shown to a client is shown again.
+  example = '',
   fetchFn,
   sleep,
   log = () => {},
@@ -63,13 +62,11 @@ export async function generateSite({
   let examples;
   let promptSet;
   let geos;
-  let layouts;
   try {
-    content = loadTemplateBlocks(templateId, root);
-    examples = loadTemplateExamples(templateId, root);
+    content = loadTemplatePictures(templateId, root);
+    examples = loadExamples(templateId, root);
     promptSet = loadTextsPromptFile(promptFile);
     geos = loadGeos(geosFile);
-    layouts = loadLayouts(layoutsDir);
   } catch (error) {
     log(`Тексты: ${error.message} — пропущены`);
     return summary;
@@ -85,30 +82,38 @@ export async function generateSite({
     log(`Тексты: гео «${geo}» незнакомое — язык взят английский`);
   }
 
-  const instructions = buildInstructions({
-    rules: promptSet.rules,
-    templateText: describeBlocks(content),
-    examples,
-  });
-
-  // Seeded by the folder name, so a re-run of a stopped generation keeps the same layouts. Every
-  // page is resolved here, before the first paid request: a layout that does not fit the theme must
-  // be named for free, not discovered after six pages have been paid for.
-  let resolved;
+  // Seeded by the folder name, so a re-run of a stopped generation keeps the same examples. Every
+  // page's frame is built here, before the first paid request: an example that does not fit the
+  // theme must be named for free, not discovered after six pages have been paid for.
+  let frames;
+  let chosen;
   try {
-    const chosen = pickLayouts({
-      layouts,
+    chosen = pickExamples({
+      examples,
       pages,
       seed: siteDir.split(/[/\\]/).filter(Boolean).at(-1),
-      chosen: layout,
+      chosen: example,
     });
-    resolved = Object.fromEntries(
-      pages.map((page) => [page, resolveLayout(chosen[page], { content, autoBlocks: AUTO_BLOCKS })]),
+    frames = Object.fromEntries(
+      pages.map((page) => [page, frameOf(chosen[page], { content, autoBlocks: AUTO_BLOCKS })]),
     );
   } catch (error) {
     log(`Тексты: ${error.message} — пропущены`);
     return summary;
   }
+
+  // The instructions carry this page's own examples, so unlike v1 there is one set per page rather
+  // than one per run. Built here, next to the frames, so a page's twelve requests all share the one
+  // string and the prompt cache has something to hold on to (see plan.mjs's buildInstructions).
+  const instructionsFor = Object.fromEntries(
+    pages.map((page) => [
+      page,
+      buildInstructions({
+        rules: promptSet.rules,
+        examples: examples[page].map((one) => one.page),
+      }),
+    ]),
+  );
   const options = { config, fetchFn, sleep };
 
   // A dedicated catch, not left to escape: an unwritable path or a plain file already sitting where
@@ -125,14 +130,17 @@ export async function generateSite({
   // and the pages below cannot be assembled without them. Only the file is protected, not the call.
   let labels;
   try {
-    const frame = await generateSiteJson(
-      { brand, geo, locale: language, domain: '', pages, instructions },
+    // The site frame is about the site, not about any one page, so it is asked with the home page's
+    // instructions — the cheapest honest choice, since home's examples are about to be paid for
+    // anyway when its own twelve requests start.
+    const built = await generateSiteJson(
+      { brand, geo, locale: language, domain: '', pages, instructions: instructionsFor.home },
       options,
     );
-    summary.cost += frame.cost;
-    labels = frame.labels;
+    summary.cost += built.cost;
+    labels = built.labels;
     const name = 'site.json';
-    if (writeIfNew(join(siteDir, name), frame.site)) summary.written.push(name);
+    if (writeIfNew(join(siteDir, name), built.site)) summary.written.push(name);
     else summary.skipped.push(name);
   } catch (error) {
     // Same principle as the page-level catch below: a truncated or refused attempt still ran the
@@ -153,7 +161,8 @@ export async function generateSite({
     const started = Date.now();
     let spent = 0;
     try {
-      const pageLayout = resolved[page];
+      const frame = frames[page];
+      const instructions = instructionsFor[page];
       const planned = await planPage(
         {
           page,
@@ -161,15 +170,11 @@ export async function generateSite({
           brand,
           geo,
           locale: language,
-          shape: planShape(pageLayout.blocks),
-          // The link budgets are not a property of the layout — they exist to stop spam, not to add
-          // it, so every page of every site from this theme gets the same ceiling, straight from
-          // blocks.json.
+          shape: planShape(frame.blocks),
+          // The link budgets are not a property of the example — the examples have no links at all.
+          // They exist to stop spam, so every page of every site from this theme gets the same
+          // ceiling, straight from pictures.json.
           links: content.links,
-          // From the resolved layout, not from the theme: the theme states the ceiling and the
-          // layout picks out of it, so reading the theme here would discard every exact number a
-          // layout wrote. One entry per kind of block, because each kind is asked for separately.
-          contentByType: contentByType(pageLayout.blocks),
           instructions,
         },
         options,
@@ -185,16 +190,14 @@ export async function generateSite({
       // everything after it up by one.
       const planned_ = new Map();
       const taken = new Map();
-      for (const [at, block] of pageLayout.blocks.entries()) {
+      for (const [at, block] of frame.blocks.entries()) {
         if (!takesASection(block)) continue;
         const nth = taken.get(block.type) ?? 0;
         taken.set(block.type, nth + 1);
         const entry = planned.plan.blocks?.[block.type]?.[nth];
-        // What goes inside the block, and in what order, comes from the layout when the layout
-        // said so — that is the whole point of naming a sequence there — and from the plan when it
-        // did not. The two never both apply: the schema stops asking as soon as a kind is spelled
-        // out everywhere it appears.
-        if (entry) planned_.set(at, { ...entry, elements: block.elements ?? entry.elements });
+        // What goes inside the block, and in what order, is the example's — the plan has no field
+        // for it, because the schema never asks. The plan supplies the heading and the brief.
+        if (entry) planned_.set(at, { ...entry, elements: block.elements, counts: block.counts });
       }
 
       const headings = [...planned_.values()].map((section) => section.heading);
@@ -203,7 +206,7 @@ export async function generateSite({
         const siblings = headings.filter((heading) => heading !== section.heading);
         try {
           const filled = await fillSection(
-            { section, siblings, brand, locale: language, instructions },
+            { section, siblings, brand, locale: language, page, counts: section.counts, instructions },
             options,
           );
           spent += filled.cost;
@@ -235,7 +238,7 @@ export async function generateSite({
       if (planned.plan.faq.length > 0) {
         try {
           const answered = await fillFaq(
-            { questions: planned.plan.faq, brand, locale: language, instructions },
+            { questions: planned.plan.faq, brand, locale: language, page, instructions },
             options,
           );
           spent += answered.cost;
@@ -263,23 +266,25 @@ export async function generateSite({
         [...sections].filter(([, section]) => section.items.length > 0),
       );
 
-      const { page: built, warnings } = assemblePage({
+      const { page: builtPage, warnings } = assemblePage({
         plan: planned.plan,
-        blocks: pageLayout.blocks,
-        layout: pageLayout.id,
+        blocks: frame.blocks,
+        example: chosen[page].id,
         sections: filledSections,
         faq,
         pages,
         page,
         labels,
-        lengths: content.lengths,
+        // Measured off the same example the shape came from, not declared anywhere: if the example
+        // writes paragraphs of 124 characters, that is what a long one is measured against.
+        lengths: frame.lengths,
       });
       for (const warning of warnings) log(`Тексты: ${name}: ${warning}`);
 
-      if (writeIfNew(join(siteDir, name), built)) summary.written.push(name);
+      if (writeIfNew(join(siteDir, name), builtPage)) summary.written.push(name);
       else summary.skipped.push(name);
       log(
-        `Тексты: ${name} готова — раскладка «${pageLayout.name}», ${((Date.now() - started) / 1000).toFixed(1)} с, ${formatCost(spent)}`,
+        `Тексты: ${name} готова — пример «${chosen[page].name}», ${((Date.now() - started) / 1000).toFixed(1)} с, ${formatCost(spent)}`,
       );
     } catch (error) {
       // Whatever this page already spent before dying — planning, filled sections, a truncated or

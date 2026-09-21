@@ -9,8 +9,8 @@ import { resolveLink, isSelfLink } from './links.mjs';
 // back to the page it is already on — are not checked here so much as made impossible by construction.
 //
 // What the page is made of — which blocks, in what order, how many — is not written here either. It
-// comes in as `blocks`: a layout already resolved against the theme, where every entry carries its
-// own nature (see factory/texts/layouts.mjs). This module knows no block by name except the two it
+// comes in as `blocks`: a frame read off the example SEO supplied, where every entry carries its
+// own nature (see factory/texts/example.mjs). This module knows no block by name except the two it
 // fills itself, so a new kind of block reaches a page without a line of this file changing.
 
 // [words](/target). Deliberately narrow: no nesting, no whitespace tricks, the same shape the
@@ -41,10 +41,11 @@ function keepLinks(text, pages, page, warnings) {
   });
 }
 
-// blocks.json's item counts (listItems, tableRows, cards) are a ceiling the model was already
-// asked to respect, unlike the character lengths below. A count is safe to actually cut, unlike a
-// length: dropping the last few rows never breaks one mid-sentence, so — unlike noteLength — this
-// one trims rather than only reporting.
+// The example's own item counts — five list rows, three table rows — are a ceiling the model was
+// already asked to respect (see fill.mjs's brief), unlike the character lengths below. A count is
+// safe to actually cut, unlike a length: dropping the last few rows never breaks one mid-sentence,
+// so — unlike noteLength — this one trims rather than only reporting. A block the example wrote no
+// such element into has no ceiling to hold the answer to, and nothing is cut.
 function trimToMax(what, list, range, warnings) {
   if (!range) return list;
   const max = Array.isArray(range) ? range[1] : range;
@@ -53,7 +54,7 @@ function trimToMax(what, list, range, warnings) {
   return list.slice(0, max);
 }
 
-function toElement(item, { images, pages, page, warnings, lengths }) {
+function toElement(item, { images, pages, page, warnings, counts }) {
   const link = (text) => keepLinks(text, pages, page, warnings);
   const picture = (name) => {
     if (name && images.has(name)) return name;
@@ -67,9 +68,9 @@ function toElement(item, { images, pages, page, warnings, lengths }) {
     case 'text':
       return { type: 'text', text: link(item.text) };
     case 'list':
-      return { type: 'list', items: trimToMax('пунктов списка', item.items, lengths.listItems, warnings).map(link) };
+      return { type: 'list', items: trimToMax('пунктов списка', item.items, counts.list, warnings).map(link) };
     case 'table': {
-      const rows = trimToMax('строк таблицы', item.rows, lengths.tableRows, warnings);
+      const rows = trimToMax('строк таблицы', item.rows, counts.table, warnings);
       return { type: 'table', columns: item.columns, rows: rows.map((row) => row.map(link)) };
     }
     case 'cards':
@@ -78,7 +79,7 @@ function toElement(item, { images, pages, page, warnings, lengths }) {
       // still carry one — that is the content format, not this stage.
       return {
         type: 'cards',
-        items: trimToMax('карточек', item.cards, lengths.cards, warnings).map((card) => ({
+        items: trimToMax('карточек', item.cards, counts.cards, warnings).map((card) => ({
           title: card.title,
           text: link(card.text),
         })),
@@ -90,7 +91,7 @@ function toElement(item, { images, pages, page, warnings, lengths }) {
       // a page of this site or it names nothing. Naming nothing is not a mistake here — it is the
       // ordinary case, and it means the partner link, which the template fills in at build time. So
       // an unusable target is dropped back to that rather than turning the button into a dead end.
-      const items = trimToMax('кнопок', item.items, lengths.buttonItems, warnings)
+      const items = trimToMax('кнопок', item.items, counts.buttons, warnings)
         .map((button) => {
           const canonical = button.href ? resolveLink(button.href, pages) : null;
           if (button.href && canonical === null) {
@@ -108,13 +109,13 @@ function toElement(item, { images, pages, page, warnings, lengths }) {
       return items.length > 0 ? { type: 'buttons', items } : null;
     }
     case 'info': {
-      const items = trimToMax('плашек', item.items, lengths.infoItems, warnings).filter(Boolean);
+      const items = trimToMax('плашек', item.items, counts.info, warnings).filter(Boolean);
       return items.length > 0 ? { type: 'info', items } : null;
     }
     case 'line':
       return { type: 'line' };
     case 'steps': {
-      const items = trimToMax('шагов', item.items, lengths.stepItems, warnings)
+      const items = trimToMax('шагов', item.items, counts.steps, warnings)
         .map((step) => ({ title: step.title, text: link(step.text) }))
         .filter((step) => step.title !== '' || step.text !== '');
       return items.length > 0 ? { type: 'steps', items } : null;
@@ -131,7 +132,7 @@ function toElement(item, { images, pages, page, warnings, lengths }) {
   }
 }
 
-// Lengths from blocks.json are reported, never enforced. Trimming a paragraph to fit would cut it
+// Lengths from the example are reported, never enforced. Trimming a paragraph to fit would cut it
 // mid-sentence, which is worse than a long paragraph, and the engine imposes no limit of its own —
 // these numbers exist so the layout stays pleasant, not so the build can fail.
 function noteLength(what, value, range, warnings) {
@@ -144,7 +145,7 @@ function noteLength(what, value, range, warnings) {
 
 // The factory's own blocks: what goes inside them is known without asking the model, so asking
 // would only pay for something thrown away. Named here, beside the builders, and handed to
-// layouts.mjs so a layout naming an auto block nobody can fill is refused before the first request.
+// example.mjs so a frame with an auto block nobody can fill is refused before the first request.
 const AUTO = {
   // Built from the headings, not from anything the model wrote: one entry per headed block that
   // survived, in the same order they come out in.
@@ -158,14 +159,14 @@ const AUTO = {
 
 export const AUTO_BLOCKS = Object.keys(AUTO);
 
-export function assemblePage({ plan, blocks, layout = '', sections, faq, pages, page, labels, lengths = {} }) {
+export function assemblePage({ plan, blocks, example = '', sections, faq, pages, page, labels, lengths = {} }) {
   const warnings = [];
-  // One name per picture-bearing block, in layout order, already normalised and de-duplicated by
+  // One name per picture-bearing block, in page order, already normalised and de-duplicated by
   // trimPlan. A null is a block whose name came back unusable: it keeps its place in the list so
   // the pairing below stays aligned, and simply has no picture.
   const pictures = plan.images ?? [];
   const images = new Set(pictures.filter(Boolean));
-  const context = { images, pages, page, warnings, lengths };
+  const context = { images, pages, page, warnings };
 
   // Two passes over the layout, because the contents cannot be built until every heading is known,
   // and a block with nothing to show is dropped along the way — so the auto blocks are filled over
@@ -173,7 +174,7 @@ export function assemblePage({ plan, blocks, layout = '', sections, faq, pages, 
   const built = [];
   for (const [at, block] of blocks.entries()) {
     if (block.auto) {
-      // layouts.mjs refuses this before the first paid request; by the time a page is assembled it
+      // example.mjs refuses this before the first paid request; by the time a page is assembled it
       // can only mean the two lists drifted apart, and an empty block on the page would be the
       // quietest possible way to say so.
       if (!AUTO[block.type]) {
@@ -223,7 +224,9 @@ export function assemblePage({ plan, blocks, layout = '', sections, faq, pages, 
         items: section.items
           .map((item) => {
             if (item.kind === 'text') noteLength('text абзаца', item.text, lengths.text, warnings);
-            return toElement(item, context);
+            // The ceilings are the block's own, from the example's own block, not the page's: one
+            // section's five-row list says nothing about what another section's table may hold.
+            return toElement(item, { ...context, counts: block.counts ?? {} });
           })
           .filter(Boolean),
       });
@@ -231,8 +234,8 @@ export function assemblePage({ plan, blocks, layout = '', sections, faq, pages, 
     }
 
     // Nothing to put in it: no heading to write, no h1 to carry, and the factory does not fill it.
-    // A layout reaches here only by naming a block blocks.json describes as holding content the
-    // plan has no field for, so say so rather than emit an empty block onto the page.
+    // A frame reaches here only from an example whose block has no heading of its own and is not
+    // one the factory fills, so say so rather than emit an empty block onto the page.
     warnings.push(`блок «${block.type}» нечем наполнить — пропущен`);
   }
 
@@ -245,9 +248,9 @@ export function assemblePage({ plan, blocks, layout = '', sections, faq, pages, 
   const headingsAfter = (index) =>
     built.slice(index + 1).filter((entry) => entry.block.heading).map((entry) => entry.heading);
 
-  // Which picture belongs to which block, worked out over the whole layout rather than over what
-  // survived. planShape counted the names in layout order, so the fourth name is for the fourth
-  // picture-bearing block of the layout — whether or not the third one made it onto the page. A
+  // Which picture belongs to which block, worked out over the whole frame rather than over what
+  // survived. planShape counted the names in page order, so the fourth name is for the fourth
+  // picture-bearing block of the page — whether or not the third one made it onto the page. A
   // counter advanced while emitting would instead shift every later picture up by one the moment a
   // block was dropped, quietly putting one block's picture under another block's heading.
   const pictureAt = new Map();
@@ -299,14 +302,14 @@ export function assemblePage({ plan, blocks, layout = '', sections, faq, pages, 
   // the page, and unlike the item counts it is never trimmed anywhere earlier in the pipeline.
   noteLength('h1 страницы', plan.h1, lengths.h1, warnings);
 
-  // Which layout the page was built from, written into the page rather than into site.json.
-  // Layouts are per page now, and site.json is written once at the start of a run and never
+  // Which example the page was built from, written into the page rather than into site.json.
+  // Examples are per page, and site.json is written once at the start of a run and never
   // overwritten: a run that stopped and was picked up later would add pages that no table in
   // site.json could still grow to hold, so the record would be wrong exactly when it was needed
   // most. src/lib/site-dir.mjs reads a page by its own three fields and never looks at the rest,
   // so this one is inert — the engine does not read it and it reaches no built page.
   return {
-    page: { title: plan.title, description: plan.description, layout, blocks: pageBlocks },
+    page: { title: plan.title, description: plan.description, example, blocks: pageBlocks },
     warnings,
   };
 }
