@@ -1,0 +1,417 @@
+{
+  "title": "899OK Login | Sign In & Register Your Account",
+  "description": "Log in or register at 899OK in under 2 minutes. Phone + OTP verification, biometric login option, and password recovery in Bangla or English.",
+  "blocks": [
+    {
+      "type": "hero",
+      "content": [
+        {
+          "type": "title",
+          "h1": "899OK Login & Account Registration"
+        },
+        {
+          "type": "text",
+          "text": "First time on 899OK and stuck at the login page? I get it — I was in the same boat when my cousin sent me the link during last year's Asia Cup."
+        },
+        {
+          "type": "text",
+          "text": "Honestly though, once you know where to tap, logging in takes about ten seconds. Registration isn't much slower. Let me walk you through it the way I wish someone had walked me through it."
+        }
+      ]
+    },
+    {
+      "type": "toc",
+      "content": [
+        {
+          "type": "title",
+          "h2": "What's on This Page"
+        },
+        {
+          "type": "list",
+          "items": [
+            "How to Log In to 899OK",
+            "Creating a New Account",
+            "Registration Steps",
+            "Account Security Tips",
+            "Password Recovery",
+            "Mobile vs Desktop Login",
+            "Login Support & Help",
+            "Login FAQ",
+            "Final Word"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "How to Log In to 899OK"
+        },
+        {
+          "type": "text",
+          "text": "Open the site or the app and look at the top-right corner. That green Login button is what you want."
+        },
+        {
+          "type": "text",
+          "text": "Type in the username (or the phone number you registered with) plus your password, tap confirm, and you're through. Simple."
+        },
+        {
+          "type": "text",
+          "text": "Three ways to sign in:"
+        },
+        {
+          "type": "table",
+          "columns": [
+            "Method",
+            "How",
+            "Speed"
+          ],
+          "rows": [
+            [
+              "Username + password",
+              "Type them in",
+              "~10 sec"
+            ],
+            [
+              "Phone + password",
+              "Type them in",
+              "~10 sec"
+            ],
+            [
+              "Biometric (app)",
+              "Fingerprint or Face ID",
+              "~2 sec"
+            ]
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Quick tip that people forget: if you're logging in from a friend's phone or a shared laptop, don't tick \"remember me\". Trust me on this one."
+        },
+        {
+          "type": "text",
+          "text": "Already have an account and just want to jump in? The homepage has the login button right at the top."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "Creating a New 899OK Account"
+        },
+        {
+          "type": "text",
+          "text": "Don't have an account yet? Signup is quick. All you need:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "A Bangladesh mobile number",
+            "An active payment app (bKash, Nagad, or Rocket)",
+            "About 2 minutes",
+            "Here's what you'll do:",
+            "1. Tap the Register button on the homepage or app",
+            "2. Type in your mobile number — use the one attached to your bKash/Nagad wallet, because this matters when you go to withdraw later",
+            "3. Pick a strong password — mix letters, numbers, and one symbol",
+            "4. Enter your name exactly as it shows on your NID",
+            "5. Select BDT as your account currency",
+            "6. Add a promo code if you've got one — this is how the welcome bonus triggers",
+            "7. Verify the OTP that lands on your phone",
+            "8. Confirm — account created"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "After that you can wander around the casino lobby or check the slots section without depositing anything. No pressure."
+        },
+        {
+          "type": "text",
+          "text": "What you won't need at signup:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Email verification (optional — can add later)",
+            "NID upload (only for first withdrawal)",
+            "Selfie or KYC (only for large withdrawals)",
+            "Address proof (never asked)"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Cleaner than most Bangladesh casinos I've tried."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "How to Register at 899OK in 5 Steps"
+        },
+        {
+          "type": "text",
+          "text": "About two minutes with your phone in hand:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "1. Tap Register — the green button at the top of the site or app",
+            "2. Enter your Bangladesh phone number (the one tied to your bKash or Nagad — important for withdrawal matching)",
+            "3. Choose a strong password mixing letters, a digit, and a symbol",
+            "4. Verify the OTP sent by SMS",
+            "5. Add a promo code if you have one to unlock the welcome bonus"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Done. You can now browse the games section and the cricket betting markets before you put a single taka in."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "899OK Account Security Tips"
+        },
+        {
+          "type": "text",
+          "text": "Your 899OK account holds your money. Treat it that way."
+        },
+        {
+          "type": "text",
+          "text": "Do:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Use a password you don't recycle from other sites — mix letters, a digit, a symbol",
+            "Turn on 2FA in settings for SMS/email codes on new-device logins",
+            "Use biometric login inside the 899OK app",
+            "Log out on shared devices — even a mate's phone",
+            "Check login history monthly (Settings → Security)",
+            "Don't:",
+            "Share your login with anyone, ever",
+            "Save the password in Chrome on a public computer",
+            "Click \"reset password\" emails you didn't request — type the site URL yourself",
+            "Use random public wifi for real-money play",
+            "Reply to Telegram DMs claiming to be \"899OK support\" — real support only lives on the site and app"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Watch for phishing: if you get an SMS or email telling you to log in urgently, check the URL carefully. Anything with extra words like \"899ok-bonus\" or \"899ok-official-login\" is a fake trying to swipe your password."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "899OK Password Recovery"
+        },
+        {
+          "type": "text",
+          "text": "Forgot your password? Happens to everyone. Fastest way back in:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "1. Tap \"Forgot Password\" on the login screen",
+            "2. Enter your registered phone number",
+            "3. Wait for the 6-digit SMS code",
+            "4. Enter the code",
+            "5. Set a new password",
+            "6. Log in with the new one"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Whole thing: about 2 minutes. Codes die after 10 minutes for security."
+        },
+        {
+          "type": "text",
+          "text": "SMS not coming through?"
+        },
+        {
+          "type": "text",
+          "text": "Check your phone signal"
+        },
+        {
+          "type": "text",
+          "text": "Wait 60 seconds and hit \"Resend\""
+        },
+        {
+          "type": "text",
+          "text": "Try email recovery if you added one"
+        },
+        {
+          "type": "text",
+          "text": "Ping live chat — they can verify by NID and reset manually"
+        },
+        {
+          "type": "text",
+          "text": "Lost the phone number too?"
+        },
+        {
+          "type": "text",
+          "text": "Hit up support with: your registered name, rough signup date, last deposit amount and method (bKash/Nagad TRX ID helps), NID scan"
+        },
+        {
+          "type": "text",
+          "text": "Manual verification takes 24–48 hours because they're being careful. That's a plus, not a minus."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "899OK Mobile vs Desktop Login"
+        },
+        {
+          "type": "text",
+          "text": "Both work fine. Different feel to each."
+        },
+        {
+          "type": "text",
+          "text": "Mobile browser (Chrome/Safari):"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Any phone, any OS",
+            "Nothing to install",
+            "Full site features",
+            "No biometric login",
+            "A touch slower than the app on 4G",
+            "Android app:",
+            "Fingerprint / Face ID login",
+            "Push notifications for cricket odds",
+            "Smoother live streams",
+            "Snappier switching between sections",
+            "Android only",
+            "Needs \"unknown sources\" install permission",
+            "Desktop browser:",
+            "Bigger screen for multi-market cricket betting",
+            "Live streams look great",
+            "Full features",
+            "No biometric",
+            "Not portable, obviously"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Most Bangladesh players I know stick to the app or Safari on their iPhone. I only fire up desktop when I've got three cricket markets open at once."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "899OK Login Support & Help"
+        },
+        {
+          "type": "text",
+          "text": "If login isn't working, three routes to reach support:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "1. Live chat — bottom-right corner on any page",
+            "Available 24/7 in Bangla and English",
+            "Reply time: usually under 3 minutes",
+            "Best for OTP or password issues",
+            "2. Email — support address on the contact page",
+            "Reply time: 4–12 hours",
+            "Best when you need to attach screenshots or documents",
+            "3. Telegram channel",
+            "Only the official one linked from the site — anything else is a scam",
+            "Reply time: 10–30 minutes",
+            "Best for general questions"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Real 899OK support will never ask for your password. If someone does, block them. Full stop."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "899OK Login — My Take"
+        },
+        {
+          "type": "text",
+          "text": "Login and registration at 899OK are about as straightforward as it gets. The phone-first signup is genuinely faster than most Bangladesh competitors, which love asking for email plus address before you've even seen the lobby."
+        },
+        {
+          "type": "text",
+          "text": "Stuck somewhere? Live chat sorts it fastest — I've never waited more than 5 minutes for a Bangla reply, even at odd hours."
+        },
+        {
+          "type": "text",
+          "text": "Set a proper password, flip on 2FA, and grab the 899OK app if you're on Android so you can use fingerprint login. That combo keeps my account safe and my sessions painless."
+        }
+      ]
+    },
+    {
+      "type": "faq",
+      "content": [
+        {
+          "type": "title",
+          "h2": "899OK Login FAQ — OTP, Recovery & Security"
+        },
+        {
+          "type": "toggle",
+          "title": "How do I create an 899OK account?",
+          "text": "Enter your Bangladesh phone number and verify the OTP. Whole thing takes about 2 minutes. No documents required at signup."
+        },
+        {
+          "type": "toggle",
+          "title": "Can I log in from more than one device?",
+          "text": "Yes, up to 2 devices at the same time. More than that triggers a security check, and you'll be asked to verify by SMS."
+        },
+        {
+          "type": "toggle",
+          "title": "What if the OTP doesn't reach me?",
+          "text": "Wait 60 seconds and tap \"Resend\". If it still fails, switch from wifi to mobile data — some routers block Bangladesh SMS gateways. Contact support if resends keep failing."
+        },
+        {
+          "type": "toggle",
+          "title": "Is 899OK login safe?",
+          "text": "Yes. SSL encryption, optional 2FA, biometric login on the app, and login history you can review in settings. Turn on 2FA for extra protection."
+        },
+        {
+          "type": "toggle",
+          "title": "Can I change my registered phone number?",
+          "text": "Yes, with verification. Go to Settings → Personal Info → Change Phone Number. You'll verify both the old and new number by OTP."
+        },
+        {
+          "type": "toggle",
+          "title": "Do I need to submit ID at signup?",
+          "text": "No. KYC only kicks in before your first larger withdrawal or if a security review is triggered. Signup itself is just phone plus password."
+        },
+        {
+          "type": "toggle",
+          "title": "What happens if I enter the wrong password too many times?",
+          "text": "Your account locks for 30 minutes after 5 failed attempts. Just use \"Forgot Password\" to reset and skip the wait."
+        }
+      ]
+    }
+  ]
+}

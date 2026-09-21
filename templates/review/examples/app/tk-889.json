@@ -1,0 +1,496 @@
+{
+  "title": "TK889 App | Android APK Download & Install Guide",
+  "description": "Get the TK889 Android APK in under two minutes. Real install steps, data usage numbers, app-only bonuses and fixes for common errors in Bangladesh.",
+  "blocks": [
+    {
+      "type": "hero",
+      "content": [
+        {
+          "type": "title",
+          "h1": "TK889 App — Android APK Download"
+        },
+        {
+          "type": "text",
+          "text": "I moved everything to the TK889 app back in Ramadan and never went back to the browser. The difference shows up fastest on in-play cricket and crash rounds — the bet slip just responds, no reload, no spinning wheel while odds move."
+        },
+        {
+          "type": "text",
+          "text": "Below is exactly how I installed it on a three-year-old Android, what permissions it actually asks for, and the two bonuses that only unlock after the APK is on your phone."
+        }
+      ]
+    },
+    {
+      "type": "toc",
+      "content": [
+        {
+          "type": "title",
+          "h2": "What You'll Find on This Page"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Where To Get The TK889 APK",
+            "Android Install, Step By Step",
+            "iPhone Users — Read This",
+            "What The App Does Better",
+            "App-Only Bonuses",
+            "Errors, Fixes And Updates",
+            "Register From The App",
+            "App Questions Answered",
+            "My Honest Verdict"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "Where To Get The TK889 APK"
+        },
+        {
+          "type": "text",
+          "text": "First thing people ask me: why isn't it in the Play Store? Because Google blocks real-money gambling apps for Bangladesh. Every operator here distributes an APK instead, so nothing shady is happening."
+        },
+        {
+          "type": "text",
+          "text": "The download button sits in the top navigation of the official site and again in the footer. One tap and the file lands in your Downloads folder."
+        },
+        {
+          "type": "text",
+          "text": "File specs before you commit storage:"
+        },
+        {
+          "type": "table",
+          "columns": [
+            "Detail",
+            "What You Get"
+          ],
+          "rows": [
+            [
+              "Download size",
+              "24 MB"
+            ],
+            [
+              "File type",
+              "APK (Android install package)"
+            ],
+            [
+              "Minimum OS",
+              "Android 6.0"
+            ],
+            [
+              "Build number",
+              "3.2.1"
+            ],
+            [
+              "Update cycle",
+              "Every 4–6 weeks"
+            ],
+            [
+              "Signature",
+              "Signed by the TK889 dev team"
+            ],
+            [
+              "Free space needed",
+              "About 100 MB during install"
+            ]
+          ]
+        },
+        {
+          "type": "text",
+          "text": "One rule I never break: the file comes from the official source only. Those APK links passed around in Telegram groups can carry a cloned login page that harvests your password. If you are unsure, open the login page from the website first and check the download link from there."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "Android Install, Step By Step"
+        },
+        {
+          "type": "text",
+          "text": "This took me 90 seconds on a Redmi with Android 11. Nothing technical, you just have to approve one security prompt the first time."
+        },
+        {
+          "type": "text",
+          "text": "1. Tap the Android download button — the .apk starts saving and you'll see it in your notification bar"
+        },
+        {
+          "type": "text",
+          "text": "2. Approve installs from your browser — Android 8 and up shows a pop-up, tap Settings then toggle it on. Android 6–7: Settings → Security → Unknown sources"
+        },
+        {
+          "type": "text",
+          "text": "3. Open the file from notifications or your file manager's Downloads folder"
+        },
+        {
+          "type": "text",
+          "text": "4. Press Install — roughly 20 seconds on most phones"
+        },
+        {
+          "type": "text",
+          "text": "5. Sign in with your existing details or register fresh, then claim your install bonus"
+        },
+        {
+          "type": "text",
+          "text": "Your website account and app account are the same thing — no second registration. After installing, I switched the unknown-sources toggle back off out of habit. If you're brand new, go straight to the bonus page and check which promo code applies before your first deposit."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "Permissions — What To Allow And What To Refuse"
+        },
+        {
+          "type": "text",
+          "text": "I check permissions on every gambling app I install. TK889 asks for very little, and that's a good sign. Here's my personal call on each one:"
+        },
+        {
+          "type": "table",
+          "columns": [
+            "Permission",
+            "Reason It Asks",
+            "My Answer"
+          ],
+          "rows": [
+            [
+              "Storage",
+              "Caching game files so slots load faster",
+              "Allow"
+            ],
+            [
+              "Notifications",
+              "Bonus drops, match kick-offs, cash-out prompts",
+              "Allow — this is how app bonuses reach you"
+            ],
+            [
+              "Camera",
+              "Uploading your NID photo for KYC",
+              "Allow only during verification"
+            ],
+            [
+              "Location",
+              "Matching your account region",
+              "Optional, speeds up checks"
+            ],
+            [
+              "SMS or contacts",
+              "No legitimate reason",
+              "Refuse — and delete that APK"
+            ]
+          ]
+        },
+        {
+          "type": "text",
+          "text": "The genuine build never requests SMS access or your contact list. If a file you downloaded somewhere else asks for those, cancel immediately and reinstall from the official source."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "iPhone Users — Read This"
+        },
+        {
+          "type": "text",
+          "text": "Straight answer: there is no iOS app. Apple doesn't approve real-money betting apps for the Bangladesh store, so nobody here has one."
+        },
+        {
+          "type": "text",
+          "text": "What you use instead is the mobile web version in Safari, and honestly my cousin's iPhone 12 runs it as smoothly as my Android app. You keep:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "The full slot collection with the same providers",
+            "Every live dealer table including Bangla-speaking rooms",
+            "Cricket and football in-play markets with live odds",
+            "bKash, Nagad and Rocket deposits and cashouts",
+            "Crash and instant titles from the games lobby",
+            "Make it feel like a real app:",
+            "1. Open the site in Safari (not Chrome — Chrome on iOS can't do this properly)",
+            "2. Tap the Share icon at the bottom",
+            "3. Scroll and choose \"Add to Home Screen\"",
+            "4. Rename it TK889 and tap Add"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Now it launches full-screen from your home screen with no address bar. The only thing you genuinely miss out on is the install bonus, since that's tied to the APK."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "What The App Does Better"
+        },
+        {
+          "type": "text",
+          "text": "I used the mobile browser for two months before switching, so I've got a decent comparison. Here's what actually changed for me:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Speed differences I noticed:",
+            "Opening a live table: about 2 seconds against 4–5 in the browser",
+            "Bet slip updates without a page reload — this matters when odds shift mid-over",
+            "Video streams buffer less on 4G in a moving bus",
+            "Features the browser can't give you:",
+            "Fingerprint login, so no typing a password every session",
+            "Push alerts for bonus drops and match starts",
+            "Bet history readable even with a dead connection",
+            "One-tap repeat bet for in-play cricket",
+            "Dealer chat stays connected instead of dropping every few minutes",
+            "Data usage per hour, roughly:",
+            "Slots: 5–10 MB",
+            "Live casino tables: 15–25 MB",
+            "Live cricket streaming: 60–100 MB"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Turn HD off in stream settings and the video figure drops by close to half. On a 1 GB daily pack, slots cost you almost nothing."
+        },
+        {
+          "type": "cards",
+          "items": [
+            {
+              "title": "Cold Start Times",
+              "text": "The app opens in 2–3 seconds from cold. The mobile browser took me 6–9 seconds including redirects and login."
+            },
+            {
+              "title": "Battery Drain",
+              "text": "About 8–10% per hour on live tables with the screen bright. Slots sit closer to 5%, similar to a video app."
+            },
+            {
+              "title": "Older Phones",
+              "text": "Android 6 and 7 devices handle slots and betting fine but may stutter on HD live streams. Drop the quality setting and it stabilises."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "App-Only Bonuses"
+        },
+        {
+          "type": "text",
+          "text": "Two offers only trigger once the APK is installed and you've logged in from it. They're the operator's way of nudging players off the browser, and I'll happily take the trade."
+        },
+        {
+          "type": "text",
+          "text": "1. First-install free bet: ৳200"
+        },
+        {
+          "type": "text",
+          "text": "Credited once per account on first app launch"
+        },
+        {
+          "type": "text",
+          "text": "No deposit needed — it's a genuine free bet"
+        },
+        {
+          "type": "text",
+          "text": "Minimum odds of 1.60 for it to count"
+        },
+        {
+          "type": "text",
+          "text": "Winnings land as withdrawable cash, no rollover on the return"
+        },
+        {
+          "type": "text",
+          "text": "2. Weekly notification spins: ৳50 value"
+        },
+        {
+          "type": "text",
+          "text": "Keep push notifications on and stay logged in"
+        },
+        {
+          "type": "text",
+          "text": "Every Sunday you get 5 spins on that week's featured slot"
+        },
+        {
+          "type": "text",
+          "text": "Small on its own, but over a month it's a few hundred taka of free play"
+        },
+        {
+          "type": "text",
+          "text": "Both stack on top of the standard welcome package, so read the terms on the promotions page before you deposit — sequencing them properly gets you more playable balance."
+        },
+        {
+          "type": "cards",
+          "items": [
+            {
+              "title": "How The ৳200 Free Bet Lands",
+              "text": "It appeared in my balance within about 40 minutes of first logging in through the app. If it doesn't, live chat resolves it quickly."
+            },
+            {
+              "title": "Why Notifications Are Worth It",
+              "text": "Reload offers reach app users before they appear anywhere on site. I've caught deposit boosts that were gone by evening."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "Errors, Fixes And Updates"
+        },
+        {
+          "type": "text",
+          "text": "Most problems I've seen in player groups come down to three or four things. Work through these in order."
+        },
+        {
+          "type": "text",
+          "text": "\"App not installed\" message:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Clear space — you want 100 MB free minimum",
+            "Delete any older version first, then install fresh",
+            "Re-download the file; a half-finished download fails silently",
+            "Installs but won't open:",
+            "Force stop from app settings, then reopen",
+            "Restart the phone (fixes it more often than it should)",
+            "Reinstall from the official source as a last step",
+            "Live stream keeps stalling:",
+            "Swap between Wi-Fi and mobile data — one is usually much better",
+            "Close background apps eating your RAM",
+            "Lower the video quality using the gear icon inside the game",
+            "Login failing:",
+            "Check you're using the number tied to your account, not a new one",
+            "Use password recovery from the login screen rather than guessing repeatedly",
+            "Updates:",
+            "The app checks on launch and shows a marker when a new build exists. You download the fresh APK and install over the old one — your session, history and preferences all stay put. Nothing to uninstall."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "If you're still stuck, live chat replies in Bangla, usually inside a few minutes. Meanwhile you can keep playing the instant games through your mobile browser."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "Register From The App In 5 Steps"
+        },
+        {
+          "type": "text",
+          "text": "If you're new, do the signup inside the app so the install bonus attaches correctly."
+        },
+        {
+          "type": "text",
+          "text": "1. Open the app and tap Register — the button sits top right"
+        },
+        {
+          "type": "text",
+          "text": "2. Enter your Bangladesh mobile number — use the one linked to your bKash or Nagad, because withdrawal names must match"
+        },
+        {
+          "type": "text",
+          "text": "3. Set a password with letters, a number and one symbol"
+        },
+        {
+          "type": "text",
+          "text": "4. Confirm the OTP that arrives by SMS"
+        },
+        {
+          "type": "text",
+          "text": "5. Add your promo code if you have one, then deposit or claim the free bet"
+        },
+        {
+          "type": "text",
+          "text": "You can browse the casino lobby and spin demo slots without depositing anything. Full KYC only becomes necessary before your first withdrawal, not at signup."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "Is The TK889 App Worth The 24 MB?"
+        },
+        {
+          "type": "text",
+          "text": "Do you strictly need it? No — the mobile site does the job, and iPhone players prove that daily. But if you play more than an hour or two a week, the app is simply the better experience: faster tables, fingerprint login, and odds that don't vanish while a page reloads."
+        },
+        {
+          "type": "text",
+          "text": "The deciding factor for me was the ৳200 free bet on first install. Two minutes of setup for a no-deposit free bet is the easiest trade on this site, and it stacks with what's on the bonus page."
+        },
+        {
+          "type": "text",
+          "text": "One last time: download only from the official source. Then go enjoy the cricket markets or a few rounds in the live casino — and set a deposit limit before you start, not after."
+        }
+      ]
+    },
+    {
+      "type": "faq",
+      "content": [
+        {
+          "type": "title",
+          "h2": "TK889 App — Install, APK And Update Questions"
+        },
+        {
+          "type": "toggle",
+          "title": "Is the TK889 APK safe on my phone?",
+          "text": "Yes, when it comes from the official source. The build is signed by the development team. Files shared in chat groups or on mirror sites can be repackaged with a fake login screen, so avoid them completely."
+        },
+        {
+          "type": "toggle",
+          "title": "Why can't I find TK889 in the Play Store?",
+          "text": "Google doesn't permit real-money gambling apps for Bangladesh. Every operator here uses direct APK distribution, so this is normal rather than a warning sign."
+        },
+        {
+          "type": "toggle",
+          "title": "Is there an iPhone version?",
+          "text": "No iOS app exists. iPhone players use the Safari version and add it to the home screen for a full-screen feel. Everything works except the APK install bonus."
+        },
+        {
+          "type": "toggle",
+          "title": "How much mobile data does the app eat?",
+          "text": "Roughly 5–10 MB per hour on slots, 15–25 MB on live tables and 60–100 MB when streaming cricket. Switching the stream off HD cuts the video figure sharply."
+        },
+        {
+          "type": "toggle",
+          "title": "Do I lose anything when the app updates?",
+          "text": "Nothing at all. The new APK installs over the existing one and your login, bet history and settings carry across. No uninstall needed."
+        },
+        {
+          "type": "toggle",
+          "title": "Can I run one account on two phones?",
+          "text": "Yes, up to two devices. Just don't place bets from both at the same moment — simultaneous activity can flag automated fraud checks and pause your account."
+        },
+        {
+          "type": "toggle",
+          "title": "What are the minimum phone requirements?",
+          "text": "Android 6.0 or newer with about 100 MB free space. The install itself is 24 MB. Older handsets run betting and slots fine but may need lower video quality on live streams."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,440 @@
+{
+  "title": "899OK Betting | Cricket, Football & Live Sports Odds",
+  "description": "Bet on BPL, IPL, football and live sports at 899OK. Deep cricket markets, fast bKash withdrawals, and my honest guide to betting from Bangladesh.",
+  "blocks": [
+    {
+      "type": "hero",
+      "content": [
+        {
+          "type": "title",
+          "h1": "899OK Betting — Cricket & Sports for Bangladesh"
+        },
+        {
+          "type": "text",
+          "text": "Look, I've tried a lot of betting sites before landing on 899OK, and the reason I stuck around is boring but real: the cricket markets go deep, the odds don't feel rigged, and bKash withdrawals actually show up the same day. This page walks you through how I bet here week to week — cricket, football, live in-play, the works."
+        }
+      ]
+    },
+    {
+      "type": "toc",
+      "content": [
+        {
+          "type": "title",
+          "h2": "What's on This Page"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Cricket Markets at 899OK",
+            "Football & Other Sports",
+            "Live In-Play Betting",
+            "Reading the Odds",
+            "How to Place a Bet",
+            "Withdrawals & Payout Speed",
+            "How I Actually Bet",
+            "Betting FAQ"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "Cricket Betting Markets at 899OK"
+        },
+        {
+          "type": "text",
+          "text": "Cricket is where 899OK really earns its keep. During BPL and IPL months the depth of markets is genuinely impressive — you're not stuck with just match winner and top scorer."
+        },
+        {
+          "type": "text",
+          "text": "Pre-match cricket markets:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Match winner & tied match",
+            "Toss winner and toss decision",
+            "Top batsman per side & top bowler per side",
+            "Total runs / sixes / fours over-under",
+            "Highest opening partnership",
+            "Method of first dismissal",
+            "Player specials — runs, wickets, catches",
+            "In-play cricket markets:",
+            "Next over runs over-under",
+            "Boundary in next over yes/no",
+            "Wicket in next over yes/no",
+            "Fall of next wicket range",
+            "Runs in next 10 balls",
+            "Live cash-out on your open bet"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Minimum stake is ৳50 on cricket. Add 4+ selections to a bet builder and the accumulator boost starts stacking on top."
+        },
+        {
+          "type": "table",
+          "columns": [
+            "Tournament",
+            "Coverage",
+            "Markets per match"
+          ],
+          "rows": [
+            [
+              "BPL (Bangladesh Premier League)",
+              "Every match",
+              "200+"
+            ],
+            [
+              "IPL",
+              "Every match",
+              "220+"
+            ],
+            [
+              "T20 World Cup",
+              "Every match",
+              "250+"
+            ],
+            [
+              "Asia Cup",
+              "Every match",
+              "180+"
+            ],
+            [
+              "Bangladesh internationals",
+              "Every match",
+              "150+"
+            ],
+            [
+              "Big Bash League",
+              "Every match",
+              "140+"
+            ],
+            [
+              "PSL & CPL",
+              "Every match",
+              "130+"
+            ],
+            [
+              "Domestic BCB tournaments",
+              "Selected matches",
+              "60+"
+            ]
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Shakib and Mustafizur player prop markets always draw the biggest volume on Bangladesh matches."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "Football & Other Sports on 899OK"
+        },
+        {
+          "type": "text",
+          "text": "Cricket leads, but football pulls its weight at 899OK. Premier League, La Liga, Serie A, Bundesliga, Champions League, Europa League — all the standard markets: 1x2, over/under 2.5, both teams to score, correct score, first goalscorer, Asian handicap."
+        },
+        {
+          "type": "text",
+          "text": "Argentina vs Brazil nights the lines move fast — half the country is loading up on Messi or Vinicius specials."
+        },
+        {
+          "type": "text",
+          "text": "Other sports at 899OK:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Tennis — Grand Slams plus ATP and WTA tour weeks",
+            "eSports — Dota 2, CS2, Valorant, Mobile Legends",
+            "Basketball — NBA and EuroLeague",
+            "MMA & Boxing — UFC events and major title fights",
+            "Table tennis — running almost 24/7",
+            "Kabaddi — Pro Kabaddi League fixtures",
+            "Darts — PDC ranking events"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "If sport gets rained off, the live casino tables and instant games like Aviator are one click sideways."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "Live In-Play Betting at 899OK"
+        },
+        {
+          "type": "text",
+          "text": "In-play is where 899OK gets fun — and where the wallet needs the most discipline. Odds move every ball in cricket, every attack in football. You can back a team going into the powerplay, watch them lose two quick wickets, and cash out before things collapse."
+        },
+        {
+          "type": "text",
+          "text": "What's included in live betting:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Odds updating in real time",
+            "Cash-out — full or partial, before the match ends",
+            "Live stats — run rate, projected total, momentum",
+            "Live streams on selected cricket and football matches",
+            "Score push notifications through the 899OK app"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Cash-out is the single feature I use most. Backed a team pre-match at 2.10, they win the toss and get a solid opening stand, odds crash to 1.45 — I take the partial profit and move on. Beats sweating every ball."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "Understanding Odds at 899OK"
+        },
+        {
+          "type": "text",
+          "text": "Two odds formats you'll see on 899OK — switch between them in settings."
+        },
+        {
+          "type": "text",
+          "text": "Decimal odds (default): Total return per ৳1 stake."
+        },
+        {
+          "type": "text",
+          "text": "1.50 → ৳100 stake returns ৳150 (৳50 profit)"
+        },
+        {
+          "type": "text",
+          "text": "2.00 → ৳100 stake returns ৳200 (৳100 profit)"
+        },
+        {
+          "type": "text",
+          "text": "4.50 → ৳100 stake returns ৳450 (৳350 profit)"
+        },
+        {
+          "type": "text",
+          "text": "Fractional odds: UK style. 5/2 means ৳5 profit per ৳2 staked, plus stake back."
+        },
+        {
+          "type": "text",
+          "text": "Implied probability shortcut: 1 ÷ decimal odds."
+        },
+        {
+          "type": "text",
+          "text": "1.50 → 66.7% chance"
+        },
+        {
+          "type": "text",
+          "text": "2.00 → 50% chance"
+        },
+        {
+          "type": "text",
+          "text": "4.00 → 25% chance"
+        },
+        {
+          "type": "text",
+          "text": "Handy when you're comparing 899OK odds against your own gut read. If you think a team wins 60% of the time and the odds show 40% implied probability, that's the kind of value bet you want."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "How to Place Your First Bet on 899OK"
+        },
+        {
+          "type": "text",
+          "text": "Straightforward once you know where the buttons are:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "1. Pick a sport from the left menu — Cricket, Football, Tennis and so on",
+            "2. Choose a match — live matches sit at the top with a red dot",
+            "3. Tap an odds number — the selection drops into your bet slip on the right",
+            "4. Enter your stake — minimum ৳50 on most cricket and football markets",
+            "5. Confirm the bet — odds are locked once the ticket is placed",
+            "6. Track it live — open bets sit under \"My Bets\" with cash-out visible when available"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "New here? Register in about 2 minutes, deposit ৳500 through bKash, and start with a ৳50 single bet before touching accumulators. Bet builder lives inside each match — combine markets from the same game into one ticket."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "899OK Withdrawal Speed & Payout Methods"
+        },
+        {
+          "type": "text",
+          "text": "This is why I trust 899OK with real money — winnings actually arrive:"
+        },
+        {
+          "type": "table",
+          "columns": [
+            "Method",
+            "Withdrawal speed",
+            "Max per request",
+            "Fee"
+          ],
+          "rows": [
+            [
+              "bKash",
+              "10–20 min typical",
+              "৳50,000",
+              "0%"
+            ],
+            [
+              "Nagad",
+              "12–25 min typical",
+              "৳50,000",
+              "0%"
+            ],
+            [
+              "Rocket",
+              "15–30 min typical",
+              "৳50,000",
+              "0%"
+            ],
+            [
+              "Bank transfer",
+              "30–90 min weekdays",
+              "৳200,000",
+              "0%"
+            ]
+          ]
+        },
+        {
+          "type": "text",
+          "text": "On amounts under ৳25,000 my bKash withdrawals usually land in under 20 minutes. Bigger requests trigger a manual review — expect 30–60 minutes on those. Winning bets settle automatically the moment the match result is confirmed."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "How I Actually Bet on 899OK"
+        },
+        {
+          "type": "text",
+          "text": "Not advice, just my personal rhythm after a few seasons:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "1. One sport focus: I bet cricket 80% of the time, football the rest. Spreading thin across five sports killed my results earlier."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "2. Under 5% of bankroll per bet: ৳500 stake on a ৳10,000 balance. Boring beats broke."
+        },
+        {
+          "type": "text",
+          "text": "3. Cash-out early on live cricket: Don't wait for the \"lock\". Momentum swings faster than you think."
+        },
+        {
+          "type": "text",
+          "text": "4. No fan bets: Never bet Bangladesh just because it's Bangladesh. Rate the match-up honestly."
+        },
+        {
+          "type": "text",
+          "text": "5. Log every ticket: Date, sport, stake, odds, result. It's boring, but the spreadsheet tells you if you're actually winning or just remembering the wins."
+        },
+        {
+          "type": "text",
+          "text": "Biggest habit that helped: withdraw when you're up. Won ৳4,000? Pull ৳3,000 out to bKash the same night. Don't roll it into another accumulator at midnight."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "My Verdict on 899OK Sports Betting"
+        },
+        {
+          "type": "text",
+          "text": "Is 899OK flawless? No. Kabaddi lines are thinner than I'd like, and if you're chasing lower-tier European football you'll notice some markets go missing."
+        },
+        {
+          "type": "text",
+          "text": "But for what most of us actually bet — BPL, IPL, Bangladesh internationals, Premier League, Champions League — 899OK stacks up. Deep markets, live cash-out that works, and bKash payouts that arrive before you forget you asked for them."
+        },
+        {
+          "type": "text",
+          "text": "Start small. ৳200 on a match you'd watch anyway. See how the platform behaves, then scale to your own comfort."
+        }
+      ]
+    },
+    {
+      "type": "faq",
+      "content": [
+        {
+          "type": "title",
+          "h2": "899OK Betting FAQ — Odds, Cash-Out & Payouts"
+        },
+        {
+          "type": "toggle",
+          "title": "Is online sports betting legal in Bangladesh?",
+          "text": "It's a grey area. Online betting through international platforms like 899OK isn't specifically regulated at the individual level. Use payment methods in your own name and keep records — that's what most Bangladeshi bettors do."
+        },
+        {
+          "type": "toggle",
+          "title": "What's the minimum bet at 899OK?",
+          "text": "৳50 on most cricket and football pre-match markets. Some live in-play markets accept lower stakes from around ৳20."
+        },
+        {
+          "type": "toggle",
+          "title": "Can I watch matches live on 899OK?",
+          "text": "Selected fixtures, yes. IPL, BPL, big Bangladesh internationals, Premier League and Champions League usually stream inside the app. Look for the play icon beside the match."
+        },
+        {
+          "type": "toggle",
+          "title": "What does cash-out do?",
+          "text": "Cash-out settles your bet early for the current value — could be higher or lower than your original stake. Use it when the live situation swings against your bet or when you want to lock in a good profit."
+        },
+        {
+          "type": "toggle",
+          "title": "How fast are bKash withdrawals?",
+          "text": "For most requests under ৳25,000, expect 10–20 minutes. Larger requests go through a manual review and can take up to an hour. Full details are on the bonus and payouts page."
+        },
+        {
+          "type": "toggle",
+          "title": "Where do I bet on Aviator or slots?",
+          "text": "Those aren't in the sportsbook. Aviator sits in instant games, and slots have their own lobby. Live dealer tables are in the casino section."
+        },
+        {
+          "type": "toggle",
+          "title": "Does 899OK offer accumulator boosts?",
+          "text": "Yes. 4+ selection accumulators get a returns boost, scaling up as you add more legs. Full terms are on the bonus page."
+        }
+      ]
+    }
+  ]
+}

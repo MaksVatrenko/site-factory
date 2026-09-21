@@ -1,0 +1,437 @@
+{
+  "title": "TK889 Login | Sign In & Register in Minutes",
+  "description": "Sign in to TK889 in seconds or open a new account with just your Bangladesh mobile number. OTP steps, password recovery and security tips inside.",
+  "blocks": [
+    {
+      "type": "hero",
+      "content": [
+        {
+          "type": "title",
+          "h1": "TK889 Login & Account Registration"
+        },
+        {
+          "type": "text",
+          "text": "First time I opened TK889 I was sitting in a CNG on Mirpur Road, one bar of signal, trying to place a quick bet before the toss. Took me longer to find my phone than to log in."
+        },
+        {
+          "type": "text",
+          "text": "The sign-in itself is about ten seconds once you know where the button hides, and registering from scratch is roughly two minutes. Below I'll walk you through both, plus what to do when the OTP decides not to show up. Want to see what's waiting inside? The casino lobby is browsable before you deposit a single taka."
+        }
+      ]
+    },
+    {
+      "type": "toc",
+      "content": [
+        {
+          "type": "title",
+          "h2": "What You'll Find on This Page"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Signing In to TK889",
+            "Opening a New Account",
+            "Registration in 5 Steps",
+            "Keeping Your Account Safe",
+            "Forgot Password? Do This",
+            "App, Mobile Web or Laptop",
+            "When You Need Support",
+            "Ready to Play",
+            "Login Questions Answered",
+            "My Final Take"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "Signing In to TK889"
+        },
+        {
+          "type": "text",
+          "text": "Load the site or open the app and glance at the top-right corner. The Login button sits there on every screen, desktop or mobile."
+        },
+        {
+          "type": "text",
+          "text": "Type the phone number or username you registered with, add your password, confirm — done. No captcha marathon, no email link to chase."
+        },
+        {
+          "type": "text",
+          "text": "Three ways to get in:"
+        },
+        {
+          "type": "table",
+          "columns": [
+            "Method",
+            "What You Do",
+            "Roughly Takes"
+          ],
+          "rows": [
+            [
+              "Phone number + password",
+              "Type both, tap confirm",
+              "10 seconds"
+            ],
+            [
+              "Username + password",
+              "Type both, tap confirm",
+              "10 seconds"
+            ],
+            [
+              "Fingerprint / Face unlock",
+              "App only, one tap",
+              "2 seconds"
+            ]
+          ]
+        },
+        {
+          "type": "text",
+          "text": "One habit worth building: if you're on your brother's laptop or an office machine, leave the \"keep me signed in\" box empty. Sessions on shared devices are how most account headaches start."
+        },
+        {
+          "type": "text",
+          "text": "Already inside and hunting for something to play? The slots section loads straight from the lobby."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "Opening a New TK889 Account"
+        },
+        {
+          "type": "text",
+          "text": "No account yet? You need surprisingly little:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "A working Bangladesh mobile number",
+            "A wallet you actually use — bKash, Nagad or Rocket",
+            "About two minutes"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "That's genuinely it. TK889 doesn't ask for an email address, a home address, or a document scan at the sign-up stage. Those come later, and only if you're withdrawing."
+        },
+        {
+          "type": "text",
+          "text": "What the form asks for:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Your mobile number — use the one tied to your payment wallet, because the name on your withdrawal has to match",
+            "A password you haven't recycled from Facebook",
+            "Your name exactly as it reads on your NID",
+            "Currency — pick BDT so deposits land without conversion nonsense",
+            "A promo code, if a friend passed one along — that's the hook for the welcome offer",
+            "What it does NOT ask for:",
+            "Email verification (optional, add it later in settings)",
+            "NID photo",
+            "A selfie",
+            "Utility bill or address proof"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "After the OTP lands your balance sits at ৳0 and the whole platform unlocks. Poke around the crash and instant games in demo mode first if you like — nobody's rushing you to fund it."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "TK889 Registration in 5 Steps"
+        },
+        {
+          "type": "text",
+          "text": "Keep your phone unlocked next to you — the OTP arrives fast and you don't want to be hunting for it:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "1. Tap Register — top-right on the homepage or inside the app",
+            "2. Enter your Bangladesh mobile number, ideally the one linked to bKash or Nagad so withdrawal names match later",
+            "3. Create a password mixing upper case, lower case, a digit and a symbol",
+            "4. Punch in the OTP that arrives by SMS — it's valid for a short window only",
+            "5. Drop in a promo code before confirming if you want the sign-up bonus attached"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Once confirmed you can wander through the cricket and football markets with an empty balance. Verification only becomes a topic when you request your first cashout."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "Keeping Your TK889 Account Safe"
+        },
+        {
+          "type": "text",
+          "text": "Your account holds real taka, so I treat it the way I treat my bKash PIN."
+        },
+        {
+          "type": "text",
+          "text": "Worth doing:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Pick a password you use nowhere else — not your email, not your wallet",
+            "Switch on two-factor verification in Settings → Security",
+            "Use fingerprint unlock if you're on the Android app",
+            "Sign out properly on any device that isn't yours",
+            "Glance at your login history once a month — unfamiliar city, unfamiliar device, change the password",
+            "Worth avoiding:",
+            "Handing your login to a friend \"just to place one bet\"",
+            "Saving the password in a browser at a cyber café",
+            "Tapping password-reset links you never requested",
+            "Playing for real money on open hotel or café wifi",
+            "Trusting any Telegram or WhatsApp account that claims to be TK889 staff"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "On fake login pages: scammers build near-perfect copies. A padlock icon proves nothing — phishing sites buy certificates too. Read the domain letter by letter before typing anything. Anything with extra words bolted on is not the real thing."
+        },
+        {
+          "type": "cards",
+          "items": [
+            {
+              "title": "Two-Factor Verification",
+              "text": "Sits under account security settings. It's the single highest-value switch on this page and takes thirty seconds to enable."
+            },
+            {
+              "title": "Spotting a Cloned Login Screen",
+              "text": "Check the address bar character by character, and never arrive at the login page through an SMS link. Type the address yourself or use a saved bookmark."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "Forgot Your Password? Do This"
+        },
+        {
+          "type": "text",
+          "text": "Happens to everyone, usually five minutes before a match starts. The recovery route is short:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "1. Tap Forgot Password on the login screen",
+            "2. Enter the mobile number you registered with",
+            "3. Wait for the SMS code",
+            "4. Type the code in",
+            "5. Set a fresh password — not a variation of the old one",
+            "6. Sign in again"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Start to finish it's around two minutes. Codes expire quickly on purpose."
+        },
+        {
+          "type": "text",
+          "text": "If the SMS never lands:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Make sure you actually have cellular signal — SMS doesn't travel over wifi",
+            "Give it a minute, then hit resend once (spamming resend can throttle you)",
+            "Toggle from wifi to mobile data and try again",
+            "Switch to email recovery if you added an email earlier",
+            "Open live chat — agents can verify you manually",
+            "If the phone number itself is gone:",
+            "Message support with your registered name, roughly when you signed up, your last deposit amount and method, plus the transaction ID if you kept it. They'll verify carefully and move the account to your new number. It isn't instant — and honestly, you want it not to be instant, because that same friction protects you from someone else doing it."
+          ]
+        },
+        {
+          "type": "cards",
+          "items": [
+            {
+              "title": "Recovery by SMS",
+              "text": "The default path. A short numeric code goes to your registered number and expires within minutes."
+            },
+            {
+              "title": "When the SIM Is Lost",
+              "text": "Manual verification through live chat with your NID and deposit history. Slower, but it works."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "App, Mobile Web or Laptop?"
+        },
+        {
+          "type": "text",
+          "text": "All three work. They just suit different moments."
+        },
+        {
+          "type": "text",
+          "text": "Mobile browser (Chrome or Safari):"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Nothing to install, works on iPhone too",
+            "Every feature available",
+            "No fingerprint shortcut",
+            "Sessions drop sooner than in the app",
+            "Android app:",
+            "Fingerprint or face unlock",
+            "Session stays alive between visits",
+            "Push alerts for bonuses and results",
+            "Noticeably snappier between sections on 4G",
+            "You'll need to allow installs from unknown sources once",
+            "Desktop browser:",
+            "Room for multiple markets side by side",
+            "Better for live streams and long sessions",
+            "No biometric login",
+            "Obviously not in your pocket"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "My own pattern: app for everyday play, laptop when a cricket match has six markets I want open at once. Grab the installer from the app page if you're on Android."
+        },
+        {
+          "type": "cards",
+          "items": [
+            {
+              "title": "Staying Signed In on Mobile",
+              "text": "The app remembers you until you sign out. The browser version times out after a stretch of inactivity, which is the safer default anyway."
+            },
+            {
+              "title": "Shared Computers",
+              "text": "Sign out every time, and clear saved passwords. Your account settings list recent sessions with device and rough location."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "When You Need Support"
+        },
+        {
+          "type": "text",
+          "text": "Locked out and nothing is working? Three doors:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Live chat — the bubble in the bottom-right of any page. Open around the clock, staffed in Bangla and English. This is the fastest option by a wide margin and the one I always use first."
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Email — better when you need to attach screenshots or documents for a manual account review. Slower, but there's a written trail."
+        },
+        {
+          "type": "text",
+          "text": "Official messaging channel — only ever the one linked from the TK889 site itself. Anything you find through a random search is a copycat."
+        },
+        {
+          "type": "text",
+          "text": "One rule that never bends: real support never asks for your password. Not for verification, not for \"account repair\", not ever. Anyone who asks is trying to rob you. Block and report."
+        },
+        {
+          "type": "text",
+          "text": "While you're waiting for a reply, there's plenty to read on the main page."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "My Final Take on TK889 Login"
+        },
+        {
+          "type": "text",
+          "text": "For a Bangladesh-facing platform, TK889 keeps the front door refreshingly light. No email hoop, no document upload before you've even seen the lobby — just a number and a code."
+        },
+        {
+          "type": "text",
+          "text": "The part people underrate is the security housekeeping. Turn on two-factor, use a password that lives nowhere else, and enable fingerprint unlock if you're on Android. Five minutes of setup saves a very bad afternoon later."
+        },
+        {
+          "type": "text",
+          "text": "If something goes sideways, live chat gets you answers faster than email will. And once you're through, the promotions page is where I'd head first."
+        }
+      ]
+    },
+    {
+      "type": "faq",
+      "content": [
+        {
+          "type": "title",
+          "h2": "TK889 Login FAQ — Signup, OTP and Security"
+        },
+        {
+          "type": "toggle",
+          "title": "What do I need to register at TK889?",
+          "text": "Just a Bangladesh mobile number and a password. You confirm one OTP and the account is live — no documents, no email verification at this stage."
+        },
+        {
+          "type": "toggle",
+          "title": "The OTP hasn't arrived. What now?",
+          "text": "Check you're on cellular signal first — SMS won't travel over wifi. Wait a minute, tap resend once, and if it still fails, open live chat and an agent will verify you another way."
+        },
+        {
+          "type": "toggle",
+          "title": "Can I sign in on my phone and laptop at the same time?",
+          "text": "Generally yes for a couple of devices. Logging in from many devices in a short period can trigger a security check, which usually just means confirming a code by SMS."
+        },
+        {
+          "type": "toggle",
+          "title": "How do I reset a forgotten password?",
+          "text": "Tap Forgot Password on the login screen, enter your registered number, type in the SMS code and set a new password. Takes about two minutes end to end."
+        },
+        {
+          "type": "toggle",
+          "title": "Is my TK889 login secure?",
+          "text": "Yes, with encryption and optional two-factor verification. Enable 2FA in settings and use fingerprint unlock on the Android app for the strongest setup."
+        },
+        {
+          "type": "toggle",
+          "title": "Can I change the phone number on my account?",
+          "text": "Yes, through account settings with verification. You'll normally confirm both the old and the new number. If the old SIM is gone, support handles it manually after ID checks."
+        },
+        {
+          "type": "toggle",
+          "title": "Do I need KYC before I can play?",
+          "text": "No. Verification is requested before withdrawals or if a security flag appears. Registration and deposits only need your phone number and payment wallet."
+        }
+      ]
+    }
+  ]
+}

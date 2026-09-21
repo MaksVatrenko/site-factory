@@ -1,0 +1,427 @@
+{
+  "title": "TK889 | Bangladesh Casino & Cricket Betting Site",
+  "description": "TK889 is the Bangladesh casino I play on most nights — bKash cashouts in minutes, deep cricket markets and live tables that stay busy till dawn.",
+  "blocks": [
+    {
+      "type": "hero",
+      "content": [
+        {
+          "type": "title",
+          "h1": "TK889 — Casino, Slots and Cricket Betting for Bangladesh"
+        },
+        {
+          "type": "text",
+          "text": "I found TK889 during a long bus ride back from Chattogram, half-watching a T20 chase on a cracked phone screen. Deposited ৳500 out of boredom, cashed out three days later to bKash, and somehow it stuck. What follows isn't marketing copy — it's what I've learned after months of playing here, including the parts that annoy me."
+        }
+      ]
+    },
+    {
+      "type": "toc",
+      "content": [
+        {
+          "type": "title",
+          "h2": "What You'll Find on This Page"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Why TK889 Stayed on My Phone",
+            "Cricket, Football and the Live Floor",
+            "Welcome Offer Without the Spin",
+            "bKash, Nagad and Rocket Timings",
+            "Mobile and App Experience",
+            "Opening an Account",
+            "Safety, Licence and Limits",
+            "Questions Players Actually Ask"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "Why TK889 Stayed on My Phone"
+        },
+        {
+          "type": "text",
+          "text": "I've deleted more betting apps than I've kept. Most fall apart the moment you try to take money out, or the lobby turns out to be forty clones of the same fruit machine. TK889 survived my usual three-week test for reasons that are pretty unglamorous:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Withdrawal requests get processed instead of sitting in 'pending' for two days — my last three bKash cash-outs landed in 9, 14 and 11 minutes",
+            "Chat support answers in Bangla, and a human takes over quickly when the bot can't help",
+            "Real studios behind the games — Pragmatic Play, Evolution, JILI, PG Soft — you can check the provider tag on every tile in the casino lobby",
+            "Cricket markets stay open deep into an innings instead of freezing after the powerplay",
+            "The slot section lets you demo most titles before spending a taka"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "None of that is exciting to write about. It's just what separates a site you use from a site you uninstall."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "Cricket, Football and the Live Floor"
+        },
+        {
+          "type": "text",
+          "text": "During BPL season this place gets loud. Match winner and total runs are the obvious ones, but TK889 goes further — top run scorer, next wicket method, runs in the coming over, whether a six lands before the drinks break. If you follow domestic cricket closely, that depth is where your knowledge actually earns something."
+        },
+        {
+          "type": "text",
+          "text": "Football fills the gaps. Premier League Saturdays, Champions League midweeks, and the usual national fever whenever Argentina or Brazil play — odds move fast on those because half the country backs the same side."
+        },
+        {
+          "type": "list",
+          "items": [
+            "Test, ODI, T20 plus BPL, IPL and Asia Cup coverage",
+            "Football with corners, cards and Asian handicap lines",
+            "Tennis tour events, NBA and eSports for late nights",
+            "Andar Bahar, Teen Patti and Baccarat from ৳50 a hand"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "When the rain delay hits, I usually drift over to crash and instant games for a few rounds until play resumes."
+        },
+        {
+          "type": "cards",
+          "items": [
+            {
+              "title": "In-Play Betting at TK889",
+              "text": "Live odds refresh every few seconds and cash-out is available on most single bets before the innings closes."
+            },
+            {
+              "title": "The Live Dealer Rooms",
+              "text": "Evolution and Ezugi tables run around the clock, with Hindi and English dealers on the card games most Bangladeshi players prefer."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "TK889 Welcome Offer — The Numbers Without the Spin"
+        },
+        {
+          "type": "text",
+          "text": "Bonus banners always look better than bonus terms. Here's the offer laid out plainly so you can decide before you deposit:"
+        },
+        {
+          "type": "table",
+          "columns": [
+            "Element",
+            "Value",
+            "Condition"
+          ],
+          "rows": [
+            [
+              "First deposit match",
+              "100% up to ৳20,000",
+              "Minimum ৳500"
+            ],
+            [
+              "Free spins",
+              "150 spins",
+              "Released 30 per day"
+            ],
+            [
+              "Wagering requirement",
+              "18x bonus amount",
+              "Slots 100%, live tables 10%"
+            ],
+            [
+              "Clearing window",
+              "21 days",
+              "Counted from credit time"
+            ],
+            [
+              "Bet cap while wagering",
+              "৳250 per spin",
+              "Exceed it and the bonus voids"
+            ]
+          ]
+        },
+        {
+          "type": "text",
+          "text": "The bet cap is what kills most bonuses — people chase a ৳500 spin and lose the whole balance to a rule they never read. Reload deals, weekly cashback and the referral scheme all sit on the bonus page."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "bKash, Nagad and Rocket — Real Timings"
+        },
+        {
+          "type": "text",
+          "text": "This is the section I'd read first if I were you. Money in is easy everywhere; money out is where sites reveal themselves."
+        },
+        {
+          "type": "table",
+          "columns": [
+            "Wallet",
+            "Min Deposit",
+            "Max Deposit",
+            "Withdrawal Time"
+          ],
+          "rows": [
+            [
+              "bKash",
+              "৳200",
+              "৳100,000",
+              "8–20 minutes"
+            ],
+            [
+              "Nagad",
+              "৳200",
+              "৳60,000",
+              "10–30 minutes"
+            ],
+            [
+              "Rocket",
+              "৳300",
+              "৳80,000",
+              "15–40 minutes"
+            ],
+            [
+              "Upay",
+              "৳300",
+              "৳40,000",
+              "20–45 minutes"
+            ]
+          ]
+        },
+        {
+          "type": "text",
+          "text": "TK889 doesn't add its own fee on either side. Withdrawal minimum is ৳500 and the daily ceiling sits at ৳200,000 across multiple requests."
+        },
+        {
+          "type": "cards",
+          "items": [
+            {
+              "title": "Name Matching Matters",
+              "text": "Your wallet must be registered in the same name as your TK889 account, otherwise the payout gets held for manual review."
+            },
+            {
+              "title": "If a Deposit Stalls",
+              "text": "Save the transaction ID and paste it into live chat — mine was credited manually inside 15 minutes the one time it happened."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "Mobile and App Experience"
+        },
+        {
+          "type": "text",
+          "text": "Almost nobody in Bangladesh plays on a desktop, so the phone build carries everything. The browser version works fine on Chrome or Safari, but the Android APK is smoother for live streams and it remembers your login, which saves a lot of typing on a small keyboard."
+        },
+        {
+          "type": "list",
+          "items": [
+            "Roughly 26 MB installed — light enough for older handsets",
+            "Android 6.0 and above, installs in under a minute",
+            "No iOS app listing — iPhone users add the site to the home screen via Safari, and it behaves like an app",
+            "Push alerts for odds boosts and free spin drops"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Full install steps, permissions and update notes live on the app page."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "Opening a TK889 Account in Four Minutes"
+        },
+        {
+          "type": "text",
+          "text": "I timed it on my cousin's phone last month — under four minutes from tap to first spin."
+        },
+        {
+          "type": "text",
+          "text": "Hit Register at the top of the site or inside the app"
+        },
+        {
+          "type": "text",
+          "text": "Type your Bangladesh mobile number — use the one tied to your bKash or Nagad wallet"
+        },
+        {
+          "type": "text",
+          "text": "Set a password with letters, a digit and a symbol, then confirm the OTP"
+        },
+        {
+          "type": "text",
+          "text": "Enter a promo code if you have one, before your first deposit lands"
+        },
+        {
+          "type": "text",
+          "text": "Identity documents are only requested before your first withdrawal, not at signup. Keep a clear NID photo ready and that step takes minutes rather than days."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "Safety, Licence and Sensible Limits"
+        },
+        {
+          "type": "text",
+          "text": "Nobody should deposit anywhere without asking this. Here's the honest picture:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Curaçao licence with independently tested RNG on the game library",
+            "SSL encryption across the site — the padlock is there on every page",
+            "Two-factor login available in account settings, worth switching on",
+            "Deposit and session limits you can set yourself, plus self-exclusion"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Verification details and password recovery are covered on the login page."
+        },
+        {
+          "type": "title",
+          "h3": "What it can't do for you:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Turn a losing streak into a winning one — the maths doesn't bend",
+            "Offer a Bangladesh-issued licence, because no offshore operator holds one",
+            "Undo a deposit you shouldn't have made, so decide your limit before you log in"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "My Honest Verdict on TK889"
+        },
+        {
+          "type": "text",
+          "text": "TK889 isn't perfect. The lobby has filler titles nobody needs, the bonus bet cap catches careless players, and there's no iOS app to speak of."
+        },
+        {
+          "type": "text",
+          "text": "But the things that actually matter — fast bKash payouts, cricket markets with real depth, and support that replies in Bangla — hold up under regular use. That's more than I can say for most sites aimed at Bangladeshi players."
+        },
+        {
+          "type": "text",
+          "text": "Decide your budget before you open the app, treat the welcome offer as a small extra rather than a plan, and withdraw your winnings the same night instead of letting them sit."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "TK889 — More Pages"
+        },
+        {
+          "type": "text",
+          "text": "Casino — Live dealer tables"
+        },
+        {
+          "type": "text",
+          "text": "Slots — Pragmatic and PG Soft reels"
+        },
+        {
+          "type": "text",
+          "text": "Games — Crash, fishing, instant wins"
+        },
+        {
+          "type": "text",
+          "text": "Betting — Cricket and football lines"
+        },
+        {
+          "type": "text",
+          "text": "Bonus — Offers and cashback"
+        },
+        {
+          "type": "text",
+          "text": "App — Android APK download"
+        },
+        {
+          "type": "text",
+          "text": "Login — Account access"
+        }
+      ]
+    },
+    {
+      "type": "faq",
+      "content": [
+        {
+          "type": "title",
+          "h2": "TK889 FAQ — Payments, Bonuses and Signup"
+        },
+        {
+          "type": "toggle",
+          "title": "How long does a TK889 withdrawal actually take?",
+          "text": "Usually 8–20 minutes to bKash. Nagad runs 10–30 minutes and Rocket a little slower. Requests made after midnight can take longer because manual checks queue up."
+        },
+        {
+          "type": "toggle",
+          "title": "What is the smallest deposit I can make?",
+          "text": "৳200 via bKash or Nagad, ৳300 on Rocket and Upay. To qualify for the welcome match you need at least ৳500 on your first deposit."
+        },
+        {
+          "type": "toggle",
+          "title": "Is there an iPhone app for TK889?",
+          "text": "No dedicated iOS app. Open the site in Safari and add it to your home screen — it opens full screen and plays every game. Android users can grab the APK from the app page."
+        },
+        {
+          "type": "toggle",
+          "title": "Do I have to verify my identity?",
+          "text": "Only before your first withdrawal. A clear NID photo and a selfie are usually enough. Registration itself needs nothing more than a phone number and OTP."
+        },
+        {
+          "type": "toggle",
+          "title": "Which games clear the bonus fastest?",
+          "text": "Slots, at 100% contribution. Live tables count 10% and sports even less, so if you're chasing the wagering, stay in the slot section and keep stakes under the ৳250 cap."
+        },
+        {
+          "type": "toggle",
+          "title": "Can I bet on BPL and IPL matches?",
+          "text": "Yes, with 40+ markets per fixture. Match result, top batsman, wicket methods and over-by-over totals all sit in the betting section during the season."
+        },
+        {
+          "type": "toggle",
+          "title": "I'm completely new — what should I do first?",
+          "text": "Register, deposit ৳500 through bKash, then try a few demo rounds in the casino lobby before staking real money. Set a loss limit in settings on day one."
+        }
+      ]
+    }
+  ]
+}

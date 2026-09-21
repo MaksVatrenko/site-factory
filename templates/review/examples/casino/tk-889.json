@@ -1,0 +1,439 @@
+{
+  "title": "TK889 Casino | Live Dealer Tables & Card Games",
+  "description": "My honest walk through the TK889 casino lobby — live dealer tables from ৳50, Bengali croupiers, bKash deposits and how fast the streams really load.",
+  "blocks": [
+    {
+      "type": "hero",
+      "content": [
+        {
+          "type": "title",
+          "h1": "TK889 Casino — Real Dealers, Real Tables"
+        },
+        {
+          "type": "text",
+          "text": "I've lost count of how many casino lobbies I've opened and closed within thirty seconds because the stream stuttered. TK889 kept me. The video holds steady on my Banani broadband and doesn't collapse the moment I switch to mobile data on the bus. Dealers greet you by username, the chat actually moves, and a ৳50 seat is never hard to find. It's not a flight to Macau — but it's close enough for a Tuesday night."
+        }
+      ]
+    },
+    {
+      "type": "toc",
+      "content": [
+        {
+          "type": "title",
+          "h2": "What You'll Find on This Page"
+        },
+        {
+          "type": "list",
+          "items": [
+            "How The Live Tables Feel",
+            "Studios Behind The Lobby",
+            "Blackjack & Baccarat",
+            "Roulette Picks",
+            "Andar Bahar & Teen Patti",
+            "Getting Seated In 5 Steps",
+            "Cashier Reality Check",
+            "Loyalty & VIP Perks",
+            "Final Word"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "How The Live Tables Actually Feel"
+        },
+        {
+          "type": "text",
+          "text": "Marketing copy loves the word 'immersive'. I care about four boring things instead, and TK889 handles them:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Tables stay populated at odd hours — I joined a Baccarat shoe at 4:10am once and there were six of us",
+            "Support replies in Bangla, usually within a few minutes, without copy-paste scripts",
+            "Wallet top-ups land almost instantly, so you don't miss a shoe waiting for credit",
+            "Stream quality degrades gracefully — audio thins out first, video rarely freezes outright"
+          ]
+        },
+        {
+          "type": "cards",
+          "items": [
+            {
+              "title": "Dealer Languages",
+              "text": "Bangla dealers appear mostly on Andar Bahar and Teen Patti after 8 PM local time. Baccarat and Roulette run English or Hindi through the night."
+            },
+            {
+              "title": "Data Usage On Mobile",
+              "text": "Roughly 70–100 MB per hour at standard quality. Drop the stream to low if you're rationing a data pack."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "Studios Behind The TK889 Lobby"
+        },
+        {
+          "type": "text",
+          "text": "The lobby is filtered by provider, which saves a lot of scrolling once you know whose tables you like. Each studio has a personality — some polished, some built specifically for South Asian players."
+        },
+        {
+          "type": "table",
+          "columns": [
+            "Studio",
+            "Main tables",
+            "Why I open it"
+          ],
+          "rows": [
+            [
+              "Evolution",
+              "Blackjack, Lightning Roulette, Crazy Time",
+              "Cleanest camera work and the widest table range"
+            ],
+            [
+              "Ezugi",
+              "Andar Bahar, Teen Patti, Bangla-speaking rooms",
+              "Built around games we already know"
+            ],
+            [
+              "Pragmatic Live",
+              "Speed Baccarat, Mega Wheel",
+              "Fast rounds when patience is thin"
+            ],
+            [
+              "Vivo Gaming",
+              "Roulette, Sic Bo, low-stake Baccarat",
+              "Quiet tables, friendlier minimums"
+            ]
+          ]
+        },
+        {
+          "type": "cards",
+          "items": [
+            {
+              "title": "Best For Beginners",
+              "text": "Vivo and Ezugi low-limit rooms. Slower pace, smaller stakes, fewer regulars firing max bets beside you."
+            },
+            {
+              "title": "Best For Big Sessions",
+              "text": "Evolution VIP rooms. Higher ceilings, dedicated dealers, but the pace assumes you know the rules already."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "Blackjack & Baccarat At TK889"
+        },
+        {
+          "type": "text",
+          "text": "Blackjack eats most of my bankroll time. Entry tables sit around ৳50 a hand, which is fine for a slow evening, while weekend VIP rooms climb past ৳10,000 minimums. Side bets — Perfect Pairs, 21+3 — look tempting and have quietly funded somebody's new car. Not mine."
+        },
+        {
+          "type": "text",
+          "text": "Baccarat draws the bigger crowd here, and three formats do most of the traffic:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Speed Baccarat — around 27 seconds a round, ideal if waiting annoys you",
+            "No Commission Baccarat — Banker pays even money, halved when it wins on a 6",
+            "Squeeze Baccarat — slow card reveals, pure theatre, terrible for impatient people"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Player, Banker, done — that's the whole game. The roadmaps look clever but the maths doesn't care about your pattern. If reels suit you better, the slots section is a click away, and the bonus terms explain why table play clears wagering far slower than spins."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "Roulette Picks Worth Your Chips"
+        },
+        {
+          "type": "text",
+          "text": "Not all wheels are equal, and the difference is real money over a month:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "European Roulette — one zero, 2.7% house edge, the sensible default",
+            "French Roulette — La Partage cuts even-money bets to a 1.35% edge",
+            "American Roulette — double zero pushes it to 5.26%, so skip it",
+            "Lightning Roulette — random multipliers up to 500x, higher variance, huge fun",
+            "Auto Roulette — no dealer chat, quickest spins in the lobby"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Limits generally run from ৳50 on standard wheels up to six figures in private rooms. If you enjoy faster decisions than a spinning ball allows, crash and instant games live next door."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "Andar Bahar, Teen Patti & Home Favourites"
+        },
+        {
+          "type": "text",
+          "text": "This is where TK889 pulls ahead of the generic European platforms chasing Bangladeshi traffic. They stock the games our uncles argue over at family gatherings, with live dealers instead of dodgy RNG clones."
+        },
+        {
+          "type": "text",
+          "text": "Andar Bahar — several live rooms plus instant versions for quick hands"
+        },
+        {
+          "type": "text",
+          "text": "Teen Patti — live three-card play with side-bet options"
+        },
+        {
+          "type": "text",
+          "text": "Dragon Tiger — one card each, fastest showdown on the floor"
+        },
+        {
+          "type": "text",
+          "text": "32 Cards & Sic Bo — smaller crowds, decent late-night value"
+        },
+        {
+          "type": "text",
+          "text": "Stakes usually sit between ৳50 and ৳25,000 per hand. Bangla-speaking dealers rotate through the South Asia shift, so evenings are your best window."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "Getting Seated In 5 Steps"
+        },
+        {
+          "type": "text",
+          "text": "Two minutes with your phone nearby, honestly no longer:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Open the register form from the top of the site or app",
+            "Type your Bangladesh mobile number — use the one tied to your bKash or Nagad wallet",
+            "Set a password with letters, a digit and a symbol, then keep it somewhere safe",
+            "Confirm the OTP that arrives by SMS",
+            "Drop in a promo code before your first deposit if you want the welcome offer applied"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "You can browse tables without funding anything. Identity checks only appear before your first withdrawal, so upload your NID early and skip the wait later."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "Cashier Reality Check"
+        },
+        {
+          "type": "text",
+          "text": "Table play punishes slow cashiers — nobody wants to sit out three shoes waiting for credit. These are the timings I've personally logged across a few months of play."
+        },
+        {
+          "type": "table",
+          "columns": [
+            "Method",
+            "Deposit",
+            "Withdrawal",
+            "Platform fee"
+          ],
+          "rows": [
+            [
+              "bKash",
+              "Under a minute",
+              "10–20 min typical",
+              "0%"
+            ],
+            [
+              "Nagad",
+              "Under a minute",
+              "12–25 min typical",
+              "0%"
+            ],
+            [
+              "Rocket",
+              "1–2 minutes",
+              "15–35 min typical",
+              "0%"
+            ],
+            [
+              "Bank transfer",
+              "5–15 minutes",
+              "Same business day",
+              "0%"
+            ]
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Withdrawals return to the same wallet you funded from. If you also follow cricket, the sportsbook side shares the exact same balance."
+        },
+        {
+          "type": "cards",
+          "items": [
+            {
+              "title": "Name Matching",
+              "text": "Your wallet name must match your account name. Mismatches are the single biggest reason payouts get held for review."
+            },
+            {
+              "title": "Larger Cashouts",
+              "text": "Anything sizeable can go to manual checking. Splitting a big win into two requests has always cleared faster for me."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "Loyalty & VIP Perks"
+        },
+        {
+          "type": "text",
+          "text": "I'm mid-tier at best, so this is partly second-hand from friends who play far heavier than I do:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "A named account manager who replies in Bangla instead of a ticket queue",
+            "Weekly cashback scaled to net losses rather than turnover alone",
+            "Priority withdrawal handling ahead of the standard queue",
+            "Eid and birthday credits, usually with lighter wagering than public promos",
+            "Closed tournaments and reload offers you never see on the promotions page"
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Nobody applies for it. Play volume gets you noticed, and long inactivity quietly drops you back down a tier."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "TK889 Casino — Is The Seat Worth It?"
+        },
+        {
+          "type": "text",
+          "text": "Live casino is personal. Some of us want the noise, the dealer banter and a shoe that runs for an hour. Others just want a hand dealt and settled in twenty seconds. TK889 covers both ends without making either feel like an afterthought."
+        },
+        {
+          "type": "text",
+          "text": "My honest advice: start small, stay on single-zero wheels or basic Blackjack, and give it one short session before deciding. The stream stability and the speed of that first withdrawal will tell you more than any review, including this one."
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "content": [
+        {
+          "type": "title",
+          "h2": "TK889 — More Pages"
+        },
+        {
+          "type": "text",
+          "text": "Home — Platform overview"
+        },
+        {
+          "type": "text",
+          "text": "Slots — Reels, jackpots and megaways"
+        },
+        {
+          "type": "text",
+          "text": "Games — Crash, instant and arcade titles"
+        },
+        {
+          "type": "text",
+          "text": "Betting — Cricket, football and more"
+        },
+        {
+          "type": "text",
+          "text": "Bonus — Offers and wagering rules"
+        },
+        {
+          "type": "text",
+          "text": "App — Mobile download guide"
+        },
+        {
+          "type": "text",
+          "text": "Login — Sign in or register"
+        }
+      ]
+    },
+    {
+      "type": "faq",
+      "content": [
+        {
+          "type": "title",
+          "h2": "Casino Questions I Get Asked"
+        },
+        {
+          "type": "toggle",
+          "title": "Are the TK889 live tables genuinely fair?",
+          "text": "Yes. These are physical shoes, wheels and dice filmed in licensed studios, with every deal visible on camera. The studios supplying TK889 are audited independently, which is a different situation from an unbranded RNG clone."
+        },
+        {
+          "type": "toggle",
+          "title": "Can I find Bangla-speaking dealers?",
+          "text": "Usually in the evening. Andar Bahar and Teen Patti rooms on the South Asia shift carry Bangla dealers, roughly 8 PM to 2 AM local time. Outside those hours expect English or Hindi."
+        },
+        {
+          "type": "toggle",
+          "title": "What's the smallest bet at a live table?",
+          "text": "৳50 on standard Blackjack, Baccarat, Roulette and Andar Bahar rooms. Private and VIP tables start considerably higher depending on the studio."
+        },
+        {
+          "type": "toggle",
+          "title": "Do table games clear bonus wagering?",
+          "text": "Only partially. Live tables contribute a small percentage compared to slots, so grinding a bonus at Baccarat takes far longer. The bonus page lists the exact contribution rates before you opt in."
+        },
+        {
+          "type": "toggle",
+          "title": "Which studio should I try first?",
+          "text": "Ezugi if you want familiar games, Evolution if you want variety and polish. Open one table from each, play ten minutes, and you'll know your preference quickly."
+        },
+        {
+          "type": "toggle",
+          "title": "Does it run properly on a mid-range phone?",
+          "text": "Yes. Browser play works fine, though the Android app holds streams together better on 4G and reconnects faster after a signal drop."
+        },
+        {
+          "type": "toggle",
+          "title": "I prefer sports — is it the same account?",
+          "text": "One wallet, both products. Move straight from a Baccarat table to the cricket markets without transferring funds anywhere."
+        }
+      ]
+    }
+  ]
+}
