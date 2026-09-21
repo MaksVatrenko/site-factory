@@ -1,0 +1,8 @@
+{
+  "pictures": {
+    "hero": "after-text",
+    "split": true,
+    "split-left": true
+  },
+  "links": { "perBlock": [0, 2], "perPage": [0, 8] }
+}
