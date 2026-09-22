@@ -84,3 +84,51 @@ describe('parseRichText', () => {
     }
   });
 });
+
+// Emphasis inside a sentence — the second and last markup the format carries. The reference sites
+// lean on it heavily: the first words of a paragraph, a stake, the name of a table. Without it a
+// page of ours is a flat wall of text next to the page it was copied from.
+describe('parseRichText: жирные слова', () => {
+  it('marks what stands between double asterisks, and keeps the rest plain', () => {
+    expect(parseRichText('**Blackjack** is where I play.')).toEqual([
+      { text: 'Blackjack', strong: true },
+      { text: ' is where I play.' },
+    ]);
+  });
+
+  it('marks more than one run in a sentence', () => {
+    expect(parseRichText('Tables from **৳50 per hand**, VIP from **৳15,000**.')).toEqual([
+      { text: 'Tables from ' },
+      { text: '৳50 per hand', strong: true },
+      { text: ', VIP from ' },
+      { text: '৳15,000', strong: true },
+      { text: '.' },
+    ]);
+  });
+
+  it('marks a link, so a bold phrase can also lead somewhere', () => {
+    expect(parseRichText('See [**the bonus**](/bonus) first.')).toEqual([
+      { text: 'See ' },
+      { text: 'the bonus', href: '/bonus', strong: true },
+      { text: ' first.' },
+    ]);
+  });
+
+  it('leaves an unclosed run as the characters it is made of', () => {
+    expect(parseRichText('2 ** 3 is not emphasis')).toEqual([{ text: '2 ** 3 is not emphasis' }]);
+  });
+
+  it('leaves an empty run alone rather than emitting nothing', () => {
+    expect(parseRichText('a ** ** b')).toEqual([{ text: 'a ** ** b' }]);
+  });
+
+  // A run may not span a line break, for the same reason a link label may not: a stray pair of
+  // asterisks in one paragraph must not reach down and bold the next one.
+  it('does not let a run cross a line break', () => {
+    expect(parseRichText('one **two\nthree** four')).toEqual([{ text: 'one **two\nthree** four' }]);
+  });
+
+  it('still parses a plain sentence as one part', () => {
+    expect(parseRichText('Nothing special here.')).toEqual([{ text: 'Nothing special here.' }]);
+  });
+});

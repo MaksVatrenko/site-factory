@@ -80,13 +80,52 @@ function unescapeXml(text) {
 }
 
 // A shared string is a run of <t> pieces: Excel splits one cell's text wherever its formatting
-// changed, so joining them back is what makes a bolded word part of its own sentence again.
+// changed. Joining them back is what makes a bolded word part of its own sentence again — and the
+// bold itself is kept, because the reference sites lean on it and the content format carries it as
+// **markup** (templates/_shared/rich-text.mjs). Everything else Excel can do to a run — a colour, a
+// size, italics — is dropped: the format has nothing to say it with.
+//
+// A cell bold all the way through gets no markup at all. Emphasis is a contrast inside a sentence,
+// and a sentence entirely emphasised has none; a heading cell, which is what those usually are,
+// would come out with four stray asterisks around it.
 function readSharedStrings(files) {
   const xml = files.get('xl/sharedStrings.xml');
   if (!xml) return [];
-  return [...xml.toString('utf8').matchAll(/<si>([\s\S]*?)<\/si>/g)].map(([, item]) =>
-    unescapeXml([...item.matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(([, piece]) => piece).join('')),
-  );
+  return [...xml.toString('utf8').matchAll(/<si>([\s\S]*?)<\/si>/g)].map(([, item]) => readItem(item));
+}
+
+// One <si>, as text. A plain one is a bare <t>; a formatted one is a list of <r> runs, each with an
+// optional <rPr> saying how that piece is drawn.
+function readItem(item) {
+  const runs = [...item.matchAll(/<r>([\s\S]*?)<\/r>/g)].map(([, run]) => ({
+    text: unescapeXml([...run.matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(([, piece]) => piece).join('')),
+    // <b/> or <b val="1"/> inside this run's own <rPr>, and not inside the text: a sentence that
+    // happens to contain "<b/>" as characters is text, not formatting.
+    bold: /<rPr>[\s\S]*?<b\b[^>]*\/>[\s\S]*?<\/rPr>/.test(run),
+  }));
+  if (runs.length === 0) {
+    return unescapeXml([...item.matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(([, piece]) => piece).join(''));
+  }
+  if (runs.every((run) => run.bold)) return runs.map((run) => run.text).join('');
+
+  // Neighbouring bold runs are joined before anything is written, or "**Black****jack**" comes out
+  // — four literal asterisks between two halves of one word, which is not emphasis at all. Excel
+  // splits a run whenever anything changed, so two bold pieces in a row are entirely ordinary.
+  const merged = [];
+  for (const run of runs) {
+    const last = merged.at(-1);
+    if (last && last.bold === run.bold) last.text += run.text;
+    else merged.push({ ...run });
+  }
+  return merged
+    .map((run) => {
+      if (!run.bold) return run.text;
+      // A run may not open or close on a space: "**Blackjack **is" renders the asterisks instead of
+      // the emphasis. Whatever space Excel left inside the formatting is pushed back outside it.
+      const [, before, words, after] = /^(\s*)([\s\S]*?)(\s*)$/.exec(run.text);
+      return words === '' ? run.text : `${before}**${words}**${after}`;
+    })
+    .join('');
 }
 
 // "A" -> 0, "Z" -> 25, "AA" -> 26. A cell carries its own column letter, and a row leaves out the

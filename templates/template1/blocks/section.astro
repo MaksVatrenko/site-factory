@@ -40,4 +40,11 @@ const context = { partnerUrl: asText(site?.partnerUrl) };
     color: var(--text-tertiary);
     font-size: 0.92rem;
   }
+
+  /* Emphasis inside a note stays as quiet as the note. RichText brightens a **bold** run to
+     --text-primary, and a descendant beats the paragraph's own colour however dim it is — so the
+     one place that knows what "after the line" means has to say this too. */
+  .rsection__inner > :global(.rline) ~ :global(p) :global(.rstrong) {
+    color: inherit;
+  }
 </style>

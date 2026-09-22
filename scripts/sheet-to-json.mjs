@@ -181,6 +181,14 @@ export function rowsToPage(rawRows) {
         ensureSection();
         current.content.push({ type: 'title', h3: stripEmoji(rest[0] || '') });
         break;
+      // A seam inside a section: what follows it is an aside about what came above. It carries
+      // nothing of its own — whatever stands in the cell beside the label is not part of it — so
+      // this is the one label that ignores the rest of its row.
+      case 'line':
+        flushBody();
+        ensureSection();
+        current.content.push({ type: 'line' });
+        break;
       case 'table':
         flushBody();
         ensureSection();

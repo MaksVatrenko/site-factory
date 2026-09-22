@@ -363,3 +363,63 @@ describe('finding the end of the archive', () => {
     expect(readWorkbook(path)[0].rows).toEqual([['цел']]);
   });
 });
+
+// Emphasis, which Excel keeps as formatting rather than as characters. A cell whose text is partly
+// bold is written as a run of <r> pieces, each with its own <rPr>, and joining them back plainly —
+// which is what this reader did — loses the one thing the formatting said. The content format has
+// no way to carry formatting either, but it does carry **markup** (templates/_shared/rich-text.mjs),
+// so the two meet there.
+describe('xlsx: жирные слова в ячейке', () => {
+  // A shared string written the way Excel writes a partly-formatted cell.
+  const runs = (...pieces) =>
+    `<?xml version="1.0"?><sst count="1"><si>${pieces
+      .map(([text, bold]) => `<r><rPr>${bold ? '<b/>' : ''}<sz val="11"/></rPr><t>${text}</t></r>`)
+      .join('')}</si></sst>`;
+
+  const read = (xml) =>
+    readWorkbook(
+      bookFile([
+        { name: 'xl/workbook.xml', text: workbookXml([{ name: 'Казино', id: 'rId1' }]) },
+        { name: 'xl/_rels/workbook.xml.rels', text: relsXml([{ id: 'rId1', target: 'worksheets/sheet1.xml' }]) },
+        { name: 'xl/sharedStrings.xml', text: xml },
+        { name: 'xl/worksheets/sheet1.xml', text: sheetXml({ 1: shared('A1', 0) }) },
+      ]),
+    )[0].rows[0][0];
+
+  it('turns a bold run into markup the content format carries', () => {
+    expect(read(runs(['Blackjack', true], [' is where I play.', false]))).toBe(
+      '**Blackjack** is where I play.',
+    );
+  });
+
+  it('marks every bold run of a cell, not only the first', () => {
+    expect(read(runs(['From ', false], ['৳50', true], [' to ', false], ['৳15,000', true]))).toBe(
+      'From **৳50** to **৳15,000**',
+    );
+  });
+
+  // Excel splits a run wherever anything changed — a font size, a colour — so two neighbouring
+  // bold pieces are ordinary. Written out naively they come back as "**a****b**", which is not
+  // emphasis at all but four literal asterisks between two words.
+  it('joins neighbouring bold runs into one, instead of four asterisks in the middle', () => {
+    expect(read(runs(['Black', true], ['jack', true], [' tables', false]))).toBe('**Blackjack** tables');
+  });
+
+  it('leaves a cell that is bold all through without markup, since nothing in it stands out', () => {
+    expect(read(runs(['Every word of it', true]))).toBe('Every word of it');
+  });
+
+  it('leaves a plain cell exactly as it was', () => {
+    expect(read('<?xml version="1.0"?><sst count="1"><si><t>Ничего особенного</t></si></sst>')).toBe(
+      'Ничего особенного',
+    );
+  });
+
+  // Trailing spaces belong outside the markers: "**слово **далее" renders the asterisks instead of
+  // the emphasis, because a run may not open or close on a space.
+  it('keeps a space that fell inside a bold run outside the markers', () => {
+    expect(read(runs(['Blackjack ', true], ['is where I play.', false]))).toBe(
+      '**Blackjack** is where I play.',
+    );
+  });
+});

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sheetToPage, classify } from '../scripts/sheet-to-json.mjs';
+import { sheetToPage, classify, rowsToPage } from '../scripts/sheet-to-json.mjs';
 
 function section(...content) {
   return { blocks: [{ type: 'section', content }] };
@@ -182,5 +182,34 @@ describe('sheetToPage: the page format it writes', () => {
       type: 'links',
       content: [{ type: 'title', h2: 'More pages' }],
     });
+  });
+});
+
+// A seam inside a section: what follows it is an aside about what came above — a caveat, a note on
+// the odds. The theme has drawn one since v1 and no example has ever carried one, because the
+// spreadsheet had no way to say it. This is that way.
+describe('метка line', () => {
+  const page = (rows) => rowsToPage(rows);
+
+  it('puts a divider where the sheet asks for one', () => {
+    const built = page([
+      ['h2', 'Раздел'],
+      ['', 'Первый абзац.'],
+      ['line'],
+      ['', 'Заметка под линией.'],
+    ]);
+    expect(built.blocks[0].content.map((item) => item.type)).toEqual(['title', 'text', 'line', 'text']);
+  });
+
+  it('carries nothing of its own, whatever stands in the cell beside it', () => {
+    const built = page([['h2', 'Раздел'], ['', 'Абзац.'], ['line', 'мусор'], ['', 'Заметка.']]);
+    expect(built.blocks[0].content[2]).toEqual({ type: 'line' });
+  });
+
+  // A divider with nothing above it inside its own section is a rule hanging off the heading, and
+  // one with nothing below it is a seam to nowhere. Neither is what the label means.
+  it('starts a section if the sheet puts one before any text', () => {
+    const built = page([['line'], ['', 'Абзац.']]);
+    expect(built.blocks[0].content.map((item) => item.type)).toEqual(['line', 'text']);
   });
 });

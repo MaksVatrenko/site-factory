@@ -1,22 +1,26 @@
 ---
-// Renders one string of body text, turning [label](/href) into a real link. Used everywhere a
-// sentence can appear -- a paragraph, a list item, a table cell, a card -- so the markup means the
-// same thing wherever the content puts it.
+// Renders one string of body text, turning [label](/href) into a real link and **words** into
+// emphasis. Used everywhere a sentence can appear -- a paragraph, a list item, a table cell, a
+// card -- so the markup means the same thing wherever the content puts it.
 import { parseRichText } from '../_shared/rich-text.mjs';
 
 const { text } = Astro.props;
 const parts = parseRichText(text);
 ---
 
-{parts.map((part) =>
-  part.href ? (
-    <a class="rlink" href={part.href}>{part.text}</a>
-  ) : (
-    <Fragment>{part.text}</Fragment>
-  ),
-)}
+{parts.map((part) => {
+  const words = part.strong ? <strong class="rstrong">{part.text}</strong> : <Fragment>{part.text}</Fragment>;
+  return part.href ? <a class="rlink" href={part.href}>{words}</a> : words;
+})}
 
 <style>
+  /* Heavier, not a different colour: emphasis inside a sentence is a change of weight, and a
+     second accent colour would compete with the links that already carry one. */
+  .rstrong {
+    font-weight: 650;
+    color: var(--text-primary);
+  }
+
   /* The underline is drawn as a background image rather than with text-decoration, because only
      a background can be animated from zero width: it grows left to right on hover instead of
      appearing all at once. */
