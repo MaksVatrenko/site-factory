@@ -369,9 +369,15 @@ export function createApp({
       // offering it would be offering a choice that fails.
       const lists = Object.values(byPage).map((list) => list.map((one) => one.name));
       const everywhere = (lists[0] ?? []).filter((name) => lists.every((list) => list.includes(name)));
-      res.json({ examples: everywhere.map((name) => ({ id: name, name })) });
+      res.json({
+        examples: everywhere.map((name) => ({ id: name, name })),
+        // The pages this theme has examples for, which is exactly the set a site may be made of.
+        // Answered here rather than left to the form to know: a list written into the form is a
+        // copy, and a copy of something on disk goes stale the first time the disk changes.
+        pages: Object.keys(byPage).sort(),
+      });
     } catch {
-      res.json({ examples: [] });
+      res.json({ examples: [], pages: [] });
     }
   });
 
@@ -499,6 +505,17 @@ export function createApp({
       pages = [...new Set(raw.map((name) => safeName(name, '')).filter(Boolean))];
       if (!pages.includes('home')) {
         res.status(400).json({ error: 'В списке страниц нужна home — иначе у сайта не будет главной' });
+        return;
+      }
+      // A page the theme has no example for cannot be written at all. Left to the run, it fails
+      // inside pickExamples — after the request has been answered 200 and the job has started — so
+      // a typo comes back as a job that begins and dies instead of as a refusal naming the page.
+      const known = loadExamples(template, ROOT);
+      const unknown = pages.filter((page) => !known[page]);
+      if (unknown.length > 0) {
+        res.status(400).json({
+          error: `У темы «${template}» нет примеров для страниц: ${unknown.join(', ')}. Есть: ${Object.keys(known).sort().join(', ')}`,
+        });
         return;
       }
     }

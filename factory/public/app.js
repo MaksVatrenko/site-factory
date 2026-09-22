@@ -110,15 +110,21 @@ async function loadLists() {
     // example is not an unfilled field — it is a choice of its own, "an example per page", and the
     // person making it has to see what they chose instead of an empty line. /api/examples answers
     // with an empty list when the theme cannot be read, so «Случайно» stays selectable regardless.
+    // Both lists belong to a theme, so both are refilled whenever the theme changes — an example
+    // name from one theme means nothing to another, and neither does a page it has no example for.
     const templateField = document.querySelector('#field-template');
-    const fillExamples = async () => {
+    const fillForTemplate = async () => {
       const answer = await fetch(`/api/examples?template=${encodeURIComponent(templateField.value)}`)
         .then((r) => r.json())
-        .catch(() => ({ examples: [] }));
+        .catch(() => ({ examples: [], pages: [] }));
       fillSelect(document.querySelector('#field-example'), [{ id: '', name: 'Случайно' }, ...answer.examples]);
+      // Ticked boxes, not a typed list: which pages to make is a real choice — a site of four out
+      // of the theme's eight — but inventing one is not, since a page with no example cannot be
+      // written. Everything the theme has is ticked to begin with, because that is the ordinary case.
+      fillPages(answer.pages ?? []);
     };
-    templateField.addEventListener('change', fillExamples);
-    await fillExamples();
+    templateField.addEventListener('change', fillForTemplate);
+    await fillForTemplate();
 
     const describe = () => {
       const chosen = templates.templates.find(
@@ -175,6 +181,28 @@ const skipImagesField = form.elements.skipImages;
 const regenerateLogoField = form.elements.regenerateLogo;
 const skipTextsField = form.elements.skipTexts;
 const pagesField = document.querySelector('#field-pages');
+
+// One checkbox per page the theme has examples for. home stays ticked and cannot be unticked: a
+// site without a front page is not a site, and the server refuses one anyway — better to say so
+// by the box being fixed than by a refusal after the button is pressed.
+function fillPages(pages) {
+  pagesField.replaceChildren(
+    ...pages.map((page) => {
+      const label = document.createElement('label');
+      label.className = 'check';
+      const box = document.createElement('input');
+      box.type = 'checkbox';
+      box.value = page;
+      box.checked = true;
+      box.disabled = page === 'home';
+      label.append(box, ` ${page}`);
+      return label;
+    }),
+  );
+  syncTexts();
+}
+
+const chosenPages = () => [...pagesField.querySelectorAll('input')].filter((box) => box.checked).map((box) => box.value);
 const exampleField = document.querySelector('#field-example');
 function syncRegenerateLogo() {
   regenerateLogoField.disabled = skipImagesField.checked;
@@ -187,15 +215,16 @@ syncRegenerateLogo();
 // use — shown greyed rather than hidden, so the list somebody typed is still theirs when they
 // change their mind, and so the checkbox visibly explains what it turned off.
 function syncTexts() {
-  for (const field of [pagesField, exampleField]) field.disabled = skipTextsField.checked;
+  exampleField.disabled = skipTextsField.checked;
+  for (const box of pagesField.querySelectorAll('input')) {
+    box.disabled = skipTextsField.checked || box.value === 'home';
+  }
+  pagesField.classList.toggle('is-off', skipTextsField.checked);
 }
 skipTextsField.addEventListener('change', syncTexts);
 syncTexts();
 
-// The pages of the supplied examples, which is what a new site is normally made of. Kept as plain
-// text the owner edits: the list is theirs, and a page the theme has no example for is refused by
-// the server with its name in the message.
-pagesField.value = ['home', 'casino', 'slots', 'games', 'betting', 'bonus', 'app', 'login'].join('\n');
+
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -207,9 +236,9 @@ form.addEventListener('submit', async (event) => {
   payload.skipImages = skipImagesField.checked;
   payload.regenerateLogo = regenerateLogoField.checked;
   payload.skipTexts = skipTextsField.checked;
-  // A disabled field is left out of FormData entirely, and the server reads a missing page list as
-  // "no pages" — which is only right when nothing is being written.
-  if (payload.skipTexts) delete payload.pages;
+  // The boxes are not form fields with a name, so FormData knows nothing about them. Sent as a
+  // list, which the server accepts alongside the old free text.
+  if (!payload.skipTexts) payload.pages = chosenPages();
   const stages = [
     payload.skipTexts ? '' : 'Пишем тексты',
     payload.skipImages ? '' : payload.regenerateLogo ? 'делаем логотип заново и картинки' : 'генерируем логотип и картинки',

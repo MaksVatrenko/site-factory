@@ -217,6 +217,15 @@ describe('factory API', () => {
     expect(data.examples.length).toBeGreaterThan(0);
   });
 
+  // The form used to hold this list as eight names written into its own source. A copy of something
+  // on disk goes stale the first time the disk changes — a page added to the theme would not show
+  // up, and one removed would still be offered and refused.
+  it('lists the pages a theme has examples for, so the form need not know them', async () => {
+    const data = await fetch(`${base}/api/examples?template=template1`).then((r) => r.json());
+    expect(data.pages).toEqual(readdirSync(join('templates', 'template1', 'examples')).sort());
+    expect(data.pages).toContain('home');
+  });
+
   it('lists site folders read from disk, each with its page count and brand name', async () => {
     const data = await fetch(`${base}/api/sites`).then((r) => r.json());
     const byId = Object.fromEntries(data.sites.map((site) => [site.id, site]));
@@ -1582,6 +1591,44 @@ describe('one request writes the texts and builds the site', () => {
     expect(response.status).toBe(400);
     expect((await response.json()).error).toContain('home');
     expect(existsSync(join('data', 'sites', 'texts-no-home'))).toBe(false);
+  });
+
+  // A page the theme has no example for cannot be written at all. Left to the run it failed inside
+  // pickExamples — after this request had been answered 200 and the job had started — so a typo
+  // came back as a job that began and died rather than as a refusal naming the page.
+  it('refuses a page the theme has no example for, naming it and what there is', async () => {
+    const out = 'texts-unknown-page';
+    rmSync(join('data', 'sites', out), { recursive: true, force: true });
+    try {
+      const response = await start({ template: 'template1', site: out, brand: 'Acme', pages: 'home\ncasno' });
+      expect(response.status).toBe(400);
+      const { error } = await response.json();
+      expect(error).toContain('casno');
+      expect(error).toContain('casino');
+      expect(existsSync(join('data', 'sites', out))).toBe(false);
+    } finally {
+      rmSync(join('data', 'sites', out), { recursive: true, force: true });
+    }
+  });
+
+  // The form sends its ticked boxes as a list, and every element of it is one page — whole. Read
+  // as text instead, the list is joined and split again, and a name with a space in it silently
+  // becomes two pages, one of which may well be real: «live casino» would pass as «casino».
+  it('keeps every element of a page list whole, rather than splitting it back into words', async () => {
+    const out = 'texts-list-pages';
+    rmSync(join('data', 'sites', out), { recursive: true, force: true });
+    try {
+      const response = await start({
+        template: 'template1', site: out, brand: 'Acme', pages: ['home', 'live casino'],
+      });
+      expect(response.status).toBe(400);
+      const { error } = await response.json();
+      // One unknown page named, not none: split into words, «casino» would be a page the theme has.
+      expect(error).toContain('live-casino');
+      expect(existsSync(join('data', 'sites', out))).toBe(false);
+    } finally {
+      rmSync(join('data', 'sites', out), { recursive: true, force: true });
+    }
   });
 
   // Finding 4: /api/generate already refuses a present but non-string template/scheme instead of
