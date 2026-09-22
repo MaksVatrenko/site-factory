@@ -163,7 +163,6 @@ export function frameOf(example, { content, autoBlocks }) {
     if (!auto) measure(h1 ? 'h1' : 'h2', head?.h1 ?? head?.h2 ?? head?.h3);
 
     const elements = [];
-    const counts = {};
     // An auto block is read for nothing at all: the factory builds the contents and the "other
     // pages" grid itself, so whatever the example wrote there is about to be thrown away, and
     // measuring its two-word lines would drag every length on the page down with them.
@@ -179,23 +178,32 @@ export function frameOf(example, { content, autoBlocks }) {
       if (!content.elements.includes(kind)) {
         throw new Error(`пример ${example.id}: тема «${content.id}» не умеет элемент «${kind}»`);
       }
-      elements.push(kind);
-
+      // One entry per element, in place, carrying its own size. Not a tally by kind and not one
+      // number for the whole page: a page's paragraphs run from 51 characters to 375 in the
+      // examples supplied, and the first screen is reliably the longest of them. Measured page-wide
+      // and handed back as a median, every paragraph of the built page came out that median — the
+      // spread collapsed from seven-fold to one-and-a-half, and the page read like a fence.
+      const spec = { kind };
       const collection = element[COLLECTION[kind] ?? 'items'];
       if (Array.isArray(collection)) {
-        // The widest of the block's same-kind elements, not the middle one: this number is also the
-        // ceiling the answer is trimmed to on arrival, and a middling ceiling would cut a list the
-        // example itself wrote in full.
-        counts[kind] = Math.max(counts[kind] ?? 0, collection.length);
-        if (kind === 'list') for (const item of collection) measure('listItem', item);
+        // `count`, not `items`: a table keeps its pieces in `rows`, and a field named after one
+        // spelling would read as a lie about the other. This is how many pieces, whatever they are called.
+        spec.count = collection.length;
+        // How long one item runs, for the kinds whose items are plain strings. The middle one: a
+        // list of five is written to one length, and its outlier should not set it for the rest.
+        const strings = collection.filter((item) => typeof item === 'string' && item.trim() !== '');
+        if (strings.length > 0) spec.length = median(strings.map((item) => item.length));
       }
-      if (kind === 'text') measure('text', element.text);
+      if (kind === 'text' && typeof element.text === 'string') spec.length = element.text.length;
       // A question and its answer, which a toggle keeps in `title` and `text` like every other
       // element of the format (docs/content-format.md) — not in fields named after what they hold.
+      // Both stay page-wide: the plan writes every question in one request and fillFaq every
+      // answer in another, so there is no per-element place for either to be asked.
       if (kind === 'toggle') {
         measure('question', element.title);
         measure('answer', element.text);
       }
+      elements.push(spec);
     }
 
     blocks.push({
@@ -207,7 +215,6 @@ export function frameOf(example, { content, autoBlocks }) {
       // pages — so where a picture goes is the theme's to declare and nobody else's.
       image: content.pictures[type] ?? false,
       elements,
-      counts,
     });
   }
 
@@ -222,6 +229,10 @@ export function frameOf(example, { content, autoBlocks }) {
     throw new Error(`в примере ${example.id} больше одного блока faq — вопросы у страницы одни`);
   }
 
+  // What is left page-wide is exactly what one request writes for the whole page: the meta fields
+  // and the h1 (the plan), every section heading (the plan), every FAQ question (the plan) and
+  // every answer (fillFaq). Paragraphs and list rows are not here any more — they belong to the
+  // element that holds them, in the block that holds it.
   measure('title', example.page.title);
   measure('description', example.page.description);
   return {
@@ -260,7 +271,7 @@ export function planShape(blocks) {
   const faq = blocks.find((block) => block.type === 'faq');
   // How many questions is how many toggles the example's own FAQ holds — the sequence already says
   // it, and a count beside it would be the same number written twice, free to disagree with itself.
-  const questions = faq?.elements?.filter((element) => element === 'toggle').length ?? 0;
+  const questions = faq?.elements?.filter((element) => element.kind === 'toggle').length ?? 0;
   return {
     // One count per kind, not one total: each kind is asked for separately, so the plan can hold
     // nine sections and two half-blocks without either being described as the other.

@@ -41,11 +41,11 @@ function keepLinks(text, pages, page, warnings) {
   });
 }
 
-// The example's own item counts — five list rows, three table rows — are a ceiling the model was
-// already asked to respect (see fill.mjs's brief), unlike the character lengths below. A count is
-// safe to actually cut, unlike a length: dropping the last few rows never breaks one mid-sentence,
-// so — unlike noteLength — this one trims rather than only reporting. A block the example wrote no
-// such element into has no ceiling to hold the answer to, and nothing is cut.
+// The example's own count for this very element — five list rows, three table rows — a ceiling the
+// model was already asked to respect (see fill.mjs's brief), unlike the character lengths below. A
+// count is safe to actually cut, unlike a length: dropping the last few rows never breaks one
+// mid-sentence, so — unlike noteLength — this one trims rather than only reporting. An element the
+// example gave no count has no ceiling to hold the answer to, and nothing is cut.
 function trimToMax(what, list, range, warnings) {
   if (!range) return list;
   const max = Array.isArray(range) ? range[1] : range;
@@ -54,7 +54,9 @@ function trimToMax(what, list, range, warnings) {
   return list.slice(0, max);
 }
 
-function toElement(item, { images, pages, page, warnings, counts }) {
+// `spec` is the example's own entry for this position — { kind, count?, length? } — so a section's
+// five-row list says nothing about what the table two elements later may hold.
+function toElement(item, { images, pages, page, warnings, spec = {} }) {
   const link = (text) => keepLinks(text, pages, page, warnings);
   const picture = (name) => {
     if (name && images.has(name)) return name;
@@ -68,9 +70,9 @@ function toElement(item, { images, pages, page, warnings, counts }) {
     case 'text':
       return { type: 'text', text: link(item.text) };
     case 'list':
-      return { type: 'list', items: trimToMax('пунктов списка', item.items, counts.list, warnings).map(link) };
+      return { type: 'list', items: trimToMax('пунктов списка', item.items, spec.count, warnings).map(link) };
     case 'table': {
-      const rows = trimToMax('строк таблицы', item.rows, counts.table, warnings);
+      const rows = trimToMax('строк таблицы', item.rows, spec.count, warnings);
       return { type: 'table', columns: item.columns, rows: rows.map((row) => row.map(link)) };
     }
     case 'cards':
@@ -79,7 +81,7 @@ function toElement(item, { images, pages, page, warnings, counts }) {
       // still carry one — that is the content format, not this stage.
       return {
         type: 'cards',
-        items: trimToMax('карточек', item.cards, counts.cards, warnings).map((card) => ({
+        items: trimToMax('карточек', item.cards, spec.count, warnings).map((card) => ({
           title: card.title,
           text: link(card.text),
         })),
@@ -91,7 +93,7 @@ function toElement(item, { images, pages, page, warnings, counts }) {
       // a page of this site or it names nothing. Naming nothing is not a mistake here — it is the
       // ordinary case, and it means the partner link, which the template fills in at build time. So
       // an unusable target is dropped back to that rather than turning the button into a dead end.
-      const items = trimToMax('кнопок', item.items, counts.buttons, warnings)
+      const items = trimToMax('кнопок', item.items, spec.count, warnings)
         .map((button) => {
           const canonical = button.href ? resolveLink(button.href, pages) : null;
           if (button.href && canonical === null) {
@@ -109,13 +111,13 @@ function toElement(item, { images, pages, page, warnings, counts }) {
       return items.length > 0 ? { type: 'buttons', items } : null;
     }
     case 'info': {
-      const items = trimToMax('плашек', item.items, counts.info, warnings).filter(Boolean);
+      const items = trimToMax('плашек', item.items, spec.count, warnings).filter(Boolean);
       return items.length > 0 ? { type: 'info', items } : null;
     }
     case 'line':
       return { type: 'line' };
     case 'steps': {
-      const items = trimToMax('шагов', item.items, counts.steps, warnings)
+      const items = trimToMax('шагов', item.items, spec.count, warnings)
         .map((step) => ({ title: step.title, text: link(step.text) }))
         .filter((step) => step.title !== '' || step.text !== '');
       return items.length > 0 ? { type: 'steps', items } : null;
@@ -132,12 +134,23 @@ function toElement(item, { images, pages, page, warnings, counts }) {
   }
 }
 
-// Lengths from the example are reported, never enforced. Trimming a paragraph to fit would cut it
-// mid-sentence, which is worse than a long paragraph, and the engine imposes no limit of its own —
-// these numbers exist so the layout stays pleasant, not so the build can fail.
+// A length measured off the example is a target, not a ceiling: the number is what the example
+// wrote in that very place, and the brief asked for it "give or take a fifth". So a bare number is
+// read the same way here — a fifth either side — and both ends are worth a line.
+//
+// Short used to be unreportable, because a bare number was read as a ceiling with a floor of zero.
+// That is exactly the failure this whole per-element measurement was written for: a first screen
+// the example wrote at 375 characters came back at 141, and nothing anywhere said so.
+const TOLERANCE = 0.2;
+
+// Reported, never enforced. Trimming a paragraph to fit would cut it mid-sentence, which is worse
+// than a long paragraph, and the engine imposes no limit of its own — these numbers exist so the
+// page reads like the one it was copied from, not so the build can fail.
 function noteLength(what, value, range, warnings) {
   if (!range) return;
-  const [min, max] = Array.isArray(range) ? range : [0, range];
+  const [min, max] = Array.isArray(range)
+    ? range
+    : [Math.round(range * (1 - TOLERANCE)), Math.round(range * (1 + TOLERANCE))];
   const length = String(value).length;
   if (length > max) warnings.push(`${what}: ${length} знаков вместо ${max} — оставлено как есть`);
   else if (min > 0 && length < min) warnings.push(`${what}: ${length} знаков вместо ${min} — оставлено как есть`);
@@ -222,11 +235,17 @@ export function assemblePage({ plan, blocks, example = '', sections, faq, pages,
         at,
         heading: section.heading,
         items: section.items
-          .map((item) => {
-            if (item.kind === 'text') noteLength('text абзаца', item.text, lengths.text, warnings);
-            // The ceilings are the block's own, from the example's own block, not the page's: one
-            // section's five-row list says nothing about what another section's table may hold.
-            return toElement(item, { ...context, counts: block.counts ?? {} });
+          .map((item, at) => {
+            // The example's entry for this very position. The answer is pinned to the same length
+            // as the sequence by the schema (see schema.mjs's sectionSchema), so item `at` is the
+            // element the example wrote `at` — a kind that disagrees means the model answered
+            // something the brief did not ask for, and the mismatch is worth a line of its own.
+            const spec = block.elements?.[at] ?? {};
+            if (spec.kind !== undefined && spec.kind !== item.kind) {
+              warnings.push(`на месте ${at + 1} ждали «${spec.kind}», пришёл «${item.kind}»`);
+            }
+            if (item.kind === 'text') noteLength('text абзаца', item.text, spec.length, warnings);
+            return toElement(item, { ...context, spec });
           })
           .filter(Boolean),
       });

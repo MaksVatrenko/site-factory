@@ -114,9 +114,9 @@ function fakeOpenAi({
     // section_content, the generic case. One item per element the brief asked for, in that order —
     // the way a model given "write these elements, in this order" behaves. Answering with one
     // paragraph whatever was asked would make every test about composition test this fake instead.
-    const wanted = (String(body.input[0].content).match(/Write these elements, in this order: (.*)$/m)?.[1] ?? '')
-      .split(', ')
-      .filter(Boolean);
+    // The brief lists one element per numbered line, each with its own size — read back the way a
+    // model reads it, so a fake cannot know more than it is told.
+    const wanted = [...String(body.input[0].content).matchAll(/^\d+\. ([a-z-]+)/gm)].map(([, kind]) => kind);
     const CANNED = {
       text: { kind: 'text', text: 'Body text of the section.' },
       title: { kind: 'title', level: 'h3', text: 'A subheading.' },
@@ -695,7 +695,7 @@ describe('every page is built from its own example', () => {
 
   // How many items a collection holds cannot be pinned by the schema — strict mode counts elements,
   // not what is inside the third of them — so it is asked for in words, from the example's own block.
-  it("tells each section how long the example's own lists were", async () => {
+  it("tells each section, place by place, what the example held there", async () => {
     const dir = siteDir();
     const fake = fakeOpenAi();
     const briefs = [];
@@ -711,7 +711,8 @@ describe('every page is built from its own example', () => {
     ])) });
 
     expect(briefs.length).toBeGreaterThan(0);
-    expect(briefs.some((brief) => /How many items each holds: list 5/.test(brief))).toBe(true);
+    // The element, its place, how many pieces and how long each one runs — all on its own line.
+    expect(briefs.some((brief) => /^\d+\. list — 5 items, about \d+ characters each$/m.test(brief))).toBe(true);
   });
 
   // Measuring a length and never asking for it is the same as not measuring it. In v1 the lengths
@@ -742,9 +743,9 @@ describe('every page is built from its own example', () => {
     expect(briefs.get('page_plan')).toContain('the h1 40');
     expect(briefs.get('page_plan')).toContain('each section heading 30');
     expect(briefs.get('page_plan')).toContain('each FAQ question 33');
-    // What a section writes.
-    expect(briefs.get('section_content')).toContain('each paragraph 124');
-    expect(briefs.get('section_content')).toContain('each list item 41');
+    // What a section writes: each element in its place, with the size the example wrote there.
+    expect(briefs.get('section_content')).toMatch(/^\d+\. text — about 124 characters$/m);
+    expect(briefs.get('section_content')).toMatch(/^\d+\. list — 1 items, about 41 characters each$/m);
     // And what the FAQ writes.
     expect(briefs.get('faq_answers')).toContain('179 characters');
   });
@@ -752,7 +753,7 @@ describe('every page is built from its own example', () => {
   // Lengths are measured off the example too, and they are only ever reported — but a report that
   // never fires is the same as none, so it is checked where it must fire: an example of very short
   // paragraphs and an answer that is not.
-  it("measures a paragraph against the example's own paragraphs", async () => {
+  it('measures a paragraph against the one the example wrote in that very place', async () => {
     const dir = siteDir();
     const terse = { type: 'text', text: 'Коротко.' };
     const { lines } = await run(dir, { ...fakeOpenAi(), ...everyPage(examplePage([
@@ -761,7 +762,11 @@ describe('every page is built from its own example', () => {
       { type: 'faq', content: [h2('Вопросы'), { type: 'toggle', title: 'В?', text: 'О.' }] },
     ])) });
 
-    expect(lines.join('\n')).toMatch(/text абзаца: \d+ знаков вместо 8/);
+    // The example wrote 8 characters in that place, and a length is a target with a fifth either
+    // side — so 25 is as worth a line as 3 would be. Short used to be unreportable at all: a bare
+    // number was read as a ceiling with a floor of zero, and a first screen the example wrote at
+    // 375 came back at 141 with nothing saying so.
+    expect(lines.join('\n')).toMatch(/text абзаца: \d+ знаков вместо 10/);
   });
 });
 

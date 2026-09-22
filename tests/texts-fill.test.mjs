@@ -10,7 +10,9 @@ const CONFIG = {
   priceCachedInput: 0.02,
   priceOutput: 1.2,
 };
-const SECTION = { heading: 'Payments', brief: 'how to pay', elements: ['title', 'text'], image: null, links: ['/bonus'] };
+// A block's elements carry their own size now, one entry per place (see example.mjs's frameOf).
+const holds = (...kinds) => kinds.map((kind) => ({ kind }));
+const SECTION = { heading: 'Payments', brief: 'how to pay', elements: holds('title', 'text'), image: null, links: ['/bonus'] };
 
 const ITEMS = { items: [{ kind: 'text', text: 'Body.' }, { kind: 'text', text: 'More.' }] };
 const run = (overrides, fetchFn) =>
@@ -46,12 +48,15 @@ describe('fillSection', () => {
   // the block's own heading, so the model was never asked to write one.
   it('asks for the subheading the plan chose, instead of mistaking it for the heading', async () => {
     let body;
-    const section = { ...SECTION, elements: ['title', 'text'] };
+    const section = { ...SECTION, elements: holds('title', 'text') };
     await run({ section }, async (_url, init) => {
       body = JSON.parse(init.body);
       return answer(ITEMS);
     });
-    expect(String(body.input[0].content)).toContain('title, text');
+    // One line per element, in place, each with its own size — not a comma list of kinds.
+    const brief = String(body.input[0].content);
+    expect(brief).toContain('1. title');
+    expect(brief).toContain('2. text');
   });
 
   // A picture belongs to a block by its nature and is placed by the factory, so there is no image

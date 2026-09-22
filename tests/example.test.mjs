@@ -42,6 +42,8 @@ function theme() {
   };
 }
 
+const kinds = (block) => block.elements.map((element) => element.kind);
+
 const title = (tag, text = 'Заголовок') => ({ type: 'title', [tag]: text });
 const text = (length) => ({ type: 'text', text: 'я'.repeat(length) });
 const list = (...lengths) => ({ type: 'list', items: lengths.map((n) => 'я'.repeat(n)) });
@@ -200,13 +202,12 @@ describe('frameOf', () => {
 
   it('leaves the block heading out of its elements, because the factory writes it', () => {
     const frame = frameOf(example(ordinary()), theme());
-    expect(frame.blocks[2].elements).toEqual(['text', 'list']);
+    expect(kinds(frame.blocks[2])).toEqual(['text', 'list']);
   });
 
   it('leaves an auto block with no elements, however full the example wrote it', () => {
     const frame = frameOf(example(ordinary()), theme());
     expect(frame.blocks[1].elements).toEqual([]);
-    expect(frame.blocks[1].counts).toEqual({});
   });
 
   it('drops a second heading inside a block, keeping what came after it', () => {
@@ -217,7 +218,7 @@ describe('frameOf', () => {
       ]),
       theme(),
     );
-    expect(frame.blocks[1].elements).toEqual(['text', 'list']);
+    expect(kinds(frame.blocks[1])).toEqual(['text', 'list']);
   });
 
   // Pictures are placed by the theme, so one standing in an example would be a second picture in
@@ -231,10 +232,10 @@ describe('frameOf', () => {
       ]),
       theme(),
     );
-    expect(frame.blocks[1].elements).toEqual(['text']);
+    expect(kinds(frame.blocks[1])).toEqual(['text']);
   });
 
-  it('counts what is inside an element: list items, table rows, cards, questions', () => {
+  it('counts what is inside each element, in its own place', () => {
     const frame = frameOf(
       example([
         { type: 'hero', content: [title('h1'), text(124)] },
@@ -250,7 +251,11 @@ describe('frameOf', () => {
       ]),
       theme(),
     );
-    expect(frame.blocks[1].counts).toEqual({ list: 5, table: 3, cards: 2 });
+    expect(frame.blocks[1].elements).toEqual([
+      { kind: 'list', count: 5, length: 41 },
+      { kind: 'table', count: 3 },
+      { kind: 'cards', count: 2 },
+    ]);
   });
 
   // Questions are elements of their own, so how many there are is already in the sequence — a
@@ -266,11 +271,14 @@ describe('frameOf', () => {
       ]),
       theme(),
     );
-    expect(frame.blocks[1].elements).toEqual(Array.from({ length: 7 }, () => 'toggle'));
-    expect(frame.blocks[1].counts).toEqual({});
+    expect(kinds(frame.blocks[1])).toEqual(Array.from({ length: 7 }, () => 'toggle'));
   });
 
-  it('takes the widest of two same-kind elements, since the count is also the ceiling for trimming', () => {
+  // The defect this shape exists to prevent, found on a live paid run: sizes taken by kind and
+  // handed back as one number per page. A page whose paragraphs ran 51 to 375 characters came back
+  // with every one of them at the median, 131 — the first screen, reliably the longest paragraph
+  // of the page, lost two thirds of itself, and the page read like a fence.
+  it('keeps each element to its own size, not to one shared by its kind', () => {
     const frame = frameOf(
       example([
         { type: 'hero', content: [title('h1'), text(124)] },
@@ -278,7 +286,25 @@ describe('frameOf', () => {
       ]),
       theme(),
     );
-    expect(frame.blocks[1].counts.list).toBe(4);
+    expect(frame.blocks[1].elements.map((element) => element.count)).toEqual([4, 2]);
+  });
+
+  it('measures each paragraph where it stands, however far apart two of them are', () => {
+    const frame = frameOf(
+      example([
+        { type: 'hero', content: [title('h1'), text(375)] },
+        { type: 'section', content: [title('h2'), text(51), text(297)] },
+      ]),
+      theme(),
+    );
+    expect(frame.blocks[0].elements).toEqual([{ kind: 'text', length: 375 }]);
+    expect(frame.blocks[1].elements).toEqual([
+      { kind: 'text', length: 51 },
+      { kind: 'text', length: 297 },
+    ]);
+    // And nothing page-wide is left for a paragraph to be flattened to.
+    expect(frame.lengths.text).toBeUndefined();
+    expect(frame.lengths.listItem).toBeUndefined();
   });
 
   it('takes the picture from the theme, since the example never has one', () => {
@@ -296,15 +322,15 @@ describe('frameOf', () => {
   // The whole reason the median is taken rather than the mean. Paragraph lengths in the supplied
   // examples run from 3 to 415 characters, and a mean lets either end set the target for every
   // paragraph on the page: here one long outlier alone would ask for 194 instead of 130.
-  it('measures lengths by kind, as a median', () => {
+  it('takes the middle length of a list, so one long row does not set it for the rest', () => {
     const frame = frameOf(
       example([
-        { type: 'hero', content: [title('h1'), text(110)] },
-        { type: 'section', content: [title('h2'), text(120), text(130), text(415)] },
+        { type: 'hero', content: [title('h1'), text(124)] },
+        { type: 'section', content: [title('h2'), list(38, 41, 44, 345)] },
       ]),
       theme(),
     );
-    expect(frame.lengths.text).toBe(130);
+    expect(frame.blocks[1].elements[0]).toEqual({ kind: 'list', count: 4, length: 44 });
   });
 
   it('measures a question and its answer, which a toggle keeps in title and text', () => {
@@ -324,7 +350,7 @@ describe('frameOf', () => {
     expect(frame.lengths.title).toBe(48);
     expect(frame.lengths.description).toBe(145);
     expect(frame.lengths.h1).toBe(40);
-    expect(frame.lengths.listItem).toBe(41);
+    expect(frame.lengths.h2).toBe(9);
   });
 
   it('measures an auto block for nothing: the factory writes its text, not the model', () => {
@@ -336,7 +362,9 @@ describe('frameOf', () => {
       ]),
       theme(),
     );
-    expect(frame.lengths.listItem).toBe(41);
+    // Its own heading is not measured either, and its two-word contents rows are not a list.
+    expect(frame.blocks[1].elements).toEqual([]);
+    expect(frame.blocks[2].elements[0].length).toBe(41);
   });
 
   it('refuses an example whose block the theme cannot draw, naming block and theme', () => {
@@ -381,15 +409,16 @@ describe('frameOf', () => {
 // that would have drifted: planned for zero times, then dropped without a word.
 describe('planShape agrees with assemblePage about what takes a section', () => {
   const nature = (type, own) => ({
-    type, auto: false, h1: false, image: false, heading: false, elements: [], counts: {}, ...own,
+    type, auto: false, h1: false, image: false, heading: false, elements: [], ...own,
   });
+  const holds = (...list) => list.map((kind) => ({ kind }));
   const FRAME = [
-    nature('hero', { h1: true, image: true, elements: ['text'] }),
+    nature('hero', { h1: true, image: true, elements: holds('text') }),
     nature('toc', { auto: true }),
-    nature('section', { heading: true, elements: ['text'] }),
-    nature('split', { heading: true, image: true, elements: ['text'] }),
+    nature('section', { heading: true, elements: holds('text') }),
+    nature('split', { heading: true, image: true, elements: holds('text') }),
     nature('links', { auto: true }),
-    nature('faq', { heading: true, elements: ['toggle'] }),
+    nature('faq', { heading: true, elements: holds('toggle') }),
   ];
 
   it('plans exactly as many blocks as the assembler asks for, of every kind', () => {
@@ -425,6 +454,6 @@ describe('planShape agrees with assemblePage about what takes a section', () => 
   // the example's own FAQ held, and the schema is pinned to that number.
   it('plans exactly as many questions as the example had', () => {
     expect(planShape(FRAME).faq).toBe(1);
-    expect(planShape([...FRAME.slice(0, 5), nature('faq', { heading: true, elements: ['toggle', 'toggle', 'toggle'] })]).faq).toBe(3);
+    expect(planShape([...FRAME.slice(0, 5), nature('faq', { heading: true, elements: holds('toggle', 'toggle', 'toggle') })]).faq).toBe(3);
   });
 });

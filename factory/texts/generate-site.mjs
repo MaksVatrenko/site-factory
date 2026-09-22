@@ -199,9 +199,10 @@ export async function generateSite({
         const nth = taken.get(block.type) ?? 0;
         taken.set(block.type, nth + 1);
         const entry = planned.plan.blocks?.[block.type]?.[nth];
-        // What goes inside the block, and in what order, is the example's — the plan has no field
-        // for it, because the schema never asks. The plan supplies the heading and the brief.
-        if (entry) planned_.set(at, { ...entry, elements: block.elements, counts: block.counts });
+        // What goes inside the block, in what order and how long each piece runs, is the example's
+        // — the plan has no field for any of it, because the schema never asks. The plan supplies
+        // the heading and the brief.
+        if (entry) planned_.set(at, { ...entry, elements: block.elements });
       }
 
       const headings = [...planned_.values()].map((section) => section.heading);
@@ -210,7 +211,7 @@ export async function generateSite({
         const siblings = headings.filter((heading) => heading !== section.heading);
         try {
           const filled = await fillSection(
-            { section, siblings, brand, locale: language, page, counts: section.counts, lengths: frame.lengths, instructions },
+            { section, siblings, brand, locale: language, page, lengths: frame.lengths, instructions },
             options,
           );
           spent += filled.cost;

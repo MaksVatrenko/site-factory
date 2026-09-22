@@ -31,23 +31,25 @@ const FAQ = [{ question: 'Is it safe?', answer: 'Yes.' }];
 // Character lengths only. How many items a list or a table holds is the block's own business now,
 // measured off the example block by block — one section's five-row list says nothing about what
 // another section's table may hold.
-const LENGTHS = { title: 60, description: [120, 160], h1: 60, text: [200, 400] };
+const LENGTHS = { title: 60, description: [120, 160], h1: 60 };
 // A frame read off an example — what generate-site.mjs hands the assembler. Every entry carries its
 // own nature, and nothing here says "hero" to the assembler except the block's own type, which it
 // only ever passes through.
 const nature = (type, own) => ({
-  type, auto: false, h1: false, image: false, heading: false, elements: [], counts: {}, ...own,
+  type, auto: false, h1: false, image: false, heading: false, elements: [], ...own,
 });
-const HERO = nature('hero', { h1: true, image: true, elements: ['text'] });
+const HERO = nature('hero', { h1: true, image: true, elements: [{ kind: 'text' }] });
 const TOC = nature('toc', { auto: true });
+// What the example's own section held, place by place — the ceiling each answer is cut back to.
+// The fixture's sections are filled with one element each unless a test says otherwise, so the
+// first place is what the trimming tests land on.
 const SECTION = nature('section', {
   heading: true,
-  elements: ['text'],
-  // What the example's own section held, which is the ceiling the answer is cut back to.
-  counts: { list: 8, table: 10, cards: 4 },
+  elements: [{ kind: 'text' }],
 });
+const sectionHolding = (...elements) => nature('section', { heading: true, elements });
 const LINKS = nature('links', { auto: true });
-const FAQ_BLOCK = nature('faq', { heading: true, elements: ['toggle'] });
+const FAQ_BLOCK = nature('faq', { heading: true, elements: [{ kind: 'toggle' }] });
 const BLOCKS = [HERO, TOC, SECTION, SECTION, LINKS, FAQ_BLOCK];
 
 // The assembler looks a filled block up by its place on the page, not by its turn in a queue:
@@ -434,13 +436,17 @@ describe('the elements a call-to-action page is made of', () => {
 
   // Lengths are reported, never enforced: cutting a paragraph mid-sentence is worse than a long
   // paragraph, and the engine does not care either way.
-  it('mentions a paragraph well outside the template length, without touching it', () => {
+  // Both ends: the example wrote 200 characters in this place, so 6 is as worth a line as 900. A
+  // first screen the example wrote at 375 came back at 141 on a live run, and nothing said so —
+  // because a bare number used to be read as a ceiling with a floor of zero.
+  it('mentions a paragraph well outside the example length, without touching it', () => {
     const sections = [
       HERO_ITEMS,
       { heading: 'Payments', items: [{ kind: 'text', text: 'Short.' }] },
       SECTIONS[1],
     ];
-    const { page, warnings } = build({ sections });
+    const blocks = [HERO, TOC, sectionHolding({ kind: 'text', length: 200 }), SECTION, LINKS, FAQ_BLOCK];
+    const { page, warnings } = build({ blocks, sections });
     const written = page.blocks.filter((block) => block.type === 'section')[0].content[1];
     expect(written.text).toBe('Short.');
     expect(warnings.join(' ')).toContain('text');
@@ -448,10 +454,12 @@ describe('the elements a call-to-action page is made of', () => {
 
   // Unlike a character length, an item count can be cut cleanly — spec §9: "лишнее отбрасывается,
   // строка в лог" — so these three, unlike the text/h1 lengths above, actually get trimmed.
+  const holdingOne = (kind, count) => [HERO, TOC, sectionHolding({ kind, count }), SECTION, LINKS, FAQ_BLOCK];
+
   it('trims a list past what the example\'s own block held, and logs what was cut', () => {
     const items = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
     const sections = [HERO_ITEMS, { heading: 'Payments', items: [{ kind: 'list', items }] }, SECTIONS[1]];
-    const { page, warnings } = build({ sections });
+    const { page, warnings } = build({ blocks: holdingOne('list', 8), sections });
     const list = page.blocks.filter((block) => block.type === 'section')[0].content[1];
     expect(list.items).toEqual(['1', '2', '3', '4', '5', '6', '7', '8']);
     expect(warnings.join(' ')).toContain('пунктов списка: 10 вместо 8');
@@ -460,7 +468,7 @@ describe('the elements a call-to-action page is made of', () => {
   it('trims a table past what the example\'s own block held, and logs what was cut', () => {
     const rows = Array.from({ length: 12 }, (_, index) => [`r${index + 1}`]);
     const sections = [HERO_ITEMS, { heading: 'Payments', items: [{ kind: 'table', columns: ['A'], rows }] }, SECTIONS[1]];
-    const { page, warnings } = build({ sections });
+    const { page, warnings } = build({ blocks: holdingOne('table', 10), sections });
     const table = page.blocks.filter((block) => block.type === 'section')[0].content[1];
     expect(table.rows).toEqual(rows.slice(0, 10));
     expect(warnings.join(' ')).toContain('строк таблицы: 12 вместо 10');
@@ -469,7 +477,7 @@ describe('the elements a call-to-action page is made of', () => {
   it('trims a card set past what the example\'s own block held, and logs what was cut', () => {
     const cards = Array.from({ length: 6 }, (_, index) => ({ title: `C${index + 1}`, text: 'T', image: null }));
     const sections = [HERO_ITEMS, { heading: 'Payments', items: [{ kind: 'cards', cards }] }, SECTIONS[1]];
-    const { page, warnings } = build({ sections });
+    const { page, warnings } = build({ blocks: holdingOne('cards', 4), sections });
     const cardsBlock = page.blocks.filter((block) => block.type === 'section')[0].content[1];
     expect(cardsBlock.items).toHaveLength(4);
     expect(cardsBlock.items.map((card) => card.title)).toEqual(['C1', 'C2', 'C3', 'C4']);
@@ -480,7 +488,7 @@ describe('the elements a call-to-action page is made of', () => {
   // trimPlan already follows for elements and pictures.
   it('leaves a list under the template minimum alone, without inventing items', () => {
     const sections = [HERO_ITEMS, { heading: 'Payments', items: [{ kind: 'list', items: ['one'] }] }, SECTIONS[1]];
-    const { page, warnings } = build({ sections });
+    const { page, warnings } = build({ blocks: holdingOne('list', 8), sections });
     const list = page.blocks.filter((block) => block.type === 'section')[0].content[1];
     expect(list.items).toEqual(['one']);
     // Other, unrelated length warnings from this fixture's text are fine — only a count trim of

@@ -35,7 +35,7 @@ async function askWithRetries(request, options, attempts) {
 }
 
 export async function fillSection(
-  { section, siblings, brand, locale, page, counts = {}, lengths = {}, instructions, attempts = DEFAULT_ATTEMPTS },
+  { section, siblings, brand, locale, page, lengths = {}, instructions, attempts = DEFAULT_ATTEMPTS },
   options,
 ) {
   // The elements of this block, in the example's own order, with nothing taken off. The block's own
@@ -43,30 +43,28 @@ export async function fillSection(
   // the heading can never disagree, and asking for it here would print it on the page twice.
   const wanted = section.elements;
 
-  // How long each collection runs, measured off the same example the sequence came from. The schema
-  // cannot say it — strict mode pins how many elements there are, not how many items are inside the
-  // third of them — so it is asked for in words here and cut back to size on arrival (assemble.mjs).
-  const sizes = Object.entries(counts)
-    .map(([element, howMany]) => `${element} ${howMany}`)
-    .join(', ');
-
-  // And how long each one runs, measured off the same example. A schema cannot pin a string's
-  // length, so this is the only way the measurement reaches the model at all.
-  const runs = [
-    lengths.text > 0 ? `each paragraph ${lengths.text}` : '',
-    lengths.listItem > 0 ? `each list item ${lengths.listItem}` : '',
-  ]
-    .filter(Boolean)
-    .join(', ');
+  // Asked one per line, each with its own size, because a size belongs to a place and not to a
+  // kind. The schema cannot carry any of this: strict mode pins how many elements there are, not
+  // how many rows are inside the third of them, and it cannot pin a string's length at all. So it
+  // is asked for in words here, and the counts are cut back to size on arrival (assemble.mjs).
+  //
+  // One number for the whole page is what this replaced, and it was wrong in a way that showed:
+  // a page whose paragraphs ran 51 to 375 characters came back with every one of them at the
+  // median, 131. The first screen, reliably the longest paragraph of the page, lost two thirds.
+  const line = (element, at) => {
+    const parts = [];
+    if (element.count > 0) parts.push(`${element.count} items`);
+    if (element.length > 0) parts.push(`about ${element.length} characters${element.count > 0 ? ' each' : ''}`);
+    return `${at + 1}. ${element.kind}${parts.length > 0 ? ` — ${parts.join(', ')}` : ''}`;
+  };
 
   const brief = [
     `Brand: ${brand}`,
     `Language: ${locale}`,
     `Section heading: ${section.heading}`,
     `What this section covers: ${section.brief}`,
-    `Write these elements, in this order: ${wanted.join(', ')}`,
-    sizes === '' ? '' : `How many items each holds: ${sizes}.`,
-    runs === '' ? '' : `Write to these lengths, in characters, give or take a fifth: ${runs}.`,
+    'Write exactly these elements, in this order, each to the size given (give or take a fifth):',
+    ...wanted.map(line),
     // Nothing is said about pictures, on purpose. A picture belongs to a block by its nature and is
     // placed by the factory, so there is no `image` element for the model to write and no name for
     // it to get wrong. Mentioning one at all would only invite it to write something that is then
@@ -84,7 +82,7 @@ export async function fillSection(
       instructions,
       input: brief,
       schemaName: 'section_content',
-      schema: sectionSchema(wanted),
+      schema: sectionSchema(wanted.map((element) => element.kind)),
       // Named by page, like every other call of this run: the instructions hold this page's own
       // examples, and a key shared across pages would have them evicting one another.
       cacheKey: `site-factory-fill:${page}`,
