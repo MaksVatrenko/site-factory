@@ -53,7 +53,7 @@ const { template = 'template1', out = '', brand = '', geo = '', locale = '', pag
 
 if (out === '' || brand === '') {
   console.error(
-    'Использование: npm run generate:texts -- --template template1 --out <папка> --brand <бренд> --geo <гео> [--locale en-US] [--pages home,casino] [--example 899ok]',
+    'Использование: npm run generate:texts -- --template template1 --out <папка> --brand <бренд> --geo <гео> [--locale en-US] [--example 899ok] [--pages home]',
   );
   process.exit(1);
 }
@@ -99,10 +99,36 @@ if (example !== '') {
   }
 }
 
-const list = pages
+// The site is made of the pages the theme has examples for — all of them. That is what the form
+// does and there is no choice in it: a page with no example cannot be written, and one that has an
+// example is one SEO sent over precisely because the site is meant to have it.
+//
+// `--pages` narrows that, and exists for one reason: a paid probe. A one-page run costs an eighth
+// of a whole site, which is what you want when checking that a change came out right. The form has
+// no such flag on purpose — it is for making sites, not for testing them.
+let everything;
+try {
+  everything = Object.keys(loadExamples(template, ROOT)).sort();
+} catch (error) {
+  // A theme that cannot be generated for is a mistake in `--template`, so it leaves the way every
+  // argument mistake does: the reason on stderr and code 1, not a stack.
+  console.error(error.message);
+  process.exit(1);
+}
+const asked = pages
   .split(',')
   .map((name) => name.trim())
   .filter(Boolean);
+const missing = asked.filter((name) => !everything.includes(name));
+if (missing.length > 0) {
+  console.error(`У темы «${template}» нет примеров для страниц: ${missing.join(', ')}. Есть: ${everything.join(', ')}`);
+  process.exit(1);
+}
+const list = asked.length > 0 ? asked : everything;
+if (!list.includes('home')) {
+  console.error('В списке страниц нужна home — иначе у сайта не будет главной');
+  process.exit(1);
+}
 
 await generateSite({
   siteDir: join(ROOT, 'data', 'sites', out),
@@ -110,7 +136,7 @@ await generateSite({
   brand,
   geo,
   locale,
-  pages: list.length > 0 ? list : ['home'],
+  pages: list,
   config: readOpenAiConfig(ENV_FILE),
   root: ROOT,
   promptFile: join(ROOT, 'factory', 'prompts', 'texts.json'),

@@ -31,7 +31,7 @@ describe('npm run generate:texts', () => {
     rmSync(join('data', 'sites', out), { recursive: true, force: true });
     try {
       const result = runCli(
-        '--template=review',
+        '--template=template1',
         '--out',
         out,
         '--brand=Acme',
@@ -101,13 +101,14 @@ describe('npm run generate:texts', () => {
   });
 
   // The other side of that check, and the reason it cannot simply refuse every --layout it does
-  // not recognise as a flag: a layout that really is on disk must reach generateSite untouched.
-  // Without this, "refuse an unknown layout" could be satisfied by refusing all of them.
-  it('lets a real --layout through to the run itself', () => {
-    const out = 'texts-cli-layout-fixture';
+  // The other half of the refusal above: this is the exact spelling the argument parser must not
+  // mistake for a flag, and an example that really is on disk must reach generateSite untouched.
+  // Without this, "refuse an unknown example" could be satisfied by refusing all of them.
+  it('lets a real --example through to the run itself', () => {
+    const out = 'texts-cli-example-fixture';
     rmSync(join('data', 'sites', out), { recursive: true, force: true });
     try {
-      const result = runCli('--out', out, '--brand', 'Acme', '--layout=long-review');
+      const result = runCli('--out', out, '--brand', 'Acme', '--example=899ok');
       // Same "got this far" reasoning as the --flag=value test above: no key behind
       // OPENAI_ENV_FILE, so a run that passed the argument checks stops at generateSite's own
       // "no key" line and exits cleanly, without touching the network.
@@ -116,5 +117,28 @@ describe('npm run generate:texts', () => {
     } finally {
       rmSync(join('data', 'sites', out), { recursive: true, force: true });
     }
+  });
+
+  // The page list is not the form's to choose and not the command line's either: a site is the
+  // pages the theme has examples for. `--pages` narrows that for a paid probe, and a name the theme
+  // has no example for is an argument mistake, refused the way every other one is.
+  it('refuses a --pages the theme has no example for, naming what there is', () => {
+    const out = 'texts-cli-bad-page';
+    rmSync(join('data', 'sites', out), { recursive: true, force: true });
+    try {
+      const result = runCli('--out', out, '--brand', 'Acme', '--pages=home,casno');
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('casno');
+      expect(result.stderr).toContain('casino');
+      expect(existsSync(join('data', 'sites', out))).toBe(false);
+    } finally {
+      rmSync(join('data', 'sites', out), { recursive: true, force: true });
+    }
+  });
+
+  it('refuses a --pages without home, which would leave the site with no front page', () => {
+    const result = runCli('--out', 'texts-cli-no-home', '--brand', 'Acme', '--pages=casino');
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('home');
   });
 });

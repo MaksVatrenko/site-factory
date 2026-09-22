@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { EventEmitter } from 'node:events';
 import {
+  copyFileSync,
   cpSync,
   existsSync,
   mkdirSync,
@@ -1519,11 +1520,35 @@ describe('one request writes the texts and builds the site', () => {
 
   afterAll(() => {
     textsServer?.close();
+    rmSync(themeDir, { recursive: true, force: true });
     rmSync(siteDir, { recursive: true, force: true });
     // The run builds as well as writes now, so it leaves an output folder behind too.
     rmSync(join('output', siteId), { recursive: true, force: true });
     rmSync(envDir, { recursive: true, force: true });
   });
+
+  // A theme of this test's own, with two example pages instead of template1's eight: the run builds
+  // every page the theme has, and eight Astro pages per test is minutes of waiting for nothing. The
+  // examples are copied from the real theme, so what is generated is generated from real material.
+  const themeId = 'texts-two-page-fixture';
+  const themeDir = join('templates', themeId);
+  function writeTheme(pages = ['home', 'casino']) {
+    rmSync(themeDir, { recursive: true, force: true });
+    // The whole theme, components and all: the run builds what it writes, and a manifest without
+    // .astro files behind it generates fine and then fails in Astro. Only the examples differ.
+    cpSync(join('templates', 'template1'), themeDir, { recursive: true });
+    const real = JSON.parse(readFileSync(join(themeDir, 'manifest.json'), 'utf8'));
+    writeFileSync(join(themeDir, 'manifest.json'), JSON.stringify({ ...real, id: themeId, name: 'Проба' }));
+    rmSync(join(themeDir, 'examples'), { recursive: true, force: true });
+    for (const page of pages) {
+      mkdirSync(join(themeDir, 'examples', page), { recursive: true });
+      copyFileSync(
+        join('templates', 'template1', 'examples', page, '899ok.json'),
+        join(themeDir, 'examples', page, '899ok.json'),
+      );
+    }
+    return themeId;
+  }
 
   const start = (payload) =>
     fetch(`${textsBase}/api/generate`, {
@@ -1535,8 +1560,7 @@ describe('one request writes the texts and builds the site', () => {
   it('writes the pages, builds the site and reports it done — all from one request', async () => {
     rmSync(join('output', siteId), { recursive: true, force: true });
     const response = await start({
-      template: 'template1', site: siteId, brand: 'Acme', geo: 'Bangladesh', pages: 'home\ncasino',
-      skipImages: true,
+      template: writeTheme(), site: siteId, brand: 'Acme', geo: 'Bangladesh', skipImages: true,
     });
     expect(response.status).toBe(200);
     const { buildId } = await response.json();
@@ -1586,45 +1610,38 @@ describe('one request writes the texts and builds the site', () => {
     }
   });
 
-  it('refuses a page list with no home page, before spending anything', async () => {
-    const response = await start({ template: 'template1', site: 'texts-no-home', brand: 'Acme', pages: 'casino' });
-    expect(response.status).toBe(400);
-    expect((await response.json()).error).toContain('home');
-    expect(existsSync(join('data', 'sites', 'texts-no-home'))).toBe(false);
-  });
-
-  // A page the theme has no example for cannot be written at all. Left to the run it failed inside
-  // pickExamples — after this request had been answered 200 and the job had started — so a typo
-  // came back as a job that began and died rather than as a refusal naming the page.
-  it('refuses a page the theme has no example for, naming it and what there is', async () => {
-    const out = 'texts-unknown-page';
+  // The site is the pages the theme has examples for — all of them, and nothing the request says.
+  // A page list used to come from the form; it does not any more, and one sent anyway is ignored
+  // rather than honoured, which is the only behaviour that cannot quietly make a shorter site.
+  it('makes every page the theme has examples for, whatever the request asks for', async () => {
+    const out = 'texts-all-pages';
     rmSync(join('data', 'sites', out), { recursive: true, force: true });
+    rmSync(join('output', out), { recursive: true, force: true });
     try {
-      const response = await start({ template: 'template1', site: out, brand: 'Acme', pages: 'home\ncasno' });
-      expect(response.status).toBe(400);
-      const { error } = await response.json();
-      expect(error).toContain('casno');
-      expect(error).toContain('casino');
-      expect(existsSync(join('data', 'sites', out))).toBe(false);
+      const response = await start({
+        template: writeTheme(), site: out, brand: 'Acme', skipImages: true,
+        // Asked for one page. The theme has two, so two is what gets written.
+        pages: ['home'],
+      });
+      expect(response.status).toBe(200);
+      await readUntilDone((await response.json()).buildId, textsBase);
+      expect(existsSync(join('data', 'sites', out, 'home.json'))).toBe(true);
+      expect(existsSync(join('data', 'sites', out, 'casino.json'))).toBe(true);
     } finally {
       rmSync(join('data', 'sites', out), { recursive: true, force: true });
+      rmSync(join('output', out), { recursive: true, force: true });
     }
   });
 
-  // The form sends its ticked boxes as a list, and every element of it is one page — whole. Read
-  // as text instead, the list is joined and split again, and a name with a space in it silently
-  // becomes two pages, one of which may well be real: «live casino» would pass as «casino».
-  it('keeps every element of a page list whole, rather than splitting it back into words', async () => {
-    const out = 'texts-list-pages';
+  // home is not a page like the others: without it the site has no front page at all. It is the one
+  // thing about the page set that can still be wrong, and it is wrong in the theme, not the request.
+  it('refuses a theme whose examples have no home page, before spending anything', async () => {
+    const out = 'texts-no-home';
     rmSync(join('data', 'sites', out), { recursive: true, force: true });
     try {
-      const response = await start({
-        template: 'template1', site: out, brand: 'Acme', pages: ['home', 'live casino'],
-      });
+      const response = await start({ template: writeTheme(['casino']), site: out, brand: 'Acme' });
       expect(response.status).toBe(400);
-      const { error } = await response.json();
-      // One unknown page named, not none: split into words, «casino» would be a page the theme has.
-      expect(error).toContain('live-casino');
+      expect((await response.json()).error).toContain('home');
       expect(existsSync(join('data', 'sites', out))).toBe(false);
     } finally {
       rmSync(join('data', 'sites', out), { recursive: true, force: true });

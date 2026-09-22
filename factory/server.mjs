@@ -501,20 +501,14 @@ export function createApp({
         return;
       }
 
-      const raw = Array.isArray(body.pages) ? body.pages : String(body.pages ?? '').split(/[\s,]+/);
-      pages = [...new Set(raw.map((name) => safeName(name, '')).filter(Boolean))];
+      // The pages of the site are the pages the theme has examples for — all of them, and nothing
+      // else. Not a choice on the form: a page with no example cannot be written at all, and one
+      // that has an example is one SEO sent over precisely because the site is meant to have it.
+      // So the request does not carry a page list, and body.pages is not read.
+      pages = Object.keys(loadExamples(template, ROOT)).sort();
       if (!pages.includes('home')) {
-        res.status(400).json({ error: 'В списке страниц нужна home — иначе у сайта не будет главной' });
-        return;
-      }
-      // A page the theme has no example for cannot be written at all. Left to the run, it fails
-      // inside pickExamples — after the request has been answered 200 and the job has started — so
-      // a typo comes back as a job that begins and dies instead of as a refusal naming the page.
-      const known = loadExamples(template, ROOT);
-      const unknown = pages.filter((page) => !known[page]);
-      if (unknown.length > 0) {
         res.status(400).json({
-          error: `У темы «${template}» нет примеров для страниц: ${unknown.join(', ')}. Есть: ${Object.keys(known).sort().join(', ')}`,
+          error: `У темы «${template}» нет примеров страницы home — у сайта не будет главной`,
         });
         return;
       }

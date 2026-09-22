@@ -182,27 +182,15 @@ const regenerateLogoField = form.elements.regenerateLogo;
 const skipTextsField = form.elements.skipTexts;
 const pagesField = document.querySelector('#field-pages');
 
-// One checkbox per page the theme has examples for. home stays ticked and cannot be unticked: a
-// site without a front page is not a site, and the server refuses one anyway — better to say so
-// by the box being fixed than by a refusal after the button is pressed.
+// Shown, not chosen. The site is made of the pages the theme has examples for — all of them — so
+// this says which those are and how many, and nothing here is a control. The server works the same
+// list out for itself and never reads one from the request.
 function fillPages(pages) {
-  pagesField.replaceChildren(
-    ...pages.map((page) => {
-      const label = document.createElement('label');
-      label.className = 'check';
-      const box = document.createElement('input');
-      box.type = 'checkbox';
-      box.value = page;
-      box.checked = true;
-      box.disabled = page === 'home';
-      label.append(box, ` ${page}`);
-      return label;
-    }),
-  );
+  pagesField.textContent = pages.length === 0
+    ? 'У шаблона нет примеров — генерировать нечего'
+    : `${pages.join(', ')} — ${pages.length}`;
   syncTexts();
 }
-
-const chosenPages = () => [...pagesField.querySelectorAll('input')].filter((box) => box.checked).map((box) => box.value);
 const exampleField = document.querySelector('#field-example');
 function syncRegenerateLogo() {
   regenerateLogoField.disabled = skipImagesField.checked;
@@ -216,9 +204,6 @@ syncRegenerateLogo();
 // change their mind, and so the checkbox visibly explains what it turned off.
 function syncTexts() {
   exampleField.disabled = skipTextsField.checked;
-  for (const box of pagesField.querySelectorAll('input')) {
-    box.disabled = skipTextsField.checked || box.value === 'home';
-  }
   pagesField.classList.toggle('is-off', skipTextsField.checked);
 }
 skipTextsField.addEventListener('change', syncTexts);
@@ -236,9 +221,6 @@ form.addEventListener('submit', async (event) => {
   payload.skipImages = skipImagesField.checked;
   payload.regenerateLogo = regenerateLogoField.checked;
   payload.skipTexts = skipTextsField.checked;
-  // The boxes are not form fields with a name, so FormData knows nothing about them. Sent as a
-  // list, which the server accepts alongside the old free text.
-  if (!payload.skipTexts) payload.pages = chosenPages();
   const stages = [
     payload.skipTexts ? '' : 'Пишем тексты',
     payload.skipImages ? '' : payload.regenerateLogo ? 'делаем логотип заново и картинки' : 'генерируем логотип и картинки',

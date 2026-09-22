@@ -127,18 +127,17 @@ select:focus {
   padding: 0;
 }
 
-/* The page list: one ticked box per page the theme has an example for. Held apart from the fields
-   above by a little space, since it is a list of one kind of thing rather than a row of settings. */
-.checks {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  margin-bottom: 0.25rem;
+/* The page list: what the theme has examples for, shown so it is known before the button is
+   pressed. Not a control — there is nothing here to choose. */
+.pages {
+  margin: 0 0 0.25rem;
+  color: var(--ink);
+  line-height: 1.5;
 }
 
-/* Greyed rather than hidden when «только пересобрать» turns it off: what was ticked stays visible,
-   so the choice is still there when the checkbox is turned back. */
-.checks.is-off {
+/* Greyed when «только пересобрать» turns the texts off: no page is written then, so the list is
+   about something that is not going to happen. */
+.pages.is-off {
   opacity: 0.45;
 }
 
