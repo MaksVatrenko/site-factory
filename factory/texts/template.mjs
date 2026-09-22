@@ -73,11 +73,20 @@ export function loadTemplatePictures(templateId, root = process.cwd()) {
     pictures[type] = placeOf(value, `блока «${type}» темы «${templateId}»`);
   }
 
-  // Same [min, max] convention as everywhere: only the upper bound is ever enforced (trimPlan cuts
-  // down to it), the lower bound is descriptive. Missing entirely defaults to 0 — the conservative
-  // default, not the permissive one: a theme that says nothing about links gets none, rather than
-  // an unstated unlimited budget.
+  // A divider before a block's closing paragraph — the one that reads as a note on what came
+  // above it. The theme has to be able to draw one at all: a `line` it never declared would reach
+  // the page as a block that renders as nothing, which is the quietest possible way to be wrong.
+  const noteLine = raw.noteLine === true;
+  if (noteLine && !manifest.elements.includes('line')) {
+    throw new Error(`тема «${templateId}» просит разделитель, но не умеет элемент «line»`);
+  }
+
+  // Same [min, max] convention as everywhere: only the upper bound is ever enforced (assemble.mjs
+  // and trimPlan cut down to it), the lower bound is descriptive. Missing entirely defaults to 0 —
+  // the conservative default, not the permissive one: a theme that says nothing gets none, rather
+  // than an unstated unlimited budget.
   const linksRaw = isPlainObject(raw.links) ? raw.links : {};
+  const emphasisRaw = isPlainObject(raw.emphasis) ? raw.emphasis : {};
   return {
     // Named so an example refused against this theme can say which theme refused it.
     id: templateId,
@@ -86,6 +95,13 @@ export function loadTemplatePictures(templateId, root = process.cwd()) {
       perBlock: readRange(linksRaw.perBlock ?? 0, `links.perBlock темы «${templateId}»`),
       perPage: readRange(linksRaw.perPage ?? 0, `links.perPage темы «${templateId}»`),
     },
+    // How many emphasised runs one block may carry. The texts arrive plain, so this is not a
+    // measurement of the example — it is what the theme will put up with when the model writes
+    // some of its own. The runs the factory adds itself do not count against it (assemble.mjs).
+    emphasis: {
+      perBlock: readRange(emphasisRaw.perBlock ?? 0, `emphasis.perBlock темы «${templateId}»`),
+    },
+    noteLine,
     // What the theme can draw at all. frameOf needs both lists to tell "this theme has no such
     // block" apart from "this theme has no such element" — two mistakes with two different fixes.
     known: manifest.blocks,

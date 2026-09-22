@@ -41,6 +41,53 @@ function keepLinks(text, pages, page, warnings) {
   });
 }
 
+// **words**, the format's second and last inline markup (templates/_shared/rich-text.mjs). Matched
+// the same way the renderer matches it, so what is counted here is exactly what will be drawn.
+const STRONG = /\*\*([^*\n]*[^*\s\n][^*\n]*)\*\*/g;
+
+// How much emphasis one block may carry, spent in the order the runs arrive — the earliest words of
+// a block are worth more than a repeat near its end, so it is the later ones that give way. Past
+// the budget the markers come off and the words stay: a sentence is not worth losing over its
+// formatting.
+//
+// The texts arrive plain and always will, so emphasis is the model's own — it is asked for in the
+// writing rules (factory/prompts/texts.json) rather than copied from an example. That is exactly
+// why it needs a ceiling: an instruction to emphasise is obeyed with enthusiasm, and a page where
+// every other phrase is bold has no emphasis left in it at all.
+function trimEmphasis(text, budget, warnings) {
+  if (!budget) return text;
+  return String(text).replace(STRONG, (whole, words) => {
+    if (budget.left > 0) {
+      budget.left -= 1;
+      return whole;
+    }
+    warnings.push(`выделение «${words}» сверх нормы блока — снято`);
+    return words;
+  });
+}
+
+// "Speed Baccarat — rounds under 30 seconds": the name of the thing, then what it is. Every list
+// item of the reference sections is written this way, and every one of them has its name
+// emphasised — so this one is mechanical rather than asked for, and does not spend the budget.
+//
+// Only up to the first dash, only when there is a dash, only when the head is short enough to be a
+// name rather than a sentence, and never when the item already carries emphasis of its own.
+const LIST_HEAD = /^([^—–\n]{2,60}?)\s+([—–]\s+\S)/;
+
+// Runs after the budget has been spent, not before: these are the factory's own and must not
+// displace the model's. Applied before it, a five-row list ate the whole allowance and left the
+// prose of the same block plain.
+function emphasiseHead(item) {
+  const text = String(item);
+  // Already emphasised, or holding a link. A link is left alone because the two markups nest only
+  // one way — `[**words**](/x)` — and wrapping the other way round renders four asterisks.
+  if (text.includes('](') || STRONG.test(text)) {
+    STRONG.lastIndex = 0;
+    return text;
+  }
+  return text.replace(LIST_HEAD, (whole, head, rest) => `**${head}** ${rest}`);
+}
+
 // The example's own count for this very element — five list rows, three table rows — a ceiling the
 // model was already asked to respect (see fill.mjs's brief), unlike the character lengths below. A
 // count is safe to actually cut, unlike a length: dropping the last few rows never breaks one
@@ -56,8 +103,10 @@ function trimToMax(what, list, range, warnings) {
 
 // `spec` is the example's own entry for this position — { kind, count?, length? } — so a section's
 // five-row list says nothing about what the table two elements later may hold.
-function toElement(item, { images, pages, page, warnings, spec = {} }) {
-  const link = (text) => keepLinks(text, pages, page, warnings);
+function toElement(item, { images, pages, page, warnings, spec = {}, emphasis }) {
+  // Both inline markups are settled in one place, so every text of every element gets the same
+  // treatment wherever the content puts it — a paragraph, a list row, a table cell, a card.
+  const link = (text) => keepLinks(trimEmphasis(text, emphasis, warnings), pages, page, warnings);
   const picture = (name) => {
     if (name && images.has(name)) return name;
     if (name) warnings.push(`картинка «${name}» не объявлена планом — убрана`);
@@ -70,7 +119,7 @@ function toElement(item, { images, pages, page, warnings, spec = {} }) {
     case 'text':
       return { type: 'text', text: link(item.text) };
     case 'list':
-      return { type: 'list', items: trimToMax('пунктов списка', item.items, spec.count, warnings).map(link) };
+      return { type: 'list', items: trimToMax('пунктов списка', item.items, spec.count, warnings).map((row) => emphasiseHead(link(row))) };
     case 'table': {
       const rows = trimToMax('строк таблицы', item.rows, spec.count, warnings);
       return { type: 'table', columns: item.columns, rows: rows.map((row) => row.map(link)) };
@@ -172,7 +221,29 @@ const AUTO = {
 
 export const AUTO_BLOCKS = Object.keys(AUTO);
 
-export function assemblePage({ plan, blocks, example = '', sections, faq, pages, page, labels, lengths = {} }) {
+// A closing paragraph that follows a list, a table or a card set is a note on what came above it,
+// and the theme draws it quieter and smaller for exactly that reason. The divider that says so is
+// put here rather than asked for: the texts arrive plain and always will, so no example carries a
+// `line` for the model to imitate, and where one belongs is a fact about the shape of the block
+// rather than about its words.
+//
+// Only at the end, and only after something that is not a paragraph. Measured across the 275
+// sections of the supplied examples: 37% have this shape, 72% merely end with a paragraph. The
+// narrower rule is the one the reference sites actually follow — a divider before the third of
+// three plain paragraphs would be a rule of ours, not theirs.
+const NOT_A_PARAGRAPH = new Set(['list', 'table', 'cards', 'steps']);
+
+function withNote(items, wanted) {
+  if (!wanted || items.length < 2) return items;
+  const last = items.at(-1);
+  const before = items.at(-2);
+  if (last?.type !== 'text' || !NOT_A_PARAGRAPH.has(before?.type)) return items;
+  // Never a second one: a block the example itself ended with a divider needs no help.
+  if (items.some((item) => item.type === 'line')) return items;
+  return [...items.slice(0, -1), { type: 'line' }, last];
+}
+
+export function assemblePage({ plan, blocks, example = '', sections, faq, pages, page, labels, lengths = {}, content = {} }) {
   const warnings = [];
   // One name per picture-bearing block, in page order, already normalised and de-duplicated by
   // trimPlan. A null is a block whose name came back unusable: it keeps its place in the list so
@@ -180,6 +251,9 @@ export function assemblePage({ plan, blocks, example = '', sections, faq, pages,
   const pictures = plan.images ?? [];
   const images = new Set(pictures.filter(Boolean));
   const context = { images, pages, page, warnings };
+  // One budget per block, not per page: emphasis is a contrast inside a block, and a block near the
+  // bottom of a long page has as much right to it as the first screen.
+  const perBlock = content.emphasis?.perBlock?.[1] ?? 0;
 
   // Two passes over the layout, because the contents cannot be built until every heading is known,
   // and a block with nothing to show is dropped along the way — so the auto blocks are filled over
@@ -209,7 +283,9 @@ export function assemblePage({ plan, blocks, example = '', sections, faq, pages,
         items: faq.map((entry) => ({
           type: 'toggle',
           title: entry.question,
-          text: keepLinks(entry.answer, pages, page, warnings),
+          // The FAQ is a block like any other and spends a budget of its own — it is filled by a
+          // request of its own (see fill.mjs), which is the only reason it is not in the loop above.
+          text: keepLinks(trimEmphasis(entry.answer, { left: perBlock }, warnings), pages, page, warnings),
         })),
       });
       continue;
@@ -221,6 +297,8 @@ export function assemblePage({ plan, blocks, example = '', sections, faq, pages,
     // and its row of claims were once declared, described to the model, and still impossible to
     // produce, because the one path that filled the first screen knew about neither.
     if (block.heading || block.h1) {
+      // Spent across everything this one block holds — its paragraphs, its list rows, its cells.
+      const emphasis = { left: perBlock };
       // Looked up by the block's own place on the page, not taken from the front of a queue. A
       // page can hold more than one kind of content block now, and they are not interchangeable: a
       // section dropped upstream would shift every later entry up by one, and a half-and-half block
@@ -234,8 +312,8 @@ export function assemblePage({ plan, blocks, example = '', sections, faq, pages,
         block,
         at,
         heading: section.heading,
-        items: section.items
-          .map((item, at) => {
+        items: withNote(
+          section.items.map((item, at) => {
             // The example's entry for this very position. The answer is pinned to the same length
             // as the sequence by the schema (see schema.mjs's sectionSchema), so item `at` is the
             // element the example wrote `at` — a kind that disagrees means the model answered
@@ -245,9 +323,10 @@ export function assemblePage({ plan, blocks, example = '', sections, faq, pages,
               warnings.push(`на месте ${at + 1} ждали «${spec.kind}», пришёл «${item.kind}»`);
             }
             if (item.kind === 'text') noteLength('text абзаца', item.text, spec.length, warnings);
-            return toElement(item, { ...context, spec });
-          })
-          .filter(Boolean),
+            return toElement(item, { ...context, spec, emphasis });
+          }).filter(Boolean),
+          content.noteLine,
+        ),
       });
       continue;
     }

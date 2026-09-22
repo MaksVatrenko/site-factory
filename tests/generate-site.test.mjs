@@ -859,7 +859,10 @@ describe('the real examples of the theme', () => {
           .filter((item) => item.type !== undefined)
           .map((item) => item.type)
           // The block's own heading, written by the factory. Every other title was dropped.
-          .slice(1);
+          .slice(1)
+          // And the divider under a closing note, which is also the factory's: the texts arrive
+          // plain, so no example carries one. Where it lands is checked on its own below.
+          .filter((kind) => kind !== 'line');
         expect(`${address} ${at} ${block.type}: ${written.join(',')}`).toBe(
           `${address} ${at} ${block.type}: ${wanted[at].elements.join(',')}`,
         );
@@ -869,6 +872,29 @@ describe('the real examples of the theme', () => {
       expect((JSON.stringify(page).match(/"image":/g) ?? [])).toHaveLength(1);
       expect(page.blocks[0].type).toBe('hero');
     }
+  });
+
+  // The divider the factory adds, on the real examples rather than on a fixture built to suit it.
+  // 37% of the 275 example sections close with a paragraph after a list, a table or a card set —
+  // so a run over a real page must put a divider in some of them, and in none of the others.
+  it('sets off a closing note, and only where one closes a block', async () => {
+    const dir = siteDir('real');
+    await run(dir, { ...fakeOpenAi(), root: process.cwd() });
+    let seen = 0;
+    for (const address of PAGES) {
+      const page = JSON.parse(readFileSync(join(dir, `${address}.json`), 'utf8'));
+      for (const block of page.blocks) {
+        const kinds = block.content.filter((item) => item.type !== undefined).map((item) => item.type);
+        const at = kinds.indexOf('line');
+        if (at === -1) continue;
+        seen += 1;
+        // Last but one, with a paragraph after it and something that is not a paragraph before.
+        expect(at).toBe(kinds.length - 2);
+        expect(kinds.at(-1)).toBe('text');
+        expect(['list', 'table', 'cards', 'steps']).toContain(kinds[at - 1]);
+      }
+    }
+    expect(seen).toBeGreaterThan(0);
   });
 
   it("cuts every collection back to what the example's own block held", async () => {

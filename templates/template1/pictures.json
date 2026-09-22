@@ -4,5 +4,21 @@
     "split": true,
     "split-left": true
   },
-  "links": { "perBlock": [0, 2], "perPage": [0, 8] }
+  "links": {
+    "perBlock": [
+      0,
+      2
+    ],
+    "perPage": [
+      0,
+      8
+    ]
+  },
+  "emphasis": {
+    "perBlock": [
+      0,
+      3
+    ]
+  },
+  "noteLine": true
 }

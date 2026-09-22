@@ -164,7 +164,7 @@ Write exactly these elements, in this order, each to the size given (give or tak
 | поменять тон, запреты, что не выдумывать | `factory/prompts/texts.json` → `rules` |
 | поменять состав страницы, порядок блоков, последовательность элементов, длины | пример в `templates/<тема>/examples/` |
 | добавить пример | `npm run import:sheet -- <таблица> --example <тема>/<имя>` |
-| поменять, где стоит картинка, и бюджеты ссылок | `templates/<тема>/pictures.json` |
+| поменять, где стоит картинка, бюджеты ссылок и выделений, разделитель | `templates/<тема>/pictures.json` |
 | показать модели приём, который она не использует | пример, в котором этот приём есть |
 | поменять модель или цены | `.env` |
 | поменять текст самого брифа | `factory/texts/plan.mjs`, `fill.mjs`, `site-json.mjs` |

@@ -283,6 +283,9 @@ export async function generateSite({
         // Measured off the same example the shape came from, not declared anywhere: if the example
         // writes paragraphs of 124 characters, that is what a long one is measured against.
         lengths: frame.lengths,
+        // What the theme decides about a page and the example cannot: how much emphasis a block
+        // may carry, and whether a closing note is set off by a divider.
+        content,
       });
       for (const warning of warnings) log(`Тексты: ${name}: ${warning}`);
 

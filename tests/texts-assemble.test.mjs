@@ -509,3 +509,140 @@ describe('the elements a call-to-action page is made of', () => {
     expect(h1s).toHaveLength(1);
   });
 });
+
+// The texts arrive plain and always will: SEO sends prose, not markup. So emphasis and the divider
+// under a closing note are the factory's to add — which is why both are held to a rule here rather
+// than copied from an example that has neither.
+describe('assemblePage: выделение и сноска', () => {
+  const THEME = { emphasis: { perBlock: [0, 3] }, noteLine: true };
+  const holding = (...elements) => [HERO, TOC, sectionHolding(...elements), SECTION, LINKS, FAQ_BLOCK];
+  const firstSection = (page) => page.blocks.filter((block) => block.type === 'section')[0];
+
+  const withTheme = (over) => build({ content: THEME, ...over });
+
+  it('keeps emphasis the model wrote, up to what the theme puts up with', () => {
+    const text = '**One** and **two** and **three** and **four** and **five**.';
+    const sections = [HERO_ITEMS, { heading: 'Payments', items: [{ kind: 'text', text }] }, SECTIONS[1]];
+    const { page, warnings } = withTheme({ blocks: holding({ kind: 'text' }), sections });
+
+    const written = firstSection(page).content[1].text;
+    expect((written.match(/\*\*/g) ?? []).length).toBe(6); // three runs, two markers each
+    // Past the budget the markers come off and the words stay: a sentence is not worth losing.
+    expect(written).toContain('four and five');
+    expect(warnings.join(' ')).toContain('«four» сверх нормы блока');
+  });
+
+  it('spends one budget across everything the block holds, not one per element', () => {
+    const sections = [
+      HERO_ITEMS,
+      {
+        heading: 'Payments',
+        items: [
+          { kind: 'text', text: '**One** and **two**.' },
+          { kind: 'text', text: '**Three** and **four**.' },
+        ],
+      },
+      SECTIONS[1],
+    ];
+    const { page } = withTheme({ blocks: holding({ kind: 'text' }, { kind: 'text' }), sections });
+    const content = firstSection(page).content;
+    expect(content[1].text).toBe('**One** and **two**.');
+    // The fourth run is the one over the line, and it is in the second paragraph.
+    expect(content[2].text).toBe('**Three** and four.');
+  });
+
+  it('gives a theme that asks for no emphasis none, whatever the model wrote', () => {
+    const sections = [HERO_ITEMS, { heading: 'Payments', items: [{ kind: 'text', text: '**One** two.' }] }, SECTIONS[1]];
+    const { page } = build({ blocks: holding({ kind: 'text' }), sections });
+    expect(firstSection(page).content[1].text).toBe('One two.');
+  });
+
+  // "Speed Baccarat — rounds under 30 seconds": every list row of the reference sections is written
+  // this way and every one has its name emphasised. Mechanical, so it does not spend the budget —
+  // a five-row list would otherwise eat the whole of it and leave the prose plain.
+  it('emphasises the name a list row opens with, without spending the budget', () => {
+    const items = [
+      'Speed Baccarat — rounds under 30 seconds',
+      'No Commission Baccarat — pays 1:1 on Banker',
+      'Squeeze Baccarat — slow reveal',
+      'Lightning Baccarat — multipliers every round',
+    ];
+    const sections = [
+      HERO_ITEMS,
+      { heading: 'Payments', items: [{ kind: 'text', text: '**Baccarat** is quieter.' }, { kind: 'list', items }] },
+      SECTIONS[1],
+    ];
+    const { page, warnings } = withTheme({
+      blocks: holding({ kind: 'text' }, { kind: 'list', count: 4 }),
+      sections,
+    });
+    const list = firstSection(page).content[2];
+    expect(list.items[0]).toBe('**Speed Baccarat** — rounds under 30 seconds');
+    expect(list.items[3]).toBe('**Lightning Baccarat** — multipliers every round');
+    // Four rows plus a paragraph run, and nothing was over budget.
+    expect(warnings.join(' ')).not.toContain('сверх нормы блока');
+  });
+
+  it('leaves a list row alone when it carries emphasis of its own', () => {
+    const items = ['**Speed** Baccarat — rounds under 30 seconds'];
+    const sections = [HERO_ITEMS, { heading: 'Payments', items: [{ kind: 'list', items }] }, SECTIONS[1]];
+    const { page } = withTheme({ blocks: holding({ kind: 'list', count: 1 }), sections });
+    expect(firstSection(page).content[1].items[0]).toBe('**Speed** Baccarat — rounds under 30 seconds');
+  });
+
+  it('leaves a list row with no dash alone, since there is no name to mark', () => {
+    const items = ['Rounds under 30 seconds if you hate waiting'];
+    const sections = [HERO_ITEMS, { heading: 'Payments', items: [{ kind: 'list', items }] }, SECTIONS[1]];
+    const { page } = withTheme({ blocks: holding({ kind: 'list', count: 1 }), sections });
+    expect(firstSection(page).content[1].items[0]).toBe('Rounds under 30 seconds if you hate waiting');
+  });
+
+  it('puts a divider before a closing paragraph that follows a list', () => {
+    const sections = [
+      HERO_ITEMS,
+      {
+        heading: 'Payments',
+        items: [{ kind: 'list', items: ['one', 'two'] }, { kind: 'text', text: 'A note on the above.' }],
+      },
+      SECTIONS[1],
+    ];
+    const { page } = withTheme({ blocks: holding({ kind: 'list', count: 2 }, { kind: 'text' }), sections });
+    expect(firstSection(page).content.map((item) => item.type)).toEqual(['title', 'list', 'line', 'text']);
+  });
+
+  // 37% of the example sections have this shape and 72% merely end with a paragraph. The narrower
+  // rule is the one the reference sites follow: a divider before the third of three plain
+  // paragraphs would be a rule of ours, not theirs.
+  it('puts no divider between two plain paragraphs', () => {
+    const sections = [
+      HERO_ITEMS,
+      { heading: 'Payments', items: [{ kind: 'text', text: 'One.' }, { kind: 'text', text: 'Two.' }] },
+      SECTIONS[1],
+    ];
+    const { page } = withTheme({ blocks: holding({ kind: 'text' }, { kind: 'text' }), sections });
+    expect(firstSection(page).content.map((item) => item.type)).toEqual(['title', 'text', 'text']);
+  });
+
+  it('puts no divider when the list is what the block ends with', () => {
+    const sections = [
+      HERO_ITEMS,
+      { heading: 'Payments', items: [{ kind: 'text', text: 'One.' }, { kind: 'list', items: ['a'] }] },
+      SECTIONS[1],
+    ];
+    const { page } = withTheme({ blocks: holding({ kind: 'text' }, { kind: 'list', count: 1 }), sections });
+    expect(firstSection(page).content.map((item) => item.type)).toEqual(['title', 'text', 'list']);
+  });
+
+  it('draws no divider at all for a theme that did not ask for one', () => {
+    const sections = [
+      HERO_ITEMS,
+      {
+        heading: 'Payments',
+        items: [{ kind: 'list', items: ['one'] }, { kind: 'text', text: 'A note.' }],
+      },
+      SECTIONS[1],
+    ];
+    const { page } = build({ blocks: holding({ kind: 'list', count: 1 }, { kind: 'text' }), sections });
+    expect(firstSection(page).content.map((item) => item.type)).toEqual(['title', 'list', 'text']);
+  });
+});

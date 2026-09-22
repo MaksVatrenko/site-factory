@@ -14,7 +14,7 @@ const MANIFEST = {
   id: 'demo',
   name: 'Demo',
   blocks: ['hero', 'toc', 'section', 'links', 'faq'],
-  elements: ['title', 'text', 'list', 'table', 'cards', 'toggle', 'image'],
+  elements: ['title', 'text', 'list', 'table', 'cards', 'toggle', 'image', 'line'],
 };
 
 // A throwaway template tree, so these tests never depend on what templates/template1 happens to hold.
@@ -70,5 +70,37 @@ describe('loadTemplatePictures', () => {
 
   it('takes an exact number for a link budget as a range', () => {
     expect(pictures({ pictures: {}, links: { perBlock: 2 } }).links.perBlock).toEqual([2, 2]);
+  });
+});
+
+// Two more things the example cannot say, for the same reason it cannot say where a picture goes:
+// the texts arrive plain. How much emphasis a block may carry, and whether a closing paragraph is
+// set off by a divider, are decisions about how a page reads — the theme's, like the picture.
+describe('loadTemplatePictures: выделение и сноска', () => {
+  it('reads the emphasis budget and whether a closing note gets a divider', () => {
+    const content = pictures({ pictures: {}, emphasis: { perBlock: [0, 3] }, noteLine: true });
+    expect(content.emphasis).toEqual({ perBlock: [0, 3] });
+    expect(content.noteLine).toBe(true);
+  });
+
+  // Same conservative default as the link budget: a theme that says nothing gets none, rather than
+  // an unstated licence to emphasise every other word.
+  it('gives a theme that says nothing about emphasis none at all', () => {
+    expect(pictures({ pictures: {} }).emphasis).toEqual({ perBlock: [0, 0] });
+  });
+
+  // And a theme that never declared a `line` element cannot draw one, so inserting it would put a
+  // block on the page that renders as nothing at all.
+  it('draws no divider unless the theme asks for one', () => {
+    expect(pictures({ pictures: {} }).noteLine).toBe(false);
+  });
+
+  it('refuses a divider from a theme whose manifest has no line element', () => {
+    const manifest = { ...MANIFEST, elements: MANIFEST.elements.filter((name) => name !== 'line') };
+    expect(() => pictures({ pictures: {}, noteLine: true }, { manifest })).toThrow(/line/);
+  });
+
+  it('takes an exact number for the emphasis budget as a range', () => {
+    expect(pictures({ pictures: {}, emphasis: { perBlock: 3 } }).emphasis.perBlock).toEqual([3, 3]);
   });
 });
